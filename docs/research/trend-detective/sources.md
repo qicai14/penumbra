@@ -1,0 +1,92 @@
+# Source list: NASA Space Apps 2026, Be An Earth System Trend Detective!
+
+Challenge page: https://www.spaceappschallenge.org/2026/challenges/earth-system-trend-detective/
+
+Notes: 'citations' are OpenAlex counts where measured; a leading ~ means approximate (OpenAlex/Semantic Scholar hit daily rate limits during the run). 'n/a' = software, data, or web docs. 'implements?' = Y if equations or data access we would directly implement. Items flagged in the Verification column returned 403/202 to curl (publisher bot-blocking) but are real; the challenge page itself fails curl locally on an SSL certificate error (exit 60), so it is unverified from this machine.
+
+## 1. Trend-detection methods (MK/Sen, autocorrelation, field significance, STL/BFAST, detectability)
+
+| # | Title | Year | URL | Citations | Takeaway | Implements? | Verification |
+|---|---|---|---|---|---|---|---|
+| 1 | Statistical Methods in Water Resources (Helsel et al., USGS TM 4-A3), ch. 12 Trend Analysis | 2020 | https://pubs.usgs.gov/tm/04/a03/tm4a3.pdf | ~1.5k | Best open textbook treatment of Mann-Kendall, Sen slope, seasonal Kendall, and trend-test pitfalls; equations are implementable as-is. | Y | HTTP 200/206 |
+| 2 | pyMannKendall: a python package for non parametric Mann Kendall family of trend tests (JOSS) | 2019 | https://joss.theoj.org/papers/10.21105/joss.01556 | 857 | Reference implementation of MK, seasonal MK, Hamed-Rao modified MK, Yue-Pilon pre-whitening, TFPW, Sen slope; use to validate our own code. | Y | HTTP 200/206 |
+| 3 | pyMannKendall GitHub repository / README | 2019 | https://github.com/mmhs013/pyMannKendall | n/a | API and tests for ~12 MK variants; direct source for correct autocorrelation-corrected variance formulas. | Y | HTTP 200/206 |
+| 4 | The stippling shows statistically significant grid points (Wilks, BAMS) | 2016 | https://doi.org/10.1175/BAMS-D-15-00267.1 | ~700 | Why per-grid-cell p<0.05 stippling is misleading; use FDR (Benjamini-Hochberg) with alpha_FDR = 2*alpha_global. NOTE: curl gets 403 (AMS bot-block), article is free to read. | Y | curl 403 (bot-block); verify in browser |
+| 5 | The Stippled Gridpoints are Statistically Significant: (Mis)uses of False Discovery Rate (EGUsphere preprint) | 2026 | https://egusphere.copernicus.org/preprints/2026/egusphere-2026-2203/ | 0 (new) | Current critique/clarification of FDR use in climate maps; tells us how to caveat our significance overlay. | Y | HTTP 200/206 |
+| 6 | Controlling the false discovery rate: a practical and powerful approach to multiple testing (Benjamini & Hochberg) | 1995 | https://www.stat.purdue.edu/~doerge/BIOINFORM.D/FALL06/Benjamini%20and%20Y%20FDR.pdf | ~100k | The BH step-up procedure itself (a few lines of code) for per-pixel p-values. | Y | HTTP 200/206 |
+| 7 | scipy.stats.false_discovery_control documentation | 2023 | https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.false_discovery_control.html | n/a | One-call BH / BY correction; BY handles arbitrary dependence between grid cells. | Y | HTTP 200/206 |
+| 8 | Factors affecting the detection of trends: statistical considerations and applications to environmental data (Weatherhead et al.) | 1998 | https://doi.org/10.1029/98JD00995 | 870 | Years-to-detect formula n* ~ [3.3 s_N / (|w0| sqrt(1+phi)/(1-phi))]^(2/3); basis of a 'how long until this trend is detectable' readout. NOTE: AGU/Wiley, curl 403, may be paywalled. | Y | curl 403; possible paywall |
+| 9 | STL: A Seasonal-Trend Decomposition Procedure Based on Loess (Cleveland et al.) | 1990 | https://www.scb.se/contentassets/ca21efb41fee47d293bbee5bf7be7fb3/stl-a-seasonal-trend-decomposition-procedure-based-on-loess.pdf | ~5k | Original STL algorithm: removes seasonal cycle, robust to outliers, yields nonlinear trend component. | Y | HTTP 200/206 |
+| 10 | statsmodels STL documentation | 2024 | https://www.statsmodels.org/stable/generated/statsmodels.tsa.seasonal.STL.html | n/a | Python STL API we would call per pixel; includes robust option and period handling. | Y | HTTP 200/206 |
+| 11 | scipy.stats.theilslopes documentation | 2024 | https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.theilslopes.html | n/a | Sen/Theil-Sen slope with confidence interval; vectorizable baseline for robust trend per cell. | Y | HTTP 200/206 |
+| 12 | BFAST: Breaks For Additive Season and Trend (project site; Verbesselt et al. 2010) | 2010 | https://bfast.r-forge.r-project.org/ | ~1.5k | Breakpoint detection in trend and seasonal components of satellite series; the canonical 'non-linear / abrupt change' method. | Y | HTTP 200/206 |
+| 13 | Rbeast: Bayesian ensemble change-point, trend and seasonality decomposition (Zhao et al. 2019) | 2019 | https://github.com/zhaokg/Rbeast | ~700 | Bayesian alternative to BFAST that reports probability of change points and trend-slope sign over time. | Y | HTTP 200/206 |
+| 14 | ruptures: change point detection in Python (GitHub) | 2020 | https://github.com/deepcharles/ruptures | n/a | PELT/binseg/window methods for piecewise-linear breaks; easy 'trend changed in year X' feature. | Y | HTTP 200/206 |
+| 15 | On the trend, detrending, and variability of nonlinear and nonstationary time series (Wu et al., EEMD) | 2007 | https://pmc.ncbi.nlm.nih.gov/articles/PMC1986583/ | 964 | Defines trend as intrinsic, not necessarily linear; EEMD for nonlinear trend extraction (the 'linear is baseline' counterpoint). | Y | HTTP 200/206 |
+| 16 | Trend Change Detection in NDVI Time Series: Effects of Inter-Annual Variability and Methodology (Forkel et al.) | 2013 | https://research.wur.nl/en/publications/trend-change-detection-in-ndvi-time-series-effects-of-inter-annua | 556 | Compares BFAST, segmented regression, and others; shows breakpoint results depend on method and noise. | Y | HTTP 200/206 |
+| 17 | Shifts in Global Vegetation Activity Trends (de Jong et al.) | 2013 | https://www.zora.uzh.ch/id/eprint/76773/1/2013_SchaepmanM_2013_ShiftsVegetation_RS_RdJ_Kopie_.pdf | 288 | Global NDVI trend shifts: greening reversing to browning in many regions; example of non-monotonic trends. | Y | HTTP 200/206 |
+| 18 | Global temperature evolution 1979-2010 (Foster & Rahmstorf) | 2011 | https://iopscience.iop.org/article/10.1088/1748-9326/6/4/044022 | ~1k | Regress out ENSO/volcanic/solar variability to expose underlying trend; model for 'remove known variability' toggles. | Y | HTTP 200/206 |
+| 19 | Detection of anthropogenic climate change in satellite records of ocean chlorophyll and productivity (Henson et al.) | 2010 | https://bg.copernicus.org/articles/7/621/2010/ | 504 | Applies the Weatherhead-style time-to-detection idea to satellite ocean color (decades needed). | Y | HTTP 200/206 |
+
+## 2. Exemplary NASA-data trend papers (regional reversals and surprises)
+
+| # | Title | Year | URL | Citations | Takeaway | Implements? | Verification |
+|---|---|---|---|---|---|---|---|
+| 1 | Greening of the Earth and its drivers (Zhu et al.) | 2016 | https://ddd.uab.cat/record/150811 | 2884 | AVHRR LAI shows 25-50% of vegetated land greening, <4% browning; attribution to CO2, N, land use. | N | HTTP 200/206 |
+| 2 | China and India lead in greening of the world through land-use management (Chen et al.) | 2019 | https://www.nature.com/articles/s41893-019-0220-7 | 3067 | MODIS LAI greening hotspots driven by cropland and forestry, not only CO2: same index, different causes by region. | N | HTTP 200/206 |
+| 3 | Emerging trends in global freshwater availability (Rodell et al.) | 2018 | https://pmc.ncbi.nlm.nih.gov/articles/PMC6077847/ | 2253 | GRACE terrestrial water storage: wet regions wetter, dry regions drier, with drivers from climate vs human use. | Y | HTTP 200/206 |
+| 4 | Global models underestimate large decadal declining and rising water storage trends relative to GRACE (Scanlon et al.) | 2018 | https://pmc.ncbi.nlm.nih.gov/articles/PMC5819387/ | 795 | GRACE shows large regional declines and rises that LSMs (GLDAS) miss; opposite-sign trends side by side. | N | HTTP 200/206 |
+| 5 | Continuity of ice sheet mass loss in Greenland and Antarctica from GRACE and GRACE-FO (Velicogna et al.) | 2020 | https://ntrs.nasa.gov/citations/29553573061775 | ~300 | Handles the GRACE to GRACE-FO gap and shows acceleration in mass loss (nonlinear trend). | N | HTTP 200/206 |
+| 6 | Evaluating global trends (1988-2010) in harmonized multi-satellite surface soil moisture (Dorigo et al.) | 2012 | https://research.vu.nl/files/648767/298389.pdf | 371 | ESA CCI soil moisture trend map with significance masking; regions of drying and wetting in the same continent. | Y | curl 403 (repository bot-block) |
+| 7 | Recent decline in the global land evapotranspiration trend due to limited moisture supply (Jung et al.) | 2010 | https://www.nature.com/articles/nature09396 | 2349 | ET increase reversed after 1998 driven by Southern Hemisphere soil moisture limits; classic trend-break example. | N | HTTP 200/206 |
+| 8 | Global and regional trends of aerosol optical depth over land and ocean using SeaWiFS 1997-2010 (Hsu et al.) | 2012 | https://acp.copernicus.org/articles/12/8037/2012/ | 399 | AOD rises over India/Arabian region and falls over Europe/US; uses significance testing per region. | Y | HTTP 200/206 |
+| 9 | Spatial and seasonal variations of aerosols over China from two decades of multi-satellite observations (Sogacheva et al.) | 2018 | https://acp.copernicus.org/articles/18/11389/2018/ | 76 | Seasonally resolved AOD trends over China; AOD rise then fall around 2011 (non-monotonic). | Y | HTTP 200/206 |
+| 10 | Aura OMI observations of regional SO2 and NO2 pollution changes from 2005 to 2014 (Krotkov et al.) | 2016 | https://acp.copernicus.org/articles/16/4605/2016/ | ~400 | OMI NO2 declining in US/Europe, rising in India, China up then flat/down: textbook regional sign reversals. | Y | HTTP 200/206 |
+| 11 | Abrupt decline in tropospheric nitrogen dioxide over China after the outbreak of COVID-19 (Liu et al.) | 2020 | https://pmc.ncbi.nlm.nih.gov/articles/PMC7455481/ | 359 | Shows how an abrupt step breaks a linear-trend assumption; uses seasonal-adjusted baseline for comparison. | Y | HTTP 200/206 |
+| 12 | A 40-y record reveals gradual Antarctic sea ice increases followed by decreases (Parkinson) | 2019 | https://pmc.ncbi.nlm.nih.gov/articles/PMC6642375/ | 780 | Antarctic sea ice trend flips sign (2014); regional opposite trends within the Southern Ocean; Arctic contrast. | Y | HTTP 200/206 |
+| 13 | Changing state of Arctic sea ice across all seasons (Stroeve & Notz) | 2018 | https://iopscience.iop.org/article/10.1088/1748-9326/aade56 | ~800 | Month-by-month Arctic sea-ice trends from passive microwave; seasonality of the trend itself matters. | Y | HTTP 200/206 |
+| 14 | Climate-change-driven accelerated sea-level rise detected in the altimeter era (Nerem et al.) | 2018 | https://pmc.ncbi.nlm.nih.gov/articles/PMC5834701/ | 1192 | Quadratic fit to altimetry after removing ENSO/volcano effects; model for linear vs accelerating trend comparison. | Y | HTTP 200/206 |
+| 15 | Historical Northern Hemisphere snow cover trends and projected changes in CMIP6 (Mudryk et al.) | 2020 | https://tc.copernicus.org/articles/14/2495/2020/ | ~250 | Snow cover extent trends by month/region with observational spread; snow trend sign differs by season. | N | HTTP 200/206 |
+| 16 | Longer and more frequent marine heatwaves over the past century (Oliver et al.) | 2018 | https://www.nature.com/articles/s41467-018-03732-9 | ~1.7k | Seasonally varying threshold climatology for SST extremes; basis for deseasonalizing and anomaly definition. | Y | HTTP 200/206 |
+
+## 3. NASA data access and documentation
+
+| # | Title | Year | URL | Citations | Takeaway | Implements? | Verification |
+|---|---|---|---|---|---|---|---|
+| 1 | NASA POWER API documentation | 2024 | https://power.larc.nasa.gov/docs/services/api/ | n/a | REST point/regional daily and monthly MERRA-2/CERES-derived series with no auth; easiest data source for a browser tool. | Y | HTTP 200/206 |
+| 2 | NASA CMR Search API documentation | 2024 | https://cmr.earthdata.nasa.gov/search/site/docs/search/api.html | n/a | Collection and granule discovery for any NASA dataset; needed for a variable picker. | Y | HTTP 200/206 |
+| 3 | NASA Harmony documentation | 2024 | https://harmony.earthdata.nasa.gov/docs | n/a | Cloud subsetting/reprojection/format conversion service; reduces download size to a region and time range. | Y | HTTP 200/206 |
+| 4 | Earthdata Cloud Cookbook (NASA Openscapes) | 2024 | https://nasa-openscapes.github.io/earthdata-cloud-cookbook/ | n/a | Worked notebooks for S3 access, OPeNDAP, Harmony, earthaccess, Zarr/COG workflows. | Y | HTTP 200/206 |
+| 5 | earthaccess (NSIDC) GitHub | 2024 | https://github.com/nsidc/earthaccess | n/a | Python library for Earthdata login, search, and streaming into xarray. | Y | HTTP 200/206 |
+| 6 | AppEEARS API documentation | 2024 | https://appeears.earthdatacloud.nasa.gov/api/ | n/a | Point and area sample extraction for MODIS NDVI and other products as CSV/NetCDF; time-series friendly. | Y | HTTP 200/206 |
+| 7 | NASA Giovanni (portal) | 2024 | https://giovanni.gsfc.nasa.gov/giovanni/ | n/a | Existing tool to differentiate from: maps/time series/trend-like stats, but user must know variables and gets limited significance and seasonal handling. | N | HTTP 200/206 |
+| 8 | MERRA-2 (NASA GMAO) | 2017 | https://gmao.gsfc.nasa.gov/gmao-products/merra-2/ | n/a | Reanalysis variables (T, precip, aerosol AOD, soil moisture); 1980-present monthly series for trends. | Y | HTTP 200/206 |
+| 9 | GLDAS (NASA LDAS) | 2004 | https://ldas.gsfc.nasa.gov/gldas | n/a | Land-surface model soil moisture, snow, runoff; pairs with GRACE for water-storage trends. | Y | HTTP 200/206 |
+| 10 | PO.DAAC GRACE data page | 2024 | https://podaac.jpl.nasa.gov/GRACE | n/a | Entry to GRACE/GRACE-FO mascon and spherical-harmonic data for terrestrial water storage. | Y | HTTP 200/206 |
+| 11 | MODIS MOD13A3 Vegetation Indices monthly (LP DAAC) | 2024 | https://lpdaac.usgs.gov/products/mod13a3v061/ | n/a | Monthly 1 km NDVI/EVI product page with user guide links; standard greening variable. | Y | HTTP 200/206 |
+| 12 | OPeNDAP documentation | 2024 | https://opendap.github.io/documentation/ | n/a | Remote subsetting of NetCDF/HDF without full download, via DAP4 constraint expressions. | Y | HTTP 200/206 |
+| 13 | Cloud-Native Geospatial Guide (Zarr, COG, GeoParquet) | 2024 | https://guide.cloudnativegeo.org/ | n/a | When to use COG vs Zarr and how chunking affects time-series reads (key for per-pixel trends). | Y | HTTP 200/206 |
+| 14 | xarray time series user guide | 2024 | https://docs.xarray.dev/en/stable/user-guide/time-series.html | n/a | groupby('time.month') climatology and anomaly computation for seasonal-cycle removal. | Y | HTTP 200/206 |
+| 15 | GISS Surface Temperature Analysis (GISTEMP) uncertainty page | 2024 | https://data.giss.nasa.gov/gistemp/uncertainty/ | n/a | How NASA reports uncertainty on trends; template for a student-readable 'how sure are we' panel. | N | HTTP 200/206 |
+
+## 4. Science communication, education research, and tools to differentiate from
+
+| # | Title | Year | URL | Citations | Takeaway | Implements? | Verification |
+|---|---|---|---|---|---|---|---|
+| 1 | Statistical tests, P values, confidence intervals, and power: a guide to misinterpretations (Greenland et al.) | 2016 | https://pmc.ncbi.nlm.nih.gov/articles/PMC4877414/ | ~4.5k | Catalog of p-value misreadings; direct input for wording the 'significant?' badge. | N | HTTP 200/206 |
+| 2 | Communicating uncertainty about facts, numbers and science (van der Bles et al.) | 2019 | https://pmc.ncbi.nlm.nih.gov/articles/PMC6549952/ | 516 | Framework: what is uncertain, how to express it (direct vs indirect); informs UI language. | N | HTTP 200/206 |
+| 3 | Hypothetical Outcome Plots outperform error bars and violin plots (Hullman et al.) | 2015 | https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0142444 | ~300 | Animated draws communicate uncertainty better to laypeople; idea for showing plausible trend lines. | Y | HTTP 200/206 |
+| 4 | GLOBE Program (NASA-sponsored student science) | 2024 | https://www.globe.gov/ | n/a | Education audience and data-literacy model; potential classroom partner/user stories. | N | HTTP 200/206 |
+| 5 | NASA Worldview | 2024 | https://worldview.earthdata.nasa.gov/ | n/a | Imagery browser: great for looking, no trend statistics; differentiation target. | N | HTTP 200/206 |
+| 6 | Climate Reanalyzer (Univ. of Maine) | 2024 | https://climatereanalyzer.org/ | n/a | Interactive reanalysis time series by year; no per-pixel trend significance or deseasonalized trend. | N | HTTP 200/206 |
+| 7 | NASA Earth Observatory | 2024 | https://earthobservatory.nasa.gov/ | n/a | Narrative image stories; useful for storyline examples, but not a user-driven analysis tool. | N | HTTP 200/206 |
+| 8 | NASA Climate Change Vital Signs | 2024 | https://climate.nasa.gov/vital-signs/ | n/a | Curated indicators (CO2, sea level, ice) with trend numbers; target set of 'known answers' for validation. | N | HTTP 200/206 |
+| 9 | NOAA Climate at a Glance | 2024 | https://www.ncei.noaa.gov/access/monitoring/climate-at-a-glance/ | n/a | Regional trend lookup with linear fit and rank; shows the linear-only baseline we want to go beyond. | N | HTTP 200/206 |
+
+## Key open problems / differentiation angles
+
+- Per-pixel significance without lying: combine autocorrelation-corrected MK/Sen slope with FDR (not raw stippling) and show it as a readable 'confident/uncertain/no signal' layer; Giovanni and Climate at a Glance do not.
+- Same variable, opposite regional signs: automatic 'trend polarity' map plus region-vs-region comparison that flags Simpson's-paradox cases (NO2 US/EU vs India, AOD China vs India, Arctic vs Antarctic ice).
+- Linear is baseline, not truth: one-click comparison of linear vs STL/BFAST/BEAST/quadratic trend with breakpoint year, and a warning when the linear fit is a poor description (sea ice, ET, NO2, Antarctic ice).
+- Seasonal cycle and known-variability toggles: show raw vs deseasonalized vs ENSO-adjusted trends side by side so students see why the answer changes.
+- 'How long until we know?' readout using Weatherhead-style detectability (record length vs noise and autocorrelation), turning uncertainty into a teachable number, validated against NASA Vital Signs known trends.

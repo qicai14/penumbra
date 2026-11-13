@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Penumbra Wireframes</title>
+<link rel="stylesheet" href="wf.css">
+<style>
+  body { padding: 24px 16px 64px; }
+  .wrap { max-width: 1440px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 24px; }
+  h2 { margin: 40px 0 4px; font-size: 18px; }
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 12px; }
+  .opt { background: var(--paper); border: 1px solid var(--line); display: flex; flex-direction: column; }
+  .opt header { display: flex; align-items: baseline; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .opt header b { font: 700 14px var(--mono); }
+  .opt header a { margin-left: auto; color: var(--ink); font-size: 12px; }
+  .thumb { position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; background: var(--bg); }
+  .thumb iframe { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; border: 0; transform-origin: 0 0; pointer-events: none; }
+  .opt p { margin: 0; padding: 10px 12px; color: var(--ink-2); font-size: 13px; }
+  .opt p.trade { padding-top: 0; }
+  @media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Penumbra lo-fi wireframes</h1>
+  <p class="muted">5 screens × 3 structural directions. Greyscale on purpose: judge layout and flow, not colour. All numbers are FAKE. Pick one letter per screen (mixing parts is fine) and note it in design/DECISIONS.md.</p>
+
+  <h2>1 · Horizon panorama + timelines <span class="chip">Must</span></h2>
+  <div class="row">
+    <article class="opt"><header><b>A</b> Stacked strip<a href="panorama/a.html">Open ↗</a></header><div class="thumb"><iframe src="panorama/a.html" title="Panorama A" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Wide 360° strip on top, timelines under it on one shared time cursor, headline numbers on the right.</p><p class="trade">+ Most familiar, easy to build. − Strip is flat, so tall terrain at low sun is cramped.</p></article>
+    <article class="opt"><header><b>B</b> Polar sky dial<a href="panorama/b.html">Open ↗</a></header><div class="thumb"><iframe src="panorama/b.html" title="Panorama B" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Round fisheye sky plot with terrain mask at the rim, plus a table of events with ± times.</p><p class="trade">+ Striking and shows the full Sun loop. − Low-elevation detail is squeezed at the rim; needs a non-linear scale.</p></article>
+    <article class="opt"><header><b>C</b> Time-first<a href="panorama/c.html">Open ↗</a></header><div class="thumb"><iframe src="panorama/c.html" title="Panorama C" loading="lazy" tabindex="-1"></iframe></div>
+      <p>A big Sun-elevation vs mask chart over 30 days; the horizon is a small snapshot that follows the cursor.</p><p class="trade">+ Answers "when" directly. − Less of a visual wow for the demo.</p></article>
+  </div>
+
+  <h2>2 · Pin and date controls + survival headline <span class="chip">Must</span></h2>
+  <div class="row">
+    <article class="opt"><header><b>A</b> Headline hero<a href="planner/a.html">Open ↗</a></header><div class="thumb"><iframe src="planner/a.html" title="Planner A" loading="lazy" tabindex="-1"></iframe></div>
+      <p>The answer (operable days, lethal shadow, margin) is a big banner; controls in a left rail, map with a 1 km ring.</p><p class="trade">+ The hook is the first thing seen. − Less map space.</p></article>
+    <article class="opt"><header><b>B</b> Map console<a href="planner/b.html">Open ↗</a></header><div class="thumb"><iframe src="planner/b.html" title="Planner B" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Full-bleed map, inputs panel on the right, results in a sticky bottom bar like a GIS tool.</p><p class="trade">+ Feels like a pro tool, max map. − Headline is smaller.</p></article>
+    <article class="opt"><header><b>C</b> What-if compare<a href="planner/c.html">Open ↗</a></header><div class="thumb"><iframe src="planner/c.html" title="Planner C" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Baseline plus variant cards (pin +300 m, date +2 d) side by side with deltas.</p><p class="trade">+ Matches demo step 3 exactly. − Needs several model runs per view.</p></article>
+  </div>
+
+  <h2>3 · 3D terrain <span class="chip">Should</span></h2>
+  <div class="row">
+    <article class="opt"><header><b>A</b> Full-bleed HUD<a href="terrain/a.html">Open ↗</a></header><div class="thumb"><iframe src="terrain/a.html" title="Terrain A" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Edge-to-edge 3D with floating readout, layers and a time sweep bar.</p><p class="trade">+ Best for the video. − Overlays cover terrain.</p></article>
+    <article class="opt"><header><b>B</b> Linked split<a href="terrain/b.html">Open ↗</a></header><div class="thumb"><iframe src="terrain/b.html" title="Terrain B" loading="lazy" tabindex="-1"></iframe></div>
+      <p>3D on the left, linked panorama, timeline and readout on the right, one cursor.</p><p class="trade">+ Ties the 3D to the numbers. − Busy on small screens.</p></article>
+    <article class="opt"><header><b>C</b> 2D map first<a href="terrain/c.html">Open ↗</a></header><div class="thumb"><iframe src="terrain/c.html" title="Terrain C" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Top-down map coloured by the model (shadow or operable days), 3D as an optional inset.</p><p class="trade">+ Survives cut-order 1 and doubles as the heatmap. − Less dramatic.</p></article>
+  </div>
+
+  <h2>4 · IM-2 replay <span class="chip">Should</span></h2>
+  <div class="row">
+    <article class="opt"><header><b>A</b> Scroll story<a href="replay/a.html">Open ↗</a></header><div class="thumb"><iframe src="replay/a.html" title="Replay A" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Five scroll steps that follow the demo story, with a sticky visual that changes per step.</p><p class="trade">+ Best for the public and the video. − Linear; planners may skip it.</p></article>
+    <article class="opt"><header><b>B</b> Mission scrubber<a href="replay/b.html">Open ↗</a></header><div class="thumb"><iframe src="replay/b.html" title="Replay B" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Event timeline on top; "what happened" next to "what Penumbra computes"; pit-depth slider.</p><p class="trade">+ Honest record vs model. − Needs sourced events (EVIDENCE.md).</p></article>
+    <article class="opt"><header><b>C</b> As landed vs better<a href="replay/c.html">Open ↗</a></header><div class="thumb"><iframe src="replay/c.html" title="Replay C" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Two columns: IM-2 as landed and the nearest site within 1 km that would have lasted 5+ days.</p><p class="trade">+ One-glance payoff for judges. − Depends on the site search working.</p></article>
+  </div>
+
+  <h2>5 · Validation scoreboard <span class="chip">Must (V1, V5)</span></h2>
+  <div class="row">
+    <article class="opt"><header><b>A</b> Ledger table<a href="scoreboard/a.html">Open ↗</a></header><div class="thumb"><iframe src="scoreboard/a.html" title="Scoreboard A" loading="lazy" tabindex="-1"></iframe></div>
+      <p>One row per test: judge, pass rule, our value, spread, status. Rows expand.</p><p class="trade">+ Dense and scientific. − Plain for the video.</p></article>
+    <article class="opt"><header><b>B</b> Gauge cards<a href="scoreboard/b.html">Open ↗</a></header><div class="thumb"><iframe src="scoreboard/b.html" title="Scoreboard B" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Big "3/5" summary and a card per test with a value-vs-threshold gauge.</p><p class="trade">+ Readable at a glance on a slide. − Hides method detail.</p></article>
+    <article class="opt"><header><b>C</b> List and detail<a href="scoreboard/c.html">Open ↗</a></header><div class="thumb"><iframe src="scoreboard/c.html" title="Scoreboard C" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Test list on the left; the picked test's charts (scatter, error histogram) and method on the right.</p><p class="trade">+ Shows the real evidence. − More charts to build.</p></article>
+  </div>
+</div>
+<script>
+  // Scale each 1440×900 frame to its card width.
+  function fit() {
+    document.querySelectorAll('.thumb').forEach(t => {
+      const f = t.querySelector('iframe');
+      f.style.transform = 'scale(' + (t.clientWidth / 1440) + ')';
+    });
+  }
+  addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>

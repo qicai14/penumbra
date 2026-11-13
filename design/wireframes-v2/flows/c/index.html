@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>v2 C: Compare and rank</title>
+<link rel="stylesheet" href="../../../wireframes/wf.css"><link rel="stylesheet" href="../../v2.css">
+<script src="../../v2.js"></script>
+<script type="application/json" id="scenarios">{
+  "a": { "seed": 7 },
+  "b": { "seed": 5, "start": 276 }
+}</script>
+<style>
+  main { display: grid; gap: 12px; padding: 12px; flex: 1; }
+  .top { display: grid; grid-template-columns: 1.3fr 1fr; gap: 12px; }
+  .ab { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .delta { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .dates { display: grid; grid-template-columns: 150px repeat(12, 1fr); gap: 2px; font-size: 11px; align-items: center; }
+  .dates i { height: 22px; display: block; }
+  @media (max-width: 900px) { .top, .ab, .delta { grid-template-columns: 1fr; } .dates { grid-template-columns: 110px repeat(12, 1fr); } }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Planner</span><span>IM-2 replay</span><span class="on">Compare</span><span>Validation</span></nav>
+    <span class="spacer"></span><span class="input">Preset: Generic 1 kW ▾</span></header>
+  <main>
+    <div class="top">
+      <section class="box"><div class="lbl">Where · Mons Mouton region · operable days if landing 2027-01-12</div>
+        <div class="svgfill" data-heat='{"cols":30,"rows":18,"nodata":true,"pins":[{"x":0.42,"y":0.55,"label":"A"},{"x":0.63,"y":0.38,"label":"B"}]}'></div>
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;align-items:center;margin-top:6px"><span class="note" style="margin:0">Operable days (darker = fewer)</span><div><div class="legend6"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="axis" style="margin-left:0"><span>0</span><span>15</span><span>30</span></div></div></div>
+        <p class="ann">Baked grid: 100 m cells, 12 landing dates, this preset only. Dropping a pin runs the live engine for that exact spot; the two must agree (T24).</p>
+      </section>
+      <section class="box"><div class="lbl">When · best cell per region × 12 baked landing dates</div>
+        <div class="dates" id="dates"></div>
+        <p class="ann">Rows sorted by the best date. Click a cell to set pin A to that region and date.</p>
+      </section>
+    </div>
+
+    <div class="ab">
+      <section class="box"><div class="lbl">A · −84.61°, 1.32°E · land 2027-01-12</div>
+        <span class="num xl" data-out="a.operable"></span><span class="unit">operable days</span>
+        <div class="muted">first lethal shadow <b class="mono" data-out="a.lethal"></b> <span class="pm">±40 min</span></div>
+        <div class="svgfill" data-pano="a" data-opt='{"h":150}'></div>
+        <div class="svgfill" data-lanes="a"></div>
+      </section>
+      <section class="box"><div class="lbl">B · −84.58°, 1.41°E · land 2027-01-10</div>
+        <span class="num xl" data-out="b.operable"></span><span class="unit">operable days</span>
+        <div class="muted">first lethal shadow <b class="mono" data-out="b.lethal"></b> <span class="pm">±40 min</span></div>
+        <div class="svgfill" data-pano="b" data-opt='{"h":150}'></div>
+        <div class="svgfill" data-lanes="b"></div>
+      </section>
+    </div>
+
+    <section class="delta">
+      <div class="box"><div class="lbl">Operable (B − A)</div><span class="num sm" id="dOp"></span></div>
+      <div class="box"><div class="lbl">Lethal shadow (B − A)</div><span class="num sm" id="dLe"></span></div>
+      <div class="box"><div class="lbl">Longest dark A / B</div><span class="num sm"><span data-out="a.dark"></span> / <span data-out="b.dark"></span></span></div>
+      <div class="box"><div class="lbl">Earth contact A / B</div><span class="num sm"><span data-out="a.contact"></span> / <span data-out="b.contact"></span></span></div>
+    </section>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+<script>
+  addEventListener('DOMContentLoaded', () => {
+    const F = window.PenumbraFake, sc = JSON.parse(document.getElementById('scenarios').textContent);
+    const a = F.run(sc.a), b = F.run(sc.b), s = v => (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(1);
+    document.getElementById('dOp').textContent = s(b.operable_d - a.operable_d) + ' d';
+    document.getElementById('dLe').textContent = s((b.lethal_h - a.lethal_h) / 24) + ' d';
+    // Region × date matrix from the same FAKE model (seed per region, Sun start per date).
+    const regions = ['de Gerlache Rim 2', 'Peak near Cabeus B', 'Nobile Rim 1', 'Mons Mouton Plateau', 'Mons Mouton', 'Haworth', 'Malapert Massif', 'Nobile Rim 2', 'Slater Plain'];
+    const greys = ['#2a2a2a', '#555', '#808080', '#aaa', '#cfcfcf', '#f0f0f0'];
+    const host = document.getElementById('dates');
+    const head = ['<span></span>'].concat([...Array(12)].map((_, i) => `<span class="mono" style="text-align:center">${['J','F','M','A','M','J','J','A','S','O','N','D'][i]}</span>`));
+    host.innerHTML = head.join('') + regions.map((r, ri) => `<span>${r}</span>` + [...Array(12)].map((_, di) => {
+      const v = F.run({ seed: 3 + ri * 4, start: (di * 30) % 360 }).operable_d;
+      return `<i title="${r}, month ${di + 1}: ${v.toFixed(1)} d" style="background:${greys[Math.min(5, Math.floor(v / 2.5))]}${ri === 4 && di === 0 ? ';outline:2px solid #1d1d1d;outline-offset:-2px' : ''}"></i>`;
+    }).join('')).join('');
+  });
+</script>
+</body>
+</html>

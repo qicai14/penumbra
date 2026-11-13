@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scoreboard C: List and detail</title>
+<link rel="stylesheet" href="../wf.css">
+<style>
+  main { display: grid; grid-template-columns: 240px 1fr; flex: 1; }
+  .list { border-right: 1px solid var(--line); background: var(--paper); }
+  .item { padding: 12px; border-bottom: 1px solid var(--line); }
+  .item.on { background: var(--fill); border-left: 4px solid var(--ink); }
+  .detail { padding: 16px; display: grid; gap: 12px; align-content: start; }
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span>Terrain</span><span>IM-2 replay</span><span class="on">Validation</span></nav></header>
+  <main class="stack-sm">
+    <nav class="list">
+      <div class="item"><b>V1</b> Horizons <span class="mono">PASS</span></div>
+      <div class="item on"><b>V2</b> PGDA visibility <span class="mono">PASS</span></div>
+      <div class="item"><b>V3</b> NAC shadows <span class="mono">—</span></div>
+      <div class="item"><b>V4</b> IM-1/IM-2 <span class="mono">PASS</span></div>
+      <div class="item"><b>V5</b> Red team <span class="mono">11/12</span></div>
+    </nav>
+    <section class="detail">
+      <div><div class="lbl">V2 · PGDA AVGVISIB_85S_060M_201608</div><h2 style="margin:0">Median error 3.8 points (limit 5)</h2></div>
+      <div class="charts stack-sm">
+        <div class="box"><div class="lbl">Ours vs NASA, 10 000 pixels</div><div class="ph" style="min-height:220px">Scatter, 1:1 line, r = 0.94</div></div>
+        <div class="box"><div class="lbl">Error histogram</div><div class="ph" style="min-height:220px">Signed error, p50 / p90 marked</div></div>
+      </div>
+      <div class="box"><div class="lbl">Method</div><p class="muted">Visibility metric, 0 m, hourly over 18.6 years, stratified sample. Source links. How to reproduce: one command.</p></div>
+    </section>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

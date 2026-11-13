@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Penumbra Wireframes v2</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css">
+<style>
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 24px 16px 80px; }
+  h1 { margin: 0 0 6px; font-size: 26px; line-height: 1.3; }
+  .lede { max-width: 820px; color: var(--ink-2); margin: 0 0 20px; font-size: 14px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card { display: grid; gap: 10px; align-content: start; }
+  .card h2 { margin: 0; font-size: 18px; line-height: 1.3; }
+  .thumb { height: 300px; overflow: hidden; border: 1px solid var(--line); background: var(--paper); position: relative; }
+  .thumb iframe { width: 1400px; height: 1000px; border: 0; transform: scale(.27); transform-origin: 0 0; pointer-events: none; }
+  .card ul { margin: 0; padding-left: 18px; font-size: 13px; }
+  .card li { margin: 3px 0; }
+  .card a { color: inherit; font-weight: 600; }
+  .matrix { margin-top: 28px; }
+  .matrix td:not(:first-child), .matrix th:not(:first-child) { text-align: center; }
+  @media (max-width: 980px) { .cards { grid-template-columns: 1fr; } .thumb iframe { transform: scale(.4); } .thumb { height: 380px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Wireframes v2 · flows (reference): three whole-app directions</h1>
+  <p class="lede">Round 2, built from docs/IDEA.md, SCIENCE-SPEC.md and ARCHITECTURE.md. Each direction is the whole app, not one screen. Every chart and headline number on these pages comes from one shared FAKE model, so a picture can never disagree with its number. Greyscale only: the Low Sun brand is applied in the hi-fi pass. Round 1 is still in <a href="../../wireframes/" style="color:inherit">../wireframes/</a>.</p>
+
+  <div class="cards">
+    <section class="card box">
+      <h2>A · Planner console</h2>
+      <a class="thumb" href="a/" aria-label="Open direction A"><iframe src="a/" tabindex="-1" title="A preview"></iframe></a>
+      <ul>
+        <li><b>For:</b> CLPS/Artemis planners doing real work.</li>
+        <li><b>Shape:</b> one linked screen. Map → panorama → timelines → headline, left to right, in the order the engine computes them.</li>
+        <li><b>Strong:</b> everything visible at once; every input shows what it reruns.</li>
+        <li><b>Weak:</b> dense; judges need the story told for them.</li>
+      </ul>
+      <a href="a/">Open A →</a>
+    </section>
+    <section class="card box">
+      <h2>B · Story first</h2>
+      <a class="thumb" href="b/" aria-label="Open direction B"><iframe src="b/" tabindex="-1" title="B preview"></iframe></a>
+      <ul>
+        <li><b>For:</b> judges and the public, then planners.</li>
+        <li><b>Shape:</b> six chapters that follow the 2-minute demo: IM-2 → same site → move it → rank → proof → use it. The headline number follows you in a side rail.</li>
+        <li><b>Strong:</b> the demo video is the page; the IM-2 pit model gets the spotlight.</li>
+        <li><b>Weak:</b> slower for repeat use; needs "Skip to planner".</li>
+      </ul>
+      <a href="b/">Open B →</a>
+    </section>
+    <section class="card box">
+      <h2>C · Compare and rank</h2>
+      <a class="thumb" href="c/" aria-label="Open direction C"><iframe src="c/" tabindex="-1" title="C preview"></iframe></a>
+      <ul>
+        <li><b>For:</b> "where and when should we land?"</li>
+        <li><b>Shape:</b> region heatmap and a region × date matrix on top; two site-date pairs (A vs B) below, with the difference spelled out.</li>
+        <li><b>Strong:</b> shows choice, not just one answer; uses the Should-tier heatmap well.</li>
+        <li><b>Weak:</b> depends on baked grids (Should tier); thin if those slip.</li>
+      </ul>
+      <a href="c/">Open C →</a>
+    </section>
+  </div>
+
+  <p class="note" style="margin-top:16px">All three share the same edge cases: <a href="states.html" style="color:inherit;font-weight:600">states.html</a> (loading, OUT_OF_COVERAGE, survives the span, NOT_LOADED, slip fallbacks, phone width).</p>
+
+  <section class="matrix box">
+    <div class="lbl">What each direction shows first</div>
+    <p class="note">✓ = on the first screen, · = one click away, — = not in it.</p>
+    <table>
+      <tr><th>Item (tier)</th><th>A</th><th>B</th><th>C</th></tr>
+      <tr><td>Pick a point and date (Must)</td><td>✓</td><td>·</td><td>✓</td></tr>
+      <tr><td>Panorama with Sun and Earth tracks (Must)</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>Live Sun/Earth elevation + countdown to sunset and Earthset (Must)</td><td>✓</td><td>·</td><td>·</td></tr>
+      <tr><td>Illumination and Earth timelines (Must)</td><td>✓</td><td>·</td><td>✓</td></tr>
+      <tr><td>Survival headline: operable days, first lethal shadow (Must)</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>IM-2 replay with pit model (Should)</td><td>·</td><td>✓</td><td>·</td></tr>
+      <tr><td>Two site-date pairs side by side (Should)</td><td>·</td><td>✓</td><td>✓</td></tr>
+      <tr><td>± band on sunset times (Should)</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>Region heatmap (Should)</td><td>—</td><td>✓</td><td>✓</td></tr>
+      <tr><td>Validation scoreboard</td><td>·</td><td>✓</td><td>·</td></tr>
+    </table>
+    <p class="ann">A mix is allowed, e.g. B as the landing page that hands off to A for planners.</p>
+  </section>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

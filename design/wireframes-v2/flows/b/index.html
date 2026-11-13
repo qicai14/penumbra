@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>v2 B: Story first</title>
+<link rel="stylesheet" href="../../../wireframes/wf.css"><link rel="stylesheet" href="../../v2.css">
+<script src="../../v2.js"></script>
+<script type="application/json" id="scenarios">{
+  "im2":   { "seed": 7, "start": 20 },
+  "pit":   { "seed": 7, "start": 20, "pit": 1.85 },
+  "moved": { "seed": 5, "start": 20 },
+  "later": { "seed": 7, "start": 44 }
+}</script>
+<style>
+  .wrapb { display: grid; grid-template-columns: 1fr 260px; gap: 24px; padding: 0 16px; max-width: 1180px; margin: 0 auto; width: 100%; }
+  .rail { position: sticky; top: 12px; align-self: start; display: grid; gap: 12px; padding-top: 28px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .lede { font-size: 16px; max-width: 640px; margin: 0; }
+  @media (max-width: 900px) { .wrapb { grid-template-columns: 1fr; } .rail { position: static; order: -1; padding-top: 12px; } .two { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <div class="toc"><span class="on">1 IM-2</span><span>2 Same site</span><span>3 Move it</span><span>4 Rank</span><span>5 Proof</span><span>6 Use it</span></div>
+    <span class="spacer"></span><span class="btn">Skip to planner →</span></header>
+
+  <div class="wrapb">
+    <div>
+      <section class="chap">
+        <div class="step">1 / 6 · 6 March 2025</div>
+        <h2>IM-2 Athena landed on its side, in a small crater near Mons Mouton.</h2>
+        <div class="ph" style="min-height:220px">Mission photo: Athena on its side, in shadow<br>(NASA/Intuitive Machines, credited)</div>
+        <p class="lede">It lasted about a day <span class="assumed">unconfirmed</span>. At the pole the Sun never climbs more than a few degrees, so a few metres of crater wall is enough to shade a panel.</p>
+      </section>
+
+      <section class="chap">
+        <div class="step">2 / 6 · same site, same date, in Penumbra</div>
+        <h2>Regional terrain alone says this site had sunlight.</h2>
+        <div class="box"><div class="lbl">Horizon from the IM-2 site · LOLA 20 m terrain only</div><div class="svgfill" data-pano="im2" data-opt='{"at":0.2}'></div></div>
+        <div class="two">
+          <div class="box"><div class="lbl">Terrain only</div><span class="num" data-out="im2.operable"></span><span class="unit">operable days</span><div class="muted">first lethal shadow <b class="mono" data-out="im2.lethal"></b></div></div>
+          <div class="box"><div class="lbl">Add a 20 m crater the map can't see</div><span class="num" data-out="pit.operable"></span><span class="unit">operable days</span><div class="muted">first lethal shadow <b class="mono" data-out="pit.lethal"></b></div></div>
+        </div>
+        <div class="box"><div class="lbl">Pit model controls</div>
+          <div class="kv"><span>Crater diameter</span><b>20 m</b><span>Crater depth</span><b>2.6 m</b><span>Panel height on its side<span class="assumed">assumed</span></span><b>0.8 m</b></div>
+          <div class="slider" style="--at:55%"></div>
+          <div class="muted">Depth needed to hide the panel from a 0.9° Sun: <b class="mono">2.3 m</b>. A typical degraded 20 m crater is about 2–3 m deep, so a small crater alone could explain it.</div>
+        </div>
+        <div class="box"><div class="lbl">With the crater rim</div><div class="svgfill" data-pano="pit" data-opt='{"at":0.2,"pitLine":1.85}'></div></div>
+      </section>
+
+      <section class="chap">
+        <div class="step">3 / 6 · drag the pin, or shift the date</div>
+        <h2>Move 300 m, or wait 2 days, and the answer changes.</h2>
+        <div class="box"><div class="svgfill" data-heat='{"cols":24,"rows":12,"pins":[{"x":0.38,"y":0.5,"label":"IM-2"},{"x":0.52,"y":0.42,"label":"+300 m"}]}'></div><div class="note">Drag the pin. Each drop reruns horizon → timeline → survival (target under 50 ms).</div></div>
+        <div class="two">
+          <div class="box"><div class="lbl">300 m north-east</div><span class="num" data-out="moved.operable"></span><span class="unit">operable days</span><div class="muted">lethal <b class="mono" data-out="moved.lethal"></b></div></div>
+          <div class="box"><div class="lbl">Same spot, land 2 days later</div><span class="num" data-out="later.operable"></span><span class="unit">operable days</span><div class="muted">lethal <b class="mono" data-out="later.lethal"></b></div></div>
+        </div>
+        <p class="ann">Show whatever the model returns, even when it is less dramatic (IDEA.md demo rule).</p>
+      </section>
+
+      <section class="chap">
+        <div class="step">4 / 6 · all nine Artemis III regions</div>
+        <h2>Which regions keep this lander alive longest?</h2>
+        <div class="box rank"><ol>
+          <li><span>1</span><span>de Gerlache Rim 2</span><span class="mono">13.2 d</span><div class="rbar" style="width:100%"></div></li>
+          <li><span>2</span><span>Peak near Cabeus B</span><span class="mono">12.6 d</span><div class="rbar" style="width:95%"></div></li>
+          <li><span>3</span><span>Nobile Rim 1</span><span class="mono">11.9 d</span><div class="rbar" style="width:90%"></div></li>
+          <li><span>4</span><span>Mons Mouton Plateau</span><span class="mono">11.0 d</span><div class="rbar" style="width:83%"></div></li>
+          <li><span>…</span><span>5 more</span><span class="mono"></span><span></span></li>
+        </ol><p class="ann">Best cell per region, for one baked landing date and this preset only. Click a region to open it in the planner.</p></div>
+      </section>
+
+      <section class="chap">
+        <div class="step">5 / 6 · why you can trust it</div>
+        <h2>Checked against JPL Horizons and NASA's illumination maps.</h2>
+        <table class="box"><tr><th>Check</th><th>Target</th><th>Result</th><th></th></tr>
+          <tr><td>V1 Sun/Earth position vs JPL Horizons</td><td class="mono">≤ 0.01°</td><td class="mono">0.0016°</td><td><span class="pass">PASS</span></td></tr>
+          <tr><td>V2 vs PGDA AVGVISIB (10 000 px)</td><td class="mono">median ≤ 5 pt</td><td class="mono">3.8 pt</td><td><span class="pass">PASS</span></td></tr>
+          <tr><td>V4 IM-2 timeline</td><td class="mono">consistent</td><td class="mono">see chapter 2</td><td><span class="pass">PASS</span></td></tr>
+          <tr><td>V5 edge cases (pole, PSR floor, year end)</td><td class="mono">all pass</td><td class="mono">11 / 12</td><td><span class="miss">MISS</span></td></tr>
+        </table>
+        <p class="ann">Misses are shown with their numbers, not hidden.</p>
+      </section>
+
+      <section class="chap">
+        <div class="step">6 / 6</div>
+        <h2>Check your own site before you fly.</h2>
+        <div><span class="btn solid">Open the planner</span> <span class="btn">JSON API</span></div>
+      </section>
+    </div>
+
+    <!-- Sticky rail: the one number follows the reader through the story -->
+    <aside class="rail">
+      <div class="box head"><div class="lbl">Now showing</div><div class="muted">IM-2 site, terrain + crater</div>
+        <span class="num" data-out="pit.operable"></span><span class="unit">operable days</span>
+        <div class="muted">lethal shadow <b class="mono" data-out="pit.lethal"></b> <span class="pm">±40 min</span></div></div>
+      <div class="box"><div class="lbl">Battery</div><div class="svgfill" data-lanes="pit" data-opt='{"rows":["soc"],"bands":false}'></div></div>
+    </aside>
+  </div>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

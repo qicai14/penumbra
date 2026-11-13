@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Penumbra · Brand</title>
+<link rel="icon" href="assets/sun-mark.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@1,112,800&family=IBM+Plex+Mono:wght@400;700&family=Inter:wght@400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../tokens.css">
+<style>
+  * { box-sizing: border-box; margin: 0; }
+  html { background: var(--color-void); }
+  body {
+    background: var(--color-void); color: var(--color-paper);
+    font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono);
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--color-paper); }
+  .wrap { max-width: var(--page-max-width); margin: 0 auto; padding: 0 var(--spacing-24); }
+
+  /* top bar */
+  .bar { border-bottom: 1px solid var(--color-iron); }
+  .bar .wrap { display: flex; align-items: center; justify-content: space-between; height: 56px; gap: var(--spacing-16); }
+  .bar nav { display: flex; gap: var(--spacing-24); font-size: var(--text-caption); color: var(--color-fog); overflow-x: auto; }
+  .bar nav a { color: var(--color-fog); text-decoration: none; white-space: nowrap; }
+  .bar nav a:hover { color: var(--color-paper); }
+
+  /* hero */
+  .hero { position: relative; padding: var(--spacing-80) 0 var(--spacing-64); overflow: hidden; border-bottom: 1px solid var(--color-iron); }
+  .prompt { color: var(--color-ash); font-size: var(--text-caption); margin-bottom: var(--spacing-16); }
+  .hero h1 { font-size: var(--text-display); line-height: var(--leading-display); font-weight: 700; max-width: 22ch; }
+  .hero p { color: var(--color-fog); margin-top: var(--spacing-16); max-width: 56ch; }
+  .arrows {
+    position: absolute; right: 0; top: 0; bottom: 0; width: 46%;
+    font-size: var(--text-caption); line-height: 1.5; color: var(--color-slate);
+    white-space: pre; pointer-events: none; user-select: none; overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 40%);
+            mask-image: linear-gradient(90deg, transparent, #000 40%);
+  }
+  .hero .wrap { position: relative; }
+
+  /* sections */
+  section { padding: var(--spacing-64) 0; border-bottom: 1px solid var(--color-iron); }
+  .sec-head { display: grid; grid-template-columns: 220px 1fr; gap: var(--spacing-24); margin-bottom: var(--spacing-40); }
+  .sec-head h2 { font-size: var(--text-heading); line-height: var(--leading-heading); font-weight: 400; }
+  .sec-head p { color: var(--color-fog); max-width: 64ch; }
+  .sec-head .prompt { margin: 0; padding-top: 4px; }
+  .grid { display: grid; gap: var(--spacing-16); }
+  .g2 { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .panel { background: var(--color-carbon); border-radius: var(--radius-sm); padding: var(--spacing-32); }
+  .panel h3 { font-size: var(--text-caption); font-weight: 400; color: var(--color-ash); text-transform: uppercase; letter-spacing: .04em; margin-bottom: var(--spacing-24); }
+  .note { color: var(--color-ash); font-size: var(--text-caption); margin-top: var(--spacing-16); }
+
+  /* logo */
+  .stage { display: flex; align-items: center; justify-content: center; min-height: 220px; border-radius: var(--radius-sm); }
+  .stage.void { background: var(--color-void); border: 1px solid var(--color-iron); }
+  .stage.carbon { background: var(--color-graphite); }
+  .wm text { font-family: var(--font-wordmark); font-style: italic; font-weight: 800; font-variation-settings: 'wdth' 112; }
+  .sizes { display: flex; align-items: flex-end; gap: var(--spacing-32); flex-wrap: wrap; }
+  .sizes figure { display: grid; gap: var(--spacing-8); justify-items: start; }
+  .sizes figcaption { font-size: var(--text-caption); color: var(--color-ash); }
+
+  /* colour */
+  .ramp { display: grid; grid-template-columns: repeat(11, 1fr); border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--color-iron); }
+  .ramp div { height: 88px; padding: 12px; font-size: 11px; line-height: 1.3; display: flex; flex-direction: column; justify-content: flex-end; }
+  .chips { grid-template-columns: repeat(4, 1fr); }
+  .chip { background: var(--color-carbon); border-radius: var(--radius-sm); overflow: hidden; }
+  .chip .sw { height: 96px; }
+  .chip .meta { padding: var(--spacing-16); display: grid; gap: 2px; font-size: var(--text-caption); }
+  .chip .meta b { font-size: var(--text-body); color: var(--color-paper); }
+  .chip .meta span { color: var(--color-fog); }
+  .chip .meta i { font-style: normal; color: var(--color-ash); }
+
+  /* type */
+  .spec { display: grid; grid-template-columns: 140px 1fr; gap: var(--spacing-16); align-items: baseline; padding: var(--spacing-16) 0; border-top: 1px solid var(--color-iron); }
+  .spec:first-of-type { border-top: 0; }
+  .spec .k { font-size: var(--text-caption); color: var(--color-ash); }
+  .spec .v { overflow-wrap: anywhere; }
+  table { width: 100%; border-collapse: collapse; font-size: var(--text-caption); font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: var(--spacing-8) 0; border-bottom: 1px solid var(--color-iron); }
+  th { color: var(--color-ash); font-weight: 400; text-transform: uppercase; letter-spacing: .04em; }
+  td { color: var(--color-fog); }
+
+  /* components */
+  .btn { display: inline-flex; align-items: center; gap: var(--spacing-8); font: 700 16px/1.5 var(--font-mono); padding: 10px 16px; border-radius: var(--radius-sm); border: 1px solid transparent; color: var(--color-paper); text-decoration: none; cursor: pointer; box-shadow: var(--shadow-subtle); transition: background-color 150ms var(--ease-out), border-color 150ms var(--ease-out); }
+  .btn-primary { background: var(--color-ember); color: var(--color-void); }
+  .btn-primary:hover { background: #c4501f; }
+  .btn-ghost { background: transparent; border-color: var(--color-slate); font-weight: 400; box-shadow: none; }
+  .btn-ghost:hover { border-color: var(--color-ash); }
+  .btn:focus-visible, a:focus-visible { outline: 2px solid var(--color-paper); outline-offset: 2px; }
+  .row { display: flex; gap: var(--spacing-16); flex-wrap: wrap; align-items: center; }
+  .callout { background: var(--color-graphite); border-radius: var(--radius-sm); padding: var(--spacing-32); border-left: 2px solid var(--color-ember); }
+  .callout .tag { margin-bottom: var(--spacing-8); color: var(--color-fog); }
+  .callout h4 { font-size: var(--text-heading-sm); font-weight: 400; line-height: var(--leading-heading-sm); }
+  .callout p { color: var(--color-fog); margin-top: var(--spacing-8); }
+  .callout .quote { background: var(--color-carbon); padding: var(--spacing-16); margin-top: var(--spacing-16); border-radius: var(--radius-sm); color: var(--color-fog); }
+  .callout a { display: inline-block; margin-top: var(--spacing-16); }
+  .tag { font-size: var(--text-caption); color: var(--color-ash); text-transform: uppercase; letter-spacing: .04em; }
+  .pill { display: inline-block; font-size: 11px; line-height: 1; padding: 8px 12px; border: 1px solid var(--color-slate); border-radius: var(--radius-full); color: var(--color-ash); text-transform: uppercase; letter-spacing: .06em; white-space: nowrap; }
+  .logbars { display: grid; gap: 3px; }
+  .logbars div { height: 6px; display: flex; gap: 2px; }
+  .logbars span { flex: 1; border-radius: 0; }
+  .field { color: var(--color-slate); font-size: var(--text-caption); line-height: 1.5; white-space: pre; overflow: hidden; height: 120px; }
+
+  /* chart */
+  .chart-panel { position: relative; }
+  .chart-panel .pill { position: absolute; top: var(--spacing-24); right: var(--spacing-24); }
+  .chart svg { display: block; width: 100%; height: auto; }
+  .chart text { font-family: var(--font-mono); }
+  .legend { display: flex; gap: var(--spacing-24); flex-wrap: wrap; margin-top: var(--spacing-16); font-size: var(--text-caption); color: var(--color-fog); }
+  .g-data { grid-template-columns: 2fr 1fr; }
+  .status { display: grid; gap: var(--spacing-8); font-variant-numeric: tabular-nums; }
+  .status div { display: flex; justify-content: space-between; gap: var(--spacing-16); padding: var(--spacing-8) 0; border-bottom: 1px solid var(--color-iron); }
+  .pass { color: var(--color-fog); }
+  .miss { color: var(--color-paper); font-weight: 700; }
+
+  /* rules */
+  .rules li { list-style: none; padding: var(--spacing-8) 0; border-bottom: 1px solid var(--color-iron); color: var(--color-fog); }
+  .rules { padding: 0; }
+  .rules li::before { margin-right: var(--spacing-8); }
+  .do li::before { content: "✓"; color: var(--color-fog); }
+  .dont li::before { content: "✕"; color: var(--color-paper); font-weight: 700; }
+
+  footer { padding: var(--spacing-40) 0 var(--spacing-64); color: var(--color-ash); font-size: var(--text-caption); }
+
+  @media (max-width: 900px) {
+    .g3, .chips { grid-template-columns: repeat(2, 1fr); }
+    .sec-head { grid-template-columns: 1fr; gap: var(--spacing-8); }
+    .ramp { grid-template-columns: repeat(4, 1fr); }
+  }
+  @media (max-width: 600px) {
+    .wrap { padding: 0 var(--spacing-16); }
+    .g2, .g3, .chips, .g-data { grid-template-columns: 1fr; }
+    .ramp { grid-template-columns: repeat(2, 1fr); }
+    .panel { padding: var(--spacing-24); }
+    .bar nav { display: none; }
+    .arrows { width: 100%; opacity: .5; }
+    .spec { grid-template-columns: 1fr; gap: 4px; }
+    .hero { padding: var(--spacing-48) 0; }
+    section { padding: var(--spacing-48) 0; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <clipPath id="sky"><rect width="362" height="35"/></clipPath>
+    <symbol id="sun" viewBox="0 0 362 110">
+      <g clip-path="url(#sky)" fill="#da5c2c"><circle cx="295" cy="35" r="6"/><polygon points="304.2,31.8 334.8,30.8 304.7,36.2"/><polygon points="303.4,30.0 320.7,26.7 304.7,34.2"/><polygon points="302.1,28.3 331.4,14.0 304.3,32.2"/><polygon points="300.6,27.0 316.6,15.6 303.5,30.3"/><polygon points="298.8,26.0 316.7,5.1 302.4,28.6"/><polygon points="296.9,25.4 305.2,12.2 300.9,27.2"/><polygon points="294.8,25.3 301.9,2.7 299.1,26.2"/><polygon points="292.8,25.5 295.0,5.0 297.2,25.5"/><polygon points="290.9,26.2 287.7,0.8 295.2,25.3"/><polygon points="289.1,27.2 284.4,11.2 293.1,25.4"/><polygon points="287.6,28.6 272.1,3.4 291.2,26.0"/><polygon points="286.5,30.3 274.2,16.3 289.4,27.0"/><polygon points="285.7,32.2 257.8,13.5 287.9,28.3"/><polygon points="285.3,34.2 270.3,27.0 286.6,30.0"/><polygon points="285.3,36.2 257.2,31.0 285.8,31.8"/></g>
+    </symbol>
+    <symbol id="mark16" viewBox="0 0 100 100">
+      <defs><clipPath id="s16"><rect width="100" height="58"/></clipPath></defs>
+      <g clip-path="url(#s16)" fill="#da5c2c"><circle cx="50" cy="58" r="13"/><polygon points="65.8,49.6 93.3,50.4 67.7,60.5"/><polygon points="62.0,44.7 79.4,41.0 67.5,54.3"/><polygon points="56.7,41.4 79.6,22.8 65.1,48.5"/><polygon points="50.6,40.1 62.3,24.2 61.0,43.9"/><polygon points="44.5,41.0 50.0,10.0 55.5,41.0"/><polygon points="39.0,43.9 37.7,24.2 49.4,40.1"/><polygon points="34.9,48.5 20.4,22.8 43.3,41.4"/><polygon points="32.5,54.3 20.6,41.0 38.0,44.7"/><polygon points="32.3,60.5 6.7,50.4 34.2,49.6"/></g>
+      <rect x="4" y="58" width="92" height="12" fill="#eeeeee"/>
+    </symbol>
+  </defs>
+</svg>
+
+<header class="bar">
+  <div class="wrap">
+    <svg class="wm" viewBox="0 0 362 110" width="132" height="40" role="img" aria-label="Penumbra">
+      <text x="6" y="80" textLength="330" lengthAdjust="spacingAndGlyphs" fill="#eeeeee" font-size="50">PENUMBRA</text>
+      <use href="#sun"/><polygon points="96,38 353,34.5 353,39" fill="#eeeeee"/>
+    </svg>
+    <nav aria-label="Sections">
+      <a href="#logo">logo</a><a href="#colour">colour</a><a href="#type">type</a><a href="#shape">shape</a><a href="#components">components</a><a href="#data">data</a><a href="#rules">rules</a>
+    </nav>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="arrows" id="arrows" aria-hidden="true"></div>
+  <div class="wrap">
+    <p class="prompt">~/brand</p>
+    <h1>Penumbra on Axiom.<br>One low Sun on a black terminal.</h1>
+    <p>The brand system for Penumbra: Axiom's flat dark surfaces and monospace, with one orange, ember, for the Sun and the wordmark kept from Low Sun. Source of truth: <a href="../DESIGN.md">DESIGN.md</a> and <a href="../tokens.css">tokens.css</a>.</p>
+  </div>
+</div>
+
+<main>
+
+<section id="logo">
+  <div class="wrap">
+    <div class="sec-head"><p class="prompt">~/logo</p><div><h2>Wordmark</h2><p>Kept unchanged from Low Sun: Archivo italic 800, wdth 112, letters in paper, the half-risen Sun in ember on a hairline horizon. It is the only text not set in mono.</p></div></div>
+    <div class="grid g2">
+      <div class="stage void">
+        <svg class="wm" viewBox="0 0 362 110" style="width:78%;max-width:400px;height:auto" role="img" aria-label="Penumbra wordmark on void">
+          <text x="6" y="80" textLength="330" lengthAdjust="spacingAndGlyphs" fill="#eeeeee" font-size="50">PENUMBRA</text>
+          <use href="#sun"/><polygon points="96,38 353,34.5 353,39" fill="#eeeeee"/>
+        </svg>
+      </div>
+      <div class="stage carbon">
+        <svg class="wm" viewBox="0 0 362 110" style="width:62%;max-width:320px;height:auto" role="img" aria-label="Penumbra wordmark on graphite">
+          <text x="6" y="80" textLength="330" lengthAdjust="spacingAndGlyphs" fill="#eeeeee" font-size="50">PENUMBRA</text>
+          <use href="#sun"/><polygon points="96,38 353,34.5 353,39" fill="#eeeeee"/>
+        </svg>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:var(--spacing-16)">
+      <h3>Sizes and small mark</h3>
+      <div class="sizes">
+        <figure><svg class="wm" viewBox="0 0 362 110" width="240" height="73" role="img" aria-label="Wordmark 240px"><text x="6" y="80" textLength="330" lengthAdjust="spacingAndGlyphs" fill="#eeeeee" font-size="50">PENUMBRA</text><use href="#sun"/><polygon points="96,38 353,34.5 353,39" fill="#eeeeee"/></svg><figcaption>240px</figcaption></figure>
+        <figure><svg class="wm" viewBox="0 0 362 110" width="132" height="40" role="img" aria-label="Wordmark 132px"><text x="6" y="80" textLength="330" lengthAdjust="spacingAndGlyphs" fill="#eeeeee" font-size="50">PENUMBRA</text><use href="#sun"/><polygon points="96,38 353,34.5 353,39" fill="#eeeeee"/></svg><figcaption>132px · min</figcaption></figure>
+        <figure><svg width="48" height="48" role="img" aria-label="Sun mark 48px"><use href="#mark16"/></svg><figcaption>mark 48</figcaption></figure>
+        <figure><svg width="32" height="32" role="img" aria-label="Sun mark 32px"><use href="#mark16"/></svg><figcaption>32</figcaption></figure>
+        <figure><svg width="16" height="16" role="img" aria-label="Sun mark 16px"><use href="#mark16"/></svg><figcaption>16 · favicon</figcaption></figure>
+      </div>
+      <p class="note">Clear space: the height of the letter P on every side. Dark grounds only (void, carbon, graphite). Don't recolour the Sun, don't stretch, don't set the wordmark in mono.</p>
+    </div>
+  </div>
+</section>
+
+<section id="colour">
+  <div class="wrap">
+    <div class="sec-head"><p class="prompt">~/colour</p><div><h2>Colour</h2><p>Eleven Axiom neutrals do almost all the work. One orange and one blue each have one job. Ratios are measured on void <code>#000000</code>.</p></div></div>
+    <div class="ramp" role="list" aria-label="Neutral ramp">
+      <div role="listitem" style="background:#000;color:#b4b4b4">void<br>000000</div>
+      <div role="listitem" style="background:#111;color:#b4b4b4">carbon<br>111111</div>
+      <div role="listitem" style="background:#191919;color:#b4b4b4">graphite<br>191919</div>
+      <div role="listitem" style="background:#202020;color:#b4b4b4">iron<br>202020</div>
+      <div role="listitem" style="background:#3a3a3a;color:#d9d9d9">slate<br>3a3a3a</div>
+      <div role="listitem" style="background:#505050;color:#eee">pewter<br>505050</div>
+      <div role="listitem" style="background:#606060;color:#eee">steel<br>606060</div>
+      <div role="listitem" style="background:#7e7e7e;color:#000">ash<br>7e7e7e</div>
+      <div role="listitem" style="background:#b4b4b4;color:#000">fog<br>b4b4b4</div>
+      <div role="listitem" style="background:#d9d9d9;color:#000">chalk<br>d9d9d9</div>
+      <div role="listitem" style="background:#eee;color:#000">paper<br>eeeeee</div>
+    </div>
+    <div class="grid chips" style="margin-top:var(--spacing-16)">
+      <div class="chip"><div class="sw" style="background:var(--color-ember)"></div><div class="meta"><b>Ember · Sun</b><span>#da5c2c · --color-ember / --color-sun</span><i>5.5:1 · the one orange</i></div></div>
+      <div class="chip"><div class="sw" style="background:var(--color-ember);display:flex;align-items:center;justify-content:center;color:#000;font-weight:700">Aa</div><div class="meta"><b>Void on ember</b><span>#000 on #da5c2c</span><i>5.5:1 · button text</i></div></div>
+      <div class="chip"><div class="sw" style="background:var(--color-earth)"></div><div class="meta"><b>Earth</b><span>#0032A0 · --color-earth</span><i>2.0:1 · NASA blue, fills only</i></div></div>
+      <div class="chip"><div class="sw" style="background:var(--color-earth-line)"></div><div class="meta"><b>Earth line</b><span>#4f7fd9 · --color-earth-line</span><i>5.4:1 · Earth lines and text</i></div></div>
+    </div>
+    <p class="note">One orange: ember is the Sun. On any chart that shows the Sun, nothing else is ember. Lethal has no colour; it is ✕ plus words.</p>
+  </div>
+</section>
+
+<section id="type">
+  <div class="wrap">
+    <div class="sec-head"><p class="prompt">~/type</p><div><h2>Type</h2><p>IBM Plex Mono for everything, in two weights: 400 and 700. It stands in for Axiom's BerkeleyMono, which is a paid font. Inter only for fine print.</p></div></div>
+    <div class="grid g2">
+      <div class="panel">
+        <h3>IBM Plex Mono · web scale</h3>
+        <div class="spec"><span class="k">display 32 / 700</span><span class="v" style="font-size:32px;line-height:1.25;font-weight:700">Sun el 0.9°</span></div>
+        <div class="spec"><span class="k">heading-lg 24</span><span class="v" style="font-size:24px;line-height:1.33">First lethal shadow</span></div>
+        <div class="spec"><span class="k">heading 20</span><span class="v" style="font-size:20px;line-height:1.4">89.45° S · 1.33° E</span></div>
+        <div class="spec"><span class="k">heading-sm 18</span><span class="v" style="font-size:18px;line-height:1.56">Hours of sunlight</span></div>
+        <div class="spec"><span class="k">body 14</span><span class="v">T + 8 d 12 h until the Sun drops below the ridge.</span></div>
+        <div class="spec"><span class="k">caption 12</span><span class="v" style="font-size:12px;color:var(--color-fog)">sun el 0.9° · illustrative</span></div>
+      </div>
+      <div class="panel">
+        <h3>Slides · 1920×1080</h3>
+        <table>
+          <thead><tr><th>role</th><th>size</th><th>weight</th></tr></thead>
+          <tbody>
+            <tr><td>display</td><td>64px</td><td>700</td></tr>
+            <tr><td>title</td><td>48px</td><td>400</td></tr>
+            <tr><td>body</td><td>28px</td><td>400</td></tr>
+            <tr><td>caption / label</td><td>22px</td><td>400</td></tr>
+            <tr><td>data</td><td>28px</td><td>400 tabular</td></tr>
+          </tbody>
+        </table>
+        <h3 style="margin-top:var(--spacing-32)">Inter · fine print</h3>
+        <p style="font-family:var(--font-fine);font-size:12px;line-height:1.5;color:var(--color-fog)">Ephemeris from JPL Horizons; terrain from NASA LOLA. Shown in Inter 12 only where mono would be too dense.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="shape">
+  <div class="wrap">
+    <div class="sec-head"><p class="prompt">~/shape</p><div><h2>Shape and space</h2><p>Flat and sharp. Elevation comes from surface steps, not shadows. 2px corners, except pills. 8px base unit.</p></div></div>
+    <div class="grid g3">
+      <div class="panel"><h3>Surfaces</h3>
+        <div style="background:var(--color-void);padding:16px;border-radius:2px;border:1px solid var(--color-iron)"><span class="tag">0 void</span>
+          <div style="background:var(--color-carbon);padding:16px;border-radius:2px;margin-top:8px"><span class="tag">1 carbon</span>
+            <div style="background:var(--color-graphite);padding:16px;border-radius:2px;margin-top:8px;border:1px solid var(--color-iron)"><span class="tag">2 graphite · 3 iron border</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel"><h3>Radius</h3>
+        <div class="row"><div style="width:72px;height:72px;background:var(--color-graphite);border:1px solid var(--color-slate);border-radius:2px"></div><span class="note" style="margin:0">2px · cards, buttons, inputs</span></div>
+        <div class="row" style="margin-top:16px"><span class="pill">FAKE DATA</span><span class="note" style="margin:0">9999px · pills under 32px</span></div>
+      </div>
+      <div class="panel"><h3>Spacing · 8px unit</h3>
+        <div style="display:grid;gap:6px">
+          <div class="row" style="gap:12px"><span style="width:8px;height:8px;background:var(--color-pewter)"></span><span class="note" style="margin:0">8</span></div>
+          <div class="row" style="gap:12px"><span style="width:16px;height:8px;background:var(--color-pewter)"></span><span class="note" style="margin:0">16</span></div>
+          <div class="row" style="gap:12px"><span style="width:24px;height:8px;background:var(--color-pewter)"></span><span class="note" style="margin:0">24</span></div>
+          <div class="row" style="gap:12px"><span style="width:32px;height:8px;background:var(--color-pewter)"></span><span class="note" style="margin:0">32 · card padding</span></div>
+          <div class="row" style="gap:12px"><span style="width:40px;height:8px;background:var(--color-pewter)"></span><span class="note" style="margin:0">40 · section gap</span></div>
+          <div class="row" style="gap:12px"><span style="width:64px;height:8px;background:var(--color-pewter)"></span><span class="note" style="margin:0">64</span></div>
+          <div class="row" style="gap:12px"><span style="width:96px;height:8px;background:var(--color-pewter)"></span><span class="note" style="margin:0">96</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="components">
+  <div class="wrap">
+    <div class="sec-head"><p class="prompt">~/components</p><div><h2>Components</h2><p>Axiom's parts, unchanged except for the font and the button's dark label. Outside charts, ember appears in three places: the primary button, log bars and the callout border.</p></div></div>
+    <div class="grid g2">
+      <div class="panel">
+        <h3>Buttons</h3>
+        <div class="row"><a class="btn btn-primary" href="#data">Run the site →</a><a class="btn btn-ghost" href="#rules">Read the method →</a></div>
+        <h3 style="margin-top:var(--spacing-32)">Tag · pill · arrow link</h3>
+        <div class="row"><span class="tag">validation</span><span class="pill">FAKE DATA</span><span class="pill">PLACEHOLDER</span><a href="#data">See the scoreboard →</a></div>
+        <h3 style="margin-top:var(--spacing-32)">Log bars</h3>
+        <div class="logbars" id="logbars" aria-hidden="true"></div>
+      </div>
+      <div class="callout">
+        <p class="tag">site · shackleton rim</p>
+        <h4>A lander at 89.45° S sees the Sun for a few degrees above the ridge, then loses it.</h4>
+        <p>Penumbra gives the hours of light and Earth contact for a site and date, and when the first lethal shadow arrives.</p>
+        <div class="quote">"Sunset at day 8.5, then 70 hours dark." <span class="pill" style="margin-left:8px">FAKE DATA</span></div>
+        <a href="#data">Open the timeline →</a>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:var(--spacing-16)">
+      <h3>Arrow field · slate</h3>
+      <div class="field" id="field" aria-hidden="true"></div>
+    </div>
+  </div>
+</section>
+
+<section id="data">
+  <div class="wrap">
+    <div class="sec-head"><p class="prompt">~/data</p><div><h2>Data encoding</h2><p>Colour never carries meaning alone: tracks differ in lightness and line style and are labelled at the line end. Lethal and pass/fail are symbols.</p></div></div>
+    <div class="grid g-data">
+      <div class="panel chart-panel">
+        <h3>Horizon · azimuth 0–360°</h3>
+        <span class="pill">FAKE DATA</span>
+        <div class="chart">
+          <svg id="chart" viewBox="0 0 720 300" role="img" aria-label="Fake horizon chart: Sun track drops behind the ridge, Earth track stays above it, first lethal shadow marked."></svg>
+        </div>
+        <div class="legend"><span><span style="color:var(--color-sun)">━</span> Sun</span><span><span style="color:var(--color-earth-line)">┅</span> Earth</span><span><span style="color:var(--color-ash)">▮</span> terrain lit</span><span><span style="color:var(--color-slate)">▮</span> in shadow</span><span><b style="color:var(--color-paper)">✕</b> first lethal shadow</span></div>
+      </div>
+      <div class="panel">
+        <h3>Validation</h3>
+        <div class="status">
+          <div><span>V1 Horizons</span><span class="pass">✓ PASS</span></div>
+          <div><span>V2 PGDA</span><span class="pass">✓ PASS</span></div>
+          <div><span>V3 NAC IoU</span><span class="miss">✕ MISS</span></div>
+          <div><span>V4 IM-1</span><span class="pass">✓ PASS</span></div>
+          <div><span>V5 red team</span><span class="pass">✓ PASS</span></div>
+        </div>
+        <p class="note"><span class="pill">FAKE DATA</span></p>
+        <h3 style="margin-top:var(--spacing-32)">Earth fill</h3>
+        <div style="height:40px;background:var(--color-earth);border-radius:2px;display:flex;align-items:center;padding:0 12px;font-size:12px;color:var(--color-paper)">contact window</div>
+        <p class="note">NASA blue as a fill, with paper text on it (12.6:1).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="rules">
+  <div class="wrap">
+    <div class="sec-head"><p class="prompt">~/rules</p><div><h2>Do and don't</h2><p>The short version of DESIGN.md sections 5 and 6.</p></div></div>
+    <div class="grid g2">
+      <div class="panel"><h3>Do</h3><ul class="rules do">
+        <li>Set every line in IBM Plex Mono, except the wordmark.</li>
+        <li>Layer void → carbon → graphite → iron for depth.</li>
+        <li>Use 2px corners on cards, panels and buttons.</li>
+        <li>Open each section with a <code>~/section</code> prompt.</li>
+        <li>Follow action labels with <code>→</code>.</li>
+        <li>Put a FAKE pill on any number that is not real.</li>
+      </ul></div>
+      <div class="panel"><h3>Don't</h3><ul class="rules dont">
+        <li>Gradients, glows, or shadows for elevation.</li>
+        <li>Ember on body text, or on any chart line except the Sun.</li>
+        <li>NASA blue as a thin line or text on black.</li>
+        <li>Red or green for status. Use ✓ and ✕.</li>
+        <li>Light-theme sections or photography.</li>
+        <li>Corners above 2px, except pills.</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer><div class="wrap">penumbra · brand · Nov 12 2026 · planning artefact, not app code</div></footer>
+
+<script>
+// Arrow field: diagonal ">" pattern
+function arrowField(el, cols, rows) {
+  let out = "";
+  for (let r = 0; r < rows; r++) {
+    let line = "";
+    for (let c = 0; c < cols; c++) line += ((c + r) % 6 < 3) ? "> " : "  ";
+    out += line + "\n";
+  }
+  el.textContent = out;
+}
+arrowField(document.getElementById("arrows"), 60, 30);
+arrowField(document.getElementById("field"), 120, 8);
+
+// Log bars: deterministic pseudo-random rows
+(function () {
+  const el = document.getElementById("logbars");
+  let s = 7; const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  for (let r = 0; r < 6; r++) {
+    const row = document.createElement("div");
+    for (let i = 0; i < 48; i++) {
+      const b = document.createElement("span");
+      const v = rnd();
+      b.style.background = v > 0.55 ? "var(--color-ember)" : v > 0.3 ? "var(--color-slate)" : "transparent";
+      row.appendChild(b);
+    }
+    el.appendChild(row);
+  }
+})();
+
+// Fake horizon chart
+(function () {
+  const svg = document.getElementById("chart");
+  const NS = "http://www.w3.org/2000/svg";
+  const W = 720, H = 300, L = 44, R = 16, T = 24, B = 40;
+  const x = az => L + (az / 360) * (W - L - R);
+  const y = el => H - B - (el / 8) * (H - T - B);
+  const add = (tag, attrs, text) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (text) e.textContent = text; svg.appendChild(e); return e; };
+  for (let e = 0; e <= 8; e += 2) {
+    add("line", { x1: L, x2: W - R, y1: y(e), y2: y(e), stroke: "#202020" });
+    add("text", { x: L - 8, y: y(e) + 4, "text-anchor": "end", fill: "#7e7e7e", "font-size": 11 }, e + "°");
+  }
+  for (let a = 0; a <= 360; a += 90) add("text", { x: x(a), y: H - B + 20, "text-anchor": "middle", fill: "#7e7e7e", "font-size": 11 }, a + "°");
+  const ridge = az => 1.6 + 1.4 * Math.sin(az / 26) + 1.1 * Math.sin(az / 9 + 1) + (az > 200 && az < 290 ? 2.2 * Math.sin((az - 200) / 90 * Math.PI) : 0);
+  const sun = az => 6.6 - 6.0 * ((az - 40) / 320);
+  for (let az = 0; az < 360; az += 4) {
+    const h = Math.max(0.2, ridge(az));
+    const lit = sun(az) > h;
+    add("rect", { x: x(az), y: y(h), width: (W - L - R) / 90 - 2, height: y(0) - y(h), fill: lit ? "#7e7e7e" : "#3a3a3a" });
+  }
+  let sp = "", ep = "";
+  let on = false; for (let az = 40; az <= 360; az += 1) { const vis = sun(az) > ridge(az); if (vis) { sp += (on ? "L" : "M") + x(az).toFixed(1) + " " + y(sun(az)).toFixed(1); } on = vis; }
+  for (let az = 0; az <= 360; az += 2) ep += (ep ? "L" : "M") + x(az).toFixed(1) + " " + y(7.2 + 0.4 * Math.sin(az / 57)).toFixed(1);
+  add("path", { d: ep, fill: "none", stroke: "#4f7fd9", "stroke-width": 2, "stroke-dasharray": "6 5" });
+  add("path", { d: sp, fill: "none", stroke: "#da5c2c", "stroke-width": 2.5 });
+  add("text", { x: x(360) - 4, y: y(7.2) - 10, "text-anchor": "end", fill: "#4f7fd9", "font-size": 12 }, "Earth");
+  add("text", { x: x(40) + 4, y: y(sun(40)) - 10, fill: "#da5c2c", "font-size": 12 }, "Sun");
+  let hit = 40; for (let az = 40; az < 360; az++) if (sun(az) < ridge(az)) { hit = az; break; }
+  add("text", { x: x(hit), y: y(sun(hit)) + 5, "text-anchor": "middle", fill: "#eeeeee", "font-size": 18, "font-weight": 700 }, "✕");
+  add("text", { x: x(hit) - 14, y: y(sun(hit)) - 14, "text-anchor": "end", fill: "#eeeeee", "font-size": 12 }, "first lethal shadow");
+})();
+</script>
+</body>
+</html>

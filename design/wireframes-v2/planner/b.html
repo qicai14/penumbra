@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planner B: What changes what</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css">
+<script src="../v2.js"></script>
+<script type="application/json" id="scenarios">{ "main": { "seed": 7 } }</script>
+<style>
+  main { display: grid; grid-template-columns: 320px 1fr; gap: 12px; padding: 12px; flex: 1; }
+  .col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+  .ctlrow { border-bottom: 1px solid var(--line); padding: 8px 0; }
+  .ctlrow:last-child { border-bottom: 0; }
+  .ctlrow .top { display: flex; justify-content: space-between; font-size: 13px; }
+  .runs { display: flex; gap: 4px; margin-top: 2px; }
+  .runs span { font: 11px var(--mono); border: 1px solid var(--line); padding: 0 4px; color: var(--ink-3); }
+  .runs span.y { border-color: var(--ink); color: var(--ink); }
+  .tor { display: grid; grid-template-columns: 170px 1fr 70px; gap: 8px; align-items: center; font-size: 13px; margin: 6px 0; }
+  .tor .track { height: 14px; background: var(--fill); position: relative; }
+  .tor .track i { position: absolute; top: 0; bottom: 0; background: var(--ink-2); }
+  .tor .track::after { content: ""; position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span class="on">Planner</span><span>Terrain</span><span>IM-2 replay</span><span>Validation</span></nav>
+    <span class="spacer"></span><span class="input">Mons Mouton · land 2027-01-12</span></header>
+  <main class="stack-sm">
+    <aside class="col">
+      <div class="box"><div class="lbl">Inputs · each shows what it reruns</div>
+        <div class="ctlrow"><div class="top"><span>Mast height <span class="assumed">assumed</span></span><b class="mono">2.0 m</b></div><div class="slider" style="--at:20%"></div><div class="runs"><span class="y">horizon</span><span class="y">timeline</span><span class="y">survival</span></div></div>
+        <div class="ctlrow"><div class="top"><span>Landing date</span><b class="mono">2027-01-12</b></div><div class="slider" style="--at:40%"></div><div class="runs"><span>horizon</span><span class="y">timeline</span><span class="y">survival</span></div></div>
+        <div class="ctlrow"><div class="top"><span>Earth margin <span class="assumed">assumed</span></span><b class="mono">2°</b></div><div class="slider" style="--at:30%"></div><div class="runs"><span>horizon</span><span class="y">timeline</span><span class="y">survival</span></div></div>
+        <div class="ctlrow"><div class="top"><span>Battery <span class="assumed">assumed</span></span><b class="mono">1 500 Wh</b></div><div class="slider" style="--at:50%"></div><div class="runs"><span>horizon</span><span>timeline</span><span class="y">survival</span></div></div>
+        <div class="ctlrow"><div class="top"><span>Load <span class="assumed">assumed</span></span><b class="mono">180 W</b></div><div class="slider" style="--at:45%"></div><div class="runs"><span>horizon</span><span>timeline</span><span class="y">survival</span></div></div>
+      </div>
+    </aside>
+    <section class="col">
+      <div class="box head" style="grid-template-columns:auto auto 1fr;gap:24px;align-items:end">
+        <div><div class="lbl">Operable</div><span class="num xl" data-out="main.operable"></span><span class="unit">days of 30</span></div>
+        <div><div class="lbl">First lethal shadow</div><span class="num" data-out="main.lethal"></span> <span class="pm">±40 min</span></div>
+        <div class="muted">Longest darkness <b class="mono" data-out="main.dark"></b></div>
+      </div>
+      <div class="box"><div class="lbl">Battery charge, 30 days</div><div class="svgfill" data-lanes="main" data-opt='{"rows":["ill","soc"]}'></div></div>
+      <div class="box"><div class="lbl">Which input matters most here · operable days if you change one thing</div><div id="tor"></div>
+        <p class="ann">Each bar reruns the model with one input moved; the centre line is today's answer.</p></div>
+    </section>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+<script>
+  addEventListener('DOMContentLoaded', () => {
+    const F = PenumbraFake, base = F.run({ seed: 7 }).operable_d;
+    const rows = [
+      ['Earth margin 2° → 4°', { seed: 7, margin: 4 }],
+      ['Mast 2 m → 10 m', { seed: 7, mast: 10 }],
+      ['Land 2 days later', { seed: 7, start: 324 }],
+      ['Land 2 days earlier', { seed: 7, start: 276 }],
+      ['Earth margin 2° → 1°', { seed: 7, margin: 1 }],
+    ].map(([n, sc]) => [n, F.run(sc).operable_d - base]).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+    const max = Math.max(...rows.map(r => Math.abs(r[1])), 1);
+    document.getElementById('tor').innerHTML = rows.map(([n, d]) => {
+      const w = 50 * Math.abs(d) / max, left = d < 0 ? 50 - w : 50;
+      return `<div class="tor"><span>${n}</span><div class="track"><i style="left:${left}%;width:${w}%"></i></div><b class="mono">${d >= 0 ? '+' : '−'}${Math.abs(d).toFixed(1)} d</b></div>`;
+    }).join('');
+  });
+</script>
+</body>
+</html>

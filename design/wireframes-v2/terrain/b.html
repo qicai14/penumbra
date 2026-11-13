@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terrain B: Region heatmap ranking</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css">
+<script src="../v2.js"></script>
+<style>
+  main { display: grid; grid-template-columns: 1fr 300px; gap: 12px; padding: 12px; flex: 1; }
+  .col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span class="on">Terrain</span><span>IM-2 replay</span><span>Validation</span></nav>
+    <span class="spacer"></span><span class="input">Mons Mouton ▾</span><span class="input">Land 2027-01-12 ▾ (12 baked dates)</span><span class="input">Generic 1 kW</span></header>
+  <main class="stack-sm">
+    <section class="box"><div class="lbl">Operable days for every 100 m cell · 151 × 151 cells</div>
+      <div class="svgfill" data-heat='{"cols":36,"rows":24,"nodata":true,"pins":[{"x":0.31,"y":0.62,"label":"1"},{"x":0.55,"y":0.28,"label":"2"},{"x":0.8,"y":0.7,"label":"3"}],"ring":[0.42,0.55,60]}'></div>
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;align-items:center;margin-top:6px"><span class="note" style="margin:0">Operable days (darker = fewer)</span><div><div class="legend6"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="axis" style="margin-left:0"><span>0</span><span>15</span><span>30</span></div></div></div>
+    </section>
+    <aside class="col">
+      <div class="box"><div class="lbl">Show</div><div>◉ Operable days</div><div>○ Time to first lethal shadow</div><div>○ Longest darkness</div></div>
+      <div class="box rank"><div class="lbl">Top cells in view</div><ol>
+        <li><span>1</span><span class="mono">−84.63°, 0.9°E</span><span class="mono">22.1 d</span><span>slope 4°</span></li>
+        <li><span>2</span><span class="mono">−84.55°, 1.6°E</span><span class="mono">21.7 d</span><span>slope 7°</span></li>
+        <li><span>3</span><span class="mono">−84.64°, 2.1°E</span><span class="mono">20.9 d</span><span>slope 3°</span></li></ol></div>
+      <div class="box"><div class="lbl">Within 1 km of IM-2 (dashed ring)</div><div class="kv"><span>Best cell</span><b>18.4 d</b><span>IM-2 spot</span><b>8.5 d</b></div></div>
+      <p class="ann">Grids are baked offline for 12 dates and this preset only. Clicking a cell runs the live engine there, and both must agree (T24).</p>
+    </aside>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

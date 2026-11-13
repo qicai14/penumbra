@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Replay A: Scroll story</title>
+<link rel="stylesheet" href="../wf.css">
+<style>
+  .story { display: grid; grid-template-columns: 1fr 1.4fr; gap: 24px; padding: 24px; }
+  .text { display: grid; gap: 120px; padding: 40px 0 200px; }
+  .text .box { max-width: 380px; }
+  .sticky { position: sticky; top: 16px; height: calc(100vh - 80px); min-height: 420px; }
+  .step { font: 700 12px var(--mono); }
+  h2 { margin: 4px 0 8px; font-size: 20px; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span>Terrain</span><span class="on">IM-2 replay</span><span>Validation</span></nav></header>
+  <section class="story stack-sm">
+    <div class="text">
+      <div class="box"><div class="step">01 / 05</div><h2>IM-2 lay on its side in shadow.</h2><p class="muted">Mons Mouton, 2025-03-06. It lasted about a day [unconfirmed].</p></div>
+      <div class="box"><div class="step">02 / 05</div><h2>Regional terrain says it had sun.</h2><p class="muted">Sun at about 1°. The 20 m map shows light on the panels.</p></div>
+      <div class="box"><div class="step">03 / 05</div><h2>Add the crater the map can't see.</h2><p class="muted">How deep must it be to shade a panel at height H?</p><div class="slider"></div><span class="mono">depth 3.0 m</span></div>
+      <div class="box"><div class="step">04 / 05</div><h2>Move 300 m, or wait 2 days.</h2><p class="muted">What the model returns, not what we hope.</p></div>
+      <div class="box"><div class="step">05 / 05</div><h2>Check before you fly.</h2><span class="btn solid">Open this site in the planner</span></div>
+    </div>
+    <div class="sticky"><div class="ph dark" style="height:100%">Sticky visual that changes per step:<br>lander photo → panorama → pit cross-section → 3D shadow sweep → planner</div></div>
+  </section>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

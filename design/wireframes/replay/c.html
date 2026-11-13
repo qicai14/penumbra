@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Replay C: As landed vs better</title>
+<link rel="stylesheet" href="../wf.css">
+<style>
+  .lead { padding: 16px 16px 0; }
+  .lead h1 { margin: 0; font-size: 22px; }
+  main { display: grid; grid-template-columns: 1fr 64px 1fr; gap: 12px; padding: 16px; align-items: start; }
+  .vs { align-self: center; text-align: center; font: 700 20px var(--mono); }
+  .col { display: grid; gap: 10px; }
+  .view { min-height: 260px; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span>Terrain</span><span class="on">IM-2 replay</span><span>Validation</span></nav></header>
+  <div class="lead"><h1>IM-2 as landed, and the nearest site that would have lasted 5+ days</h1><p class="muted">Search radius 1 km · or nearest landing date · same lander preset</p></div>
+  <main class="stack-sm">
+    <section class="box col">
+      <div class="lbl">As landed · 2025-03-06</div>
+      <div class="ph dark view">Panorama / 3D at landing</div>
+      <div class="num">~1<span class="unit">day [U]</span></div>
+      <div class="lane"><span class="name">Operable</span><div class="track"><i style="left:0;width:4%"></i></div></div>
+    </section>
+    <div class="vs">→</div>
+    <section class="box col" style="outline:3px solid var(--ink)">
+      <div class="lbl">Best within 1 km · 410 m SE</div>
+      <div class="ph dark view">Panorama / 3D at the better site</div>
+      <div class="num">6.8<span class="unit">days</span></div>
+      <div class="lane"><span class="name">Operable</span><div class="track"><i style="left:0;width:40%"></i><i style="left:48%;width:10%"></i></div></div>
+    </section>
+  </main>
+  <div class="box" style="margin:0 16px 16px"><div class="lbl">Why it differs</div><p class="muted">Sentence generated from the numbers: rim 3 m higher to the north blocks the Sun from az 120–160° for 30 h.</p></div>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

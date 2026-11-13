@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Replay B: Timeline check</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css">
+<script src="../v2.js"></script>
+<script type="application/json" id="scenarios">{ "pit": { "seed": 7, "start": 20, "pit": 1.85 } }</script>
+<style>
+  main { display: grid; gap: 12px; padding: 12px; flex: 1; }
+  .ev { display: grid; grid-template-columns: 92px 1fr; gap: 8px; align-items: center; }
+  .ev .track { position: relative; height: 60px; background: var(--fill); }
+  .ev .track b { position: absolute; top: 4px; transform: translateX(-1px); border-left: 2px solid var(--ink); padding: 3px 8px; background: var(--paper); font: 600 12px/1.3 var(--sans); }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 800px) { .two { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span>Terrain</span><span class="on">IM-2 replay</span><span>Validation</span></nav>
+    <span class="spacer"></span><span class="input">IM-2 Athena · 2025-03-06 → +4 d</span></header>
+  <main>
+    <section class="box"><div class="lbl">V4 · published timeline vs our model · first 4 days shown on the same axis</div>
+      <div class="ev"><span class="name">Published</span><div class="track">
+        <b style="left:8px">landed</b><b style="left:6%;top:32px">on its side</b><b style="left:28%">last contact ≈ 1 d <span class="assumed">unconfirmed</span></b></div></div>
+      <div class="ev"><span class="name">Our model</span><div class="track">
+        <b style="left:8px">sunlit 22%</b><b style="left:18%;top:32px">panel shaded</b><b style="left:29%">battery at minimum</b></div></div>
+      <div class="axis"><span>land</span><span>+1 d</span><span>+2 d</span><span>+3 d</span><span>+4 d</span></div>
+      <p class="ann">Pass = consistent with the published timeline. No Sun elevation was ever published for IM-1 or IM-2, so this is a consistency check, not a match to a number.</p>
+    </section>
+    <div class="two">
+      <section class="box"><div class="lbl">Model, 30 days, with the crater</div><div class="svgfill" data-lanes="pit" data-opt='{"rows":["ill","con","soc"]}'></div></section>
+      <section class="box"><div class="lbl">Verdict</div>
+        <div><span class="pass">CONSISTENT</span> model dies at <b class="mono" data-out="pit.lethal"></b>; mission ended ≈ 1 d after landing.</div>
+        <table style="margin-top:8px"><tr><th>Source</th><th>Claim</th></tr><tr><td>NASA / IM press, 2025</td><td>on its side in a small crater</td></tr><tr><td>SCIENCE-SPEC E73, E74</td><td>low Sun + panel orientation stopped charging</td></tr><tr><td>U19</td><td>"about 1 day" unconfirmed</td></tr></table></section>
+    </div>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

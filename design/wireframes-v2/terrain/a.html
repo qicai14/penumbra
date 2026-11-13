@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terrain A: Shadow sweep</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css">
+<script src="../v2.js"></script>
+<style>
+  main { display: grid; gap: 12px; padding: 12px; flex: 1; grid-template-rows: 1fr auto; }
+  .stage { position: relative; min-height: 480px; padding: 0; }
+  .stage .ph { position: absolute; inset: 0; border: 0; }
+  .hud { position: absolute; left: 16px; top: 16px; width: 250px; color: var(--ink); border-color: var(--ink); }
+  .box.dark .hud .lbl { color: var(--ink-3); }
+  .frames { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; }
+  .frames div { height: 56px; }
+  .frames .on { outline: 2px solid var(--ink); outline-offset: 1px; }
+  @media (max-width: 760px) { .frames { grid-template-columns: repeat(4, 1fr); } .hud { position: static; width: auto; margin: 12px; } .stage { display: grid; align-content: end; } }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span class="on">Terrain</span><span>IM-2 replay</span><span>Validation</span></nav>
+    <span class="spacer"></span><span class="input">Mons Mouton region · 15 × 15 km</span></header>
+  <main>
+    <section class="box dark stage">
+      <div class="ph dark">3D terrain, shaded by our model's shadow at time t (not GPU shadow maps)<br>Shadow edge drawn as a bright line; pin and its horizon cone on the ground</div>
+      <div class="box hud"><div class="lbl">At the pin</div>
+        <div class="kv"><span>Lit now</span><b><span data-out="main.lit"></span> · <span data-out="main.disc"></span> disc</b><span>Shadow edge</span><b>220 m W</b><span>Edge speed</span><b>≈ 9 m/h</b><span>Reaches pin in</span><b><span data-out="main.sunset"></span> ±40 min</b></div></div>
+    </section>
+    <section class="box"><div class="lbl">Sweep time · 2027-01-12 → +30 d · one frame per day shown</div>
+      <div class="slider" style="--at:23%"></div>
+      <div class="frames"><div class="ph dark">+0d</div><div class="ph dark on">+1d</div><div class="ph dark">+2d</div><div class="ph dark">+3d</div><div class="ph dark">+4d</div><div class="ph dark">+5d</div><div class="ph dark">+6d</div><div class="ph dark">+7d</div></div>
+      <div style="margin-top:8px"><span class="btn">▶ Play sweep</span> <span class="btn">1 h / s ▾</span> <span class="chip">Camera: lander mast height</span></div>
+      <p class="ann">Real-scale shadows at a person's or a mast's eye height (cinematographer role, IDEA.md). If 3D slips, this screen becomes the 2D map (cut order 1).</p>
+    </section>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

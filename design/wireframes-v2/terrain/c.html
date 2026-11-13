@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terrain C: Cross-section to the Sun</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css">
+<script src="../v2.js"></script>
+<style>
+  main { display: grid; grid-template-columns: 300px 1fr; gap: 12px; padding: 12px; flex: 1; }
+  .col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span class="on">Terrain</span><span>IM-2 replay</span><span>Validation</span></nav>
+    <span class="spacer"></span><span class="input">Mons Mouton · −84.61°, 1.32°E</span><span class="input">2027-01-12 18:00 UTC</span></header>
+  <main class="stack-sm">
+    <aside class="col">
+      <div class="box"><div class="lbl">Cut line: pin → Sun azimuth 141°</div>
+        <div class="svgfill" data-heat='{"cols":16,"rows":16,"pins":[{"x":0.4,"y":0.6,"label":"pin","cone":true}]}'></div>
+        <div class="kv" style="margin-top:8px"><span>Follow</span><b>◉ Sun ○ Earth ○ any az</b></div></div>
+      <div class="box"><div class="lbl">Blocking ridge</div><div class="kv"><span>Distance</span><b>2.4 km</b><span>Clears the ray by</span><b>+31 m</b><span>Sun sets behind it in</span><b data-out="main.sunset"></b></div></div>
+    </aside>
+    <section class="box"><div class="lbl">Terrain profile along the cut</div>
+      <p class="note">Height exaggerated ×20. The Moon's curvature is included.</p>
+      <div class="svgfill"><svg viewBox="0 0 720 300" role="img" aria-label="Terrain profile with the Sun ray from the mast top">
+        <rect width="720" height="300" fill="#f4f4f2"/>
+        <path d="M40 210 L70 205 L110 214 L160 200 L210 196 L250 176 L285 150 L300 140 L320 152 L360 175 L420 186 L480 170 L540 160 L600 172 L680 166 L680 270 L40 270Z" fill="#b9b9b6"/>
+        <path d="M40 270 Q360 262 680 270" fill="none" stroke="#555" stroke-dasharray="4 3"/><text x="520" y="290" font-size="11" fill="#555">sphere (curvature)</text>
+        <line x1="40" y1="210" x2="40" y2="186" stroke="#1d1d1d" stroke-width="3"/><text x="46" y="182" font-size="12" fill="#1d1d1d">mast 2 m</text>
+        <line x1="40" y1="186" x2="700" y2="98" stroke="#1d1d1d" stroke-width="2.5"/><text x="560" y="104" font-size="12" font-weight="700" fill="#1d1d1d">ray to the Sun, <tspan data-out="main.sunEl"></tspan></text>
+        <line x1="300" y1="140" x2="300" y2="151" stroke="#1d1d1d" stroke-dasharray="2 2"/><text x="250" y="130" font-size="12" fill="#1d1d1d">ridge, 2.4 km</text>
+        <text x="40" y="250" font-size="11" fill="#1d1d1d">0 km</text><text x="290" y="250" font-size="11" fill="#1d1d1d">2.4</text><text x="640" y="250" font-size="11" fill="#1d1d1d">7 km</text>
+      </svg></div>
+      <p class="ann">The 20 m tile covers the first 7 km; past that the 240 m tile is used, out to 200 km. This view explains <i>why</i> a site goes dark, which no panorama shows directly.</p>
+    </section>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

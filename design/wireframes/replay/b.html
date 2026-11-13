@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Replay B: Mission scrubber</title>
+<link rel="stylesheet" href="../wf.css">
+<style>
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; }
+  .scrub { padding: 12px; }
+  .events { position: relative; height: 56px; border-top: 2px solid var(--ink); margin-top: 24px; }
+  .ev { position: absolute; top: -9px; transform: translateX(-50%); text-align: center; font-size: 12px; }
+  .ev b { display: block; width: 16px; height: 16px; margin: 0 auto 4px; background: var(--ink); transform: rotate(45deg); }
+  .view { min-height: 300px; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span>Terrain</span><span class="on">IM-2 replay</span><span>Validation</span></nav>
+    <span class="spacer"></span><span class="chip">Mission: IM-2 ▾</span><span class="chip">IM-1 (stretch)</span></header>
+  <section class="box scrub" style="margin:12px 12px 0">
+    <div class="lbl">Mission timeline · drag or click an event</div>
+    <div class="events">
+      <span class="ev" style="left:4%"><b></b>Landing</span>
+      <span class="ev" style="left:12%"><b></b>Tipped</span>
+      <span class="ev" style="left:38%"><b></b>Last contact [U]</span>
+      <span class="ev" style="left:46%;font-weight:700">▲ now</span>
+      <span class="ev" style="left:90%"><b></b>Sunrise at site</span>
+    </div>
+  </section>
+  <main class="stack-sm">
+    <section class="box"><div class="lbl">What happened (published record)</div><div class="ph view">Mission photo / timeline text with sources</div><div class="note">Every claim links to EVIDENCE.md. Unconfirmed = [U].</div></section>
+    <section class="box"><div class="lbl">What Penumbra computes</div><div class="ph dark view">Panorama or 3D at the scrubbed time</div>
+      <table><tr><td>Sun disc on panel</td><td class="mono">0%</td></tr><tr><td>Battery SoC</td><td class="mono">12%</td></tr><tr><td>Earth el</td><td class="mono">4.2°</td></tr></table></section>
+  </main>
+  <div class="box" style="margin:0 12px 12px"><div class="lbl">Pit model</div><span class="mono">Crater depth</span><div class="slider" style="--at:35%"></div><span class="muted">Shows the depth at which the panels go dark.</span></div>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

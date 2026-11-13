@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scoreboard B: Gauge cards</title>
+<link rel="stylesheet" href="../wf.css">
+<style>
+  main { padding: 16px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+  .gauge { height: 10px; background: var(--fill); position: relative; margin: 12px 0 4px; }
+  .gauge .thr { position: absolute; top: -6px; bottom: -6px; border-left: 2px dashed var(--ink); }
+  .gauge .val { position: absolute; top: -4px; width: 14px; height: 18px; background: var(--ink); }
+  .summary { display: flex; gap: 24px; align-items: baseline; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span>Terrain</span><span>IM-2 replay</span><span class="on">Validation</span></nav></header>
+  <main>
+    <div class="summary"><span class="num xl">3/5</span><span class="muted">tests pass · 1 miss · 1 not run</span></div>
+    <div class="grid">
+      <div class="box"><div class="lbl">V1 · Horizons</div><div class="num">0.0031°</div><div class="gauge"><span class="thr" style="left:70%"></span><span class="val" style="left:20%"></span></div><div class="muted">limit 0.01° · PASS</div></div>
+      <div class="box"><div class="lbl">V2 · PGDA visibility</div><div class="num">3.8 pt</div><div class="gauge"><span class="thr" style="left:70%"></span><span class="val" style="left:52%"></span></div><div class="muted">limit 5 pt · PASS</div></div>
+      <div class="box"><div class="lbl">V3 · NAC shadows</div><div class="num">—</div><div class="gauge"></div><div class="muted">stretch · NOT RUN</div></div>
+      <div class="box"><div class="lbl">V4 · IM-1/IM-2</div><div class="num sm">consistent</div><div class="muted">with published timeline · PASS</div></div>
+      <div class="box"><div class="lbl">V5 · Red team</div><div class="num">11/12</div><div class="gauge"><span class="thr" style="left:100%"></span><span class="val" style="left:88%"></span></div><div class="muted">PSR floor case fails · MISS</div></div>
+    </div>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

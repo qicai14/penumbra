@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Scoreboard A: Ledger table</title>
+<link rel="stylesheet" href="../wf.css">
+<style>
+  main { padding: 16px; max-width: 1100px; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  .spark { width: 120px; height: 24px; background: var(--fill); }
+  .st { font: 700 12px var(--mono); border: 2px solid var(--ink); padding: 4px 8px; }
+  .st.miss { border-style: dashed; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span>Terrain</span><span>IM-2 replay</span><span class="on">Validation</span></nav></header>
+  <main>
+    <h1>Checked against outside judges</h1>
+    <p class="muted">Misses are reported with the numbers. Last run: 2026-11-15 09:12 UTC · commit abc1234</p>
+    <div class="box" style="padding:0;overflow-x:auto">
+      <table>
+        <tr><th>Test</th><th>Judge</th><th>Pass if</th><th>Ours</th><th>Spread</th><th>Status</th></tr>
+        <tr><td><b>V1</b></td><td>JPL Horizons, 20 pairs</td><td class="mono">≤ 0.01°</td><td class="mono">0.0031°</td><td><div class="spark"></div></td><td><span class="st">PASS</span></td></tr>
+        <tr><td><b>V2</b></td><td>PGDA AVGVISIB, 10 000 px</td><td class="mono">median ≤ 5 pt</td><td class="mono">3.8 pt</td><td><div class="spark"></div></td><td><span class="st">PASS</span></td></tr>
+        <tr><td><b>V3</b></td><td>LROC NAC shadows</td><td class="mono">IoU ≥ 0.75</td><td class="mono">—</td><td>—</td><td><span class="st miss">NOT RUN</span></td></tr>
+        <tr><td><b>V4</b></td><td>IM-1 / IM-2 timeline</td><td>consistent</td><td>consistent</td><td>—</td><td><span class="st">PASS</span></td></tr>
+        <tr><td><b>V5</b></td><td>Red-team cases</td><td class="mono">12 / 12</td><td class="mono">11 / 12</td><td>—</td><td><span class="st miss">MISS</span></td></tr>
+      </table>
+    </div>
+    <p class="note">Click a row to expand its chart and method notes.</p>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

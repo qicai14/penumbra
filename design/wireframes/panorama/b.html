@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Panorama B: Polar dial</title>
+<link rel="stylesheet" href="../wf.css">
+<style>
+  main { display: grid; grid-template-columns: minmax(320px, 1fr) 1.2fr; gap: 12px; padding: 12px; flex: 1; }
+  .right { display: grid; gap: 12px; align-content: start; }
+  .heads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .dial { max-width: 520px; margin: 0 auto; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span class="on">Site</span><span>Terrain</span><span>IM-2 replay</span><span>Validation</span></nav>
+    <span class="spacer"></span><span class="input">Site ▾</span><span class="input">Date ▾</span>
+  </header>
+  <main class="stack-sm">
+    <section class="box">
+      <div class="lbl">Sky dial · zenith at centre, horizon at rim, azimuth around</div>
+      <div class="svgwrap dial">
+        <svg viewBox="0 0 400 400" aria-label="Polar horizon sketch">
+          <circle cx="200" cy="200" r="190" fill="#eee" stroke="#555"/>
+          <path d="M200 10 L240 22 L300 40 L340 70 L380 120 L388 200 L370 270 L330 330 L270 375 L200 390 L120 372 L70 330 L30 270 L12 200 L28 120 L70 60 L140 22Z
+                   M200 40 L235 46 L290 64 L330 104 L350 150 L362 200 L340 262 L300 320 L250 352 L200 360 L140 350 L95 310 L52 260 L42 200 L60 140 L100 80 L150 52Z" fill="#9a9a9a" fill-rule="evenodd"/>
+          <circle cx="200" cy="200" r="150" fill="none" stroke="#bbb" stroke-dasharray="3 3"/>
+          <circle cx="200" cy="200" r="100" fill="none" stroke="#ccc" stroke-dasharray="3 3"/>
+          <circle cx="200" cy="200" r="168" fill="none" stroke="#1d1d1d" stroke-width="2.5" stroke-dasharray="8 5"/>
+          <path d="M120 60 A 160 160 0 0 1 300 70" fill="none" stroke="#1d1d1d" stroke-width="2" stroke-dasharray="2 4"/>
+          <circle cx="338" cy="292" r="8" fill="#fff" stroke="#1d1d1d" stroke-width="2"/>
+          <g font-size="12" font-family="monospace" fill="#333"><text x="194" y="8">N</text><text x="390" y="204">E</text><text x="194" y="400">S</text><text x="0" y="204">W</text></g>
+        </svg>
+      </div>
+      <div class="note">Radius = elevation (rim 0°, rings 2° and 6°, non-linear). Terrain mask grey, Sun track dashed, Earth dotted.</div>
+      <div class="slider" style="--at:46%"></div><div class="muted mono">Scrub: 2027-01-25 18:00 UTC</div>
+    </section>
+    <section class="right">
+      <div class="heads">
+        <div class="box"><div class="lbl">Operable</div><div class="num">11.4<span class="unit">d</span></div></div>
+        <div class="box"><div class="lbl">Lethal shadow</div><div class="num sm">T+6d 14h ±40m</div></div>
+        <div class="box"><div class="lbl">Longest night</div><div class="num">58<span class="unit">h</span></div></div>
+      </div>
+      <div class="box">
+        <div class="lbl">Timelines · 30 days</div>
+        <div class="lane"><span class="name">Sun disc %</span><div class="track"><i style="left:0;width:22%"></i><i style="left:30%;width:40%"></i><i style="left:78%;width:22%"></i></div></div>
+        <div class="lane"><span class="name">Earth &gt; 2°</span><div class="track"><i style="left:0;width:48%"></i><i style="left:62%;width:38%"></i></div></div>
+        <div class="lane"><span class="name">Operable</span><div class="track"><i style="left:0;width:22%"></i><i style="left:30%;width:18%"></i><i style="left:78%;width:22%"></i></div></div>
+        <div class="axis"><span>0</span><span>10</span><span>20</span><span>30 d</span></div>
+      </div>
+      <div class="box"><div class="lbl">Events</div>
+        <table><tr><th>When</th><th>Event</th><th>±</th></tr>
+          <tr><td class="mono">T+6d 14h</td><td>Sun below mask (lethal)</td><td class="mono">40 m</td></tr>
+          <tr><td class="mono">T+9d 02h</td><td>Sunrise</td><td class="mono">25 m</td></tr>
+          <tr><td class="mono">T+14d 10h</td><td>Earth below 2°</td><td class="mono">—</td></tr></table>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planner C: What-if compare</title>
+<link rel="stylesheet" href="../wf.css">
+<style>
+  .inputs { display: flex; flex-wrap: wrap; gap: 12px; padding: 12px; align-items: end; border-bottom: 1px solid var(--line); background: var(--paper); }
+  main { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 12px; }
+  .card { display: grid; gap: 10px; }
+  .card.base { outline: 3px solid var(--ink); }
+  .delta { font: 700 14px var(--mono); }
+  .mapmini { min-height: 140px; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span class="on">Planner</span><span>Terrain</span><span>IM-2 replay</span><span>Validation</span></nav></header>
+  <section class="inputs">
+    <div class="ctl"><span class="lbl">Baseline site</span><span class="input">Mons Mouton · 84.790°S 3.430°E</span></div>
+    <div class="ctl"><span class="lbl">Date</span><span class="input">2027-01-12</span></div>
+    <div class="ctl"><span class="lbl">Preset</span><span class="input">Generic CLPS medium</span></div>
+    <span class="btn">+ Add a variant</span>
+    <span class="muted">Variants: move pin · shift date · change mast height</span>
+  </section>
+  <main class="stack-sm">
+    <article class="box card base">
+      <div class="lbl">Baseline</div>
+      <div class="ph mapmini">Site thumb</div>
+      <div class="num">11.4<span class="unit">operable days</span></div>
+      <div class="mono">Lethal shadow T+6d 14h</div>
+      <div class="lane"><span class="name">Operable</span><div class="track"><i style="left:0;width:22%"></i><i style="left:30%;width:18%"></i><i style="left:78%;width:22%"></i></div></div>
+    </article>
+    <article class="box card">
+      <div class="lbl">Pin moved 300 m NE</div>
+      <div class="ph mapmini">Site thumb</div>
+      <div class="num">16.0<span class="unit">operable days</span></div>
+      <div class="delta">+4.6 d vs baseline</div>
+      <div class="mono">Lethal shadow T+13d 02h</div>
+      <div class="lane"><span class="name">Operable</span><div class="track"><i style="left:0;width:44%"></i><i style="left:52%;width:40%"></i></div></div>
+    </article>
+    <article class="box card">
+      <div class="lbl">Date +2 days</div>
+      <div class="ph mapmini">Site thumb</div>
+      <div class="num">9.1<span class="unit">operable days</span></div>
+      <div class="delta">−2.3 d vs baseline</div>
+      <div class="mono">Lethal shadow T+4d 20h</div>
+      <div class="lane"><span class="name">Operable</span><div class="track"><i style="left:0;width:15%"></i><i style="left:40%;width:16%"></i><i style="left:80%;width:20%"></i></div></div>
+    </article>
+  </main>
+  <div class="note" style="margin:0 12px 12px">Up to 4 variants; the best card gets a "recommended" tag. This is the demo-story step "drag the pin 300 m or shift by 2 days".</div>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planner A: Headline hero</title>
+<link rel="stylesheet" href="../wf.css">
+<style>
+  .hero { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 12px; padding: 12px 12px 0; }
+  main { display: grid; grid-template-columns: 260px 1fr; gap: 12px; padding: 12px; flex: 1; }
+  .map { min-height: 420px; position: relative; }
+  .pin { position: absolute; left: 48%; top: 44%; width: 18px; height: 18px; border: 3px solid var(--ink); border-radius: 50%; background: #fff; }
+  .ring { position: absolute; left: calc(48% - 70px); top: calc(44% - 70px); width: 158px; height: 158px; border: 1px dashed var(--ink); border-radius: 50%; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span class="on">Planner</span><span>Terrain</span><span>IM-2 replay</span><span>Validation</span></nav></header>
+  <section class="hero stack-sm">
+    <div class="box dark"><div class="lbl">Will it survive? · operable time in 30 days</div><div class="num xl">11.4<span class="unit" style="color:#ccc">days</span></div><div>Mission target 14 d · <b>short by 2.6 d</b></div></div>
+    <div class="box"><div class="lbl">First lethal shadow</div><div class="num">T+6d 14h</div><div class="muted mono">± 40 min · battery hits 0% at T+8d 03h</div></div>
+    <div class="box"><div class="lbl">Mission margin</div><div class="num">−19%</div><div class="muted">Earth contact 18.2 d · longest night 58 h</div></div>
+  </section>
+  <main class="stack-sm">
+    <aside class="box">
+      <div class="ctl"><span class="lbl">Region</span><span class="input">Mons Mouton ▾</span></div>
+      <div class="ctl"><span class="lbl">Pin (lat, lon)</span><span class="input">84.790°S 3.430°E</span></div>
+      <div class="ctl"><span class="lbl">Landing date</span><span class="input">2027-01-12 06:00 UTC</span>
+        <div><span class="chip">−2 d</span> <span class="chip">−1 d</span> <span class="chip">+1 d</span> <span class="chip">+2 d</span></div></div>
+      <div class="ctl"><span class="lbl">Lander preset</span><span class="input">Generic CLPS medium ▾</span></div>
+      <div class="ctl"><span class="lbl">Panel height</span><div class="slider" style="--at:30%"></div><span class="mono">2.0 m</span></div>
+      <div class="ctl"><span class="lbl">Battery / load</span><span class="input">4 000 Wh · 180 W (assumed)</span></div>
+      <span class="btn solid">Find a better site within 1 km</span>
+    </aside>
+    <section class="box map">
+      <div class="lbl">Region map · drag the pin · ring = 1 km</div>
+      <div class="ph" style="position:absolute;inset:32px 12px 12px">LOLA hillshade, coloured by operable days (later)</div>
+      <div class="ring"></div><div class="pin"></div>
+    </section>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

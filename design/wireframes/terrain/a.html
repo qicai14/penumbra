@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terrain A: Full-bleed HUD</title>
+<link rel="stylesheet" href="../wf.css">
+<style>
+  .stage { position: relative; flex: 1; min-height: 560px; }
+  .hud { position: absolute; background: rgba(255,255,255,.94); border: 1px solid var(--ink); padding: 10px 12px; }
+  .tl { left: 16px; top: 16px; width: 240px; }
+  .tr { right: 16px; top: 16px; width: 200px; }
+  .bt { left: 16px; right: 16px; bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span class="on">Terrain</span><span>IM-2 replay</span><span>Validation</span></nav></header>
+  <section class="stage">
+    <div class="ph dark" style="position:absolute;inset:0">3D LOLA terrain, lit by our model (not GPU shadow maps).<br>Orbit · zoom · click to drop a pin</div>
+    <div class="hud tl"><div class="lbl">Pin</div><div class="mono">84.790°S 3.430°E</div><div class="mono">Sun el 0.92° · az 141°</div><div class="mono">Lit: 64% of disc</div></div>
+    <div class="hud tr"><div class="lbl">Layers</div><div>☑ Model shadow</div><div>☐ Operable days</div><div>☐ PSR mask</div><div>☐ Vertical ×3</div></div>
+    <div class="hud bt">
+      <div class="lbl">Time · drag to sweep the shadow · ▶ play at 1 h/s</div>
+      <div class="slider" style="--at:46%"></div>
+      <div class="axis" style="margin-left:0"><span>2027-01-12</span><span>01-19</span><span>01-26</span><span>02-02</span><span>02-11</span></div>
+    </div>
+  </section>
+</div>
+<div class="fake" style="bottom:110px">FAKE DATA</div>
+</body>
+</html>

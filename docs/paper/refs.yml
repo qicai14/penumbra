@@ -1,0 +1,87 @@
+# Hayagriva bibliography for docs/paper/penumbra.typ. Sources: docs/research/lunar-landing/sources.md,
+# docs/research/lunar-landing/facts-grill-1.md, docs/SCIENCE-SPEC.md §6. Add an entry only when the text cites it.
+
+mazarico2011:
+  type: article
+  title: Illumination conditions of the lunar polar regions using LOLA topography
+  author: [Mazarico, E., Neumann, G. A., Smith, D. E., Zuber, M. T., Torrence, M. H.]
+  date: 2011
+  parent: { type: periodical, title: Icarus }
+  url: https://ntrs.nasa.gov/citations/20120010094
+
+barker2021:
+  type: article
+  title: "Improved LOLA elevation maps for south pole landing sites: Error estimates and their impact on illumination conditions"
+  author: [Barker, M. K., Mazarico, E., Neumann, G. A., Smith, D. E., Zuber, M. T., Head, J. W.]
+  date: 2021
+  parent: { type: periodical, title: Planetary and Space Science }
+  url: https://ntrs.nasa.gov/citations/20205009660
+
+barker2023:
+  type: article
+  title: A New View of the Lunar South Pole from the Lunar Orbiter Laser Altimeter (LOLA)
+  author: [Barker, M. K., Mazarico, E., Neumann, G. A., Smith, D. E., Zuber, M. T., Head, J. W.]
+  date: 2023
+  parent: { type: periodical, title: The Planetary Science Journal }
+  serial-number: { doi: 10.3847/PSJ/acf3e1 }
+
+park2021:
+  type: article
+  title: The JPL Planetary and Lunar Ephemerides DE440 and DE441
+  author: [Park, R. S., Folkner, W. M., Williams, J. G., Boggs, D. H.]
+  date: 2021
+  parent: { type: periodical, title: The Astronomical Journal }
+  serial-number: { doi: 10.3847/1538-3881/abd414 }
+
+derosa2012:
+  type: article
+  title: Characterisation of potential landing sites for the European Space Agency's Lunar Lander project
+  author: "De Rosa, D."
+  date: 2012
+  parent: { type: periodical, title: Planetary and Space Science }
+  url: https://arxiv.org/abs/1208.5587
+
+glaser2018:
+  type: article
+  title: "Illumination conditions at the lunar poles: Implications for future exploration"
+  author: [Gläser, P., Oberst, J., Neumann, G. A., Mazarico, E., Speyerer, E. J., Robinson, M. S.]
+  date: 2018
+  parent: { type: periodical, title: Planetary and Space Science }
+  url: https://ntrs.nasa.gov/citations/20170007365
+
+# Data products (NASA and partner data must be cited: docs/SUBMISSION.md D1)
+pgda-lola-spole:
+  type: misc
+  title: "LOLA south pole DEM products (LDEM_80S_20MPP_ADJ, LDEM_60S_240MPP_ADJ, LPSR_80S_20MPP_ADJ)"
+  author: NASA Goddard Planetary Geodynamics Data Archive
+  date: 2023
+  serial-number: { doi: 10.60903/gsfcpgda-lola-spole }
+  url: https://pgda.gsfc.nasa.gov/products/90
+
+pgda-illumination:
+  type: misc
+  title: "Lunar south pole illumination maps (AVGVISIB_85S_060M_201608 and _EARTH)"
+  author: NASA Goddard Planetary Geodynamics Data Archive
+  date: 2016
+  url: https://pgda.gsfc.nasa.gov/products/69
+
+naif-kernels:
+  type: misc
+  title: "NAIF generic kernels: de440.bsp, moon_pa_de440_200625.bpc, moon_de440_250416.tf, naif0012.tls"
+  author: NASA Navigation and Ancillary Information Facility
+  date: 2025
+  url: https://naif.jpl.nasa.gov/pub/naif/generic_kernels/
+
+horizons:
+  type: web
+  title: JPL Horizons System and API
+  author: NASA JPL Solar System Dynamics Group
+  date: 2024
+  url: https://ssd-api.jpl.nasa.gov/doc/horizons.html
+
+anise:
+  type: repository
+  title: "ANISE: Attitude, Navigation, Instrument, Spacecraft, Ephemeris"
+  author: Nyx Space
+  date: 2026
+  url: https://github.com/nyx-space/anise

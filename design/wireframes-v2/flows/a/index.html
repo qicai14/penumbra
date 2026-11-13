@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>v2 A: Planner console</title>
+<link rel="stylesheet" href="../../../wireframes/wf.css"><link rel="stylesheet" href="../../v2.css">
+<script src="../../v2.js"></script>
+<script type="application/json" id="scenarios">{ "main": { "seed": 7 } }</script>
+<style>
+  main { display: grid; grid-template-columns: 300px 1fr 300px; gap: 12px; padding: 12px; flex: 1; }
+  .col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+  @media (max-width: 1100px) { main { grid-template-columns: 1fr 1fr; } .mid { grid-column: 1 / -1; order: -1; } }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span class="on">Planner</span><span>IM-2 replay</span><span>Compare</span><span>Validation</span></nav>
+    <span class="spacer"></span>
+    <span class="input">Region: Mons Mouton ▾</span><span class="input">Land 2027-01-12 06:00 UTC</span><span class="input">Span 30 d</span></header>
+  <main>
+    <!-- LEFT: where. Click the height image → xy_to_latlon → ground_height -->
+    <section class="col">
+      <div class="box"><div class="lbl">1 · Site: click the map</div>
+        <div class="svgfill" data-heat='{"cols":20,"rows":20,"pins":[{"x":0.42,"y":0.55,"label":"","cone":true}]}'></div>
+        <div class="note">Height image of the 20 m near tile. Shading here is terrain, not results. The cone shows which way the panorama looks.</div>
+        <div class="kv"><span>Lat, lon</span><b>−84.61°, 1.32°E</b><span>Ground</span><b>+1 284.6 m</b><span>Nearest PSR</span><b>420 m S</b></div>
+      </div>
+      <div class="box"><div class="lbl">Lander preset</div>
+        <div class="ctl"><span class="input">Generic 1 kW lander ▾</span></div>
+        <div class="kv">
+          <span>Mast / panel height</span><b>2.0 m</b>
+          <span>Battery<span class="assumed">assumed</span></span><b>1 500 Wh</b>
+          <span>Minimum charge<span class="assumed">assumed</span></span><b>300 Wh</b>
+          <span>Load<span class="assumed">assumed</span></span><b>180 W</b>
+          <span>Panels</span><b>Sun-tracking</b>
+          <span>Earth margin (De Rosa 2012)</span><b>2°</b>
+        </div>
+        <p class="ann">Changing the mast reruns everything; changing the battery reruns only survival (ARCHITECTURE §1.4).</p>
+      </div>
+    </section>
+
+    <!-- MIDDLE: what the site sees, over time -->
+    <section class="col mid">
+      <div class="box"><div class="lbl">2 · Horizon from the pin (720 azimuths, 0.5° each)</div>
+        <div class="svgfill" data-pano="main"></div>
+        <div class="note">Grey = terrain mask. Dot on the Sun track = now (cursor). Filled dot = Earth.</div>
+      </div>
+      <div class="box"><div class="lbl">3 · 30 days after landing · 10-min steps</div>
+        <div class="svgfill" data-lanes="main"></div>
+        <div class="note">Hatched slivers = ±40 min band on each sunset (σ<sub>z</sub> 0.5 m, assumed). After the lethal shadow the battery line stays flat at the minimum.</div>
+      </div>
+    </section>
+
+    <!-- RIGHT: the answer -->
+    <section class="col">
+      <div class="box head"><div class="lbl">4 · Survival headline</div>
+        <div><span class="num xl" data-out="main.operable"></span><span class="unit">operable days of 30</span></div>
+        <div class="muted">Sun AND Earth contact, until the battery dies</div>
+        <div style="margin-top:10px"><div class="lbl">First lethal shadow</div><span class="num" data-out="main.lethal"></span> <span class="pm">±40 min</span></div>
+      </div>
+      <div class="box"><div class="lbl">Live at the cursor</div>
+        <div class="kv"><span>Sun elevation</span><b>0.92°</b><span>Sun disc visible</span><b>64%</b><span>Earth elevation</span><b>4.1°</b><span>Next sunset in</span><b>14 h 20 m ±40 m</b><span>Next Earthset in</span><b>3 d 02 h</b></div>
+      </div>
+      <div class="box"><div class="lbl">Over the span</div>
+        <div class="kv"><span>Sunlit (disc-weighted)</span><b data-out="main.sunlit"></b><span>Earth contact</span><b data-out="main.contact"></b><span>Longest darkness</span><b data-out="main.dark"></b></div>
+        <p class="ann">Sunlit uses the disc fraction (power). The PGDA comparison uses "any part visible", a different metric, shown only on Validation.</p>
+      </div>
+      <div class="box"><div class="lbl">Next</div><span class="btn">Compare with another site/date</span> <span class="btn">Share link</span></div>
+    </section>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>v2 States: what the engine can return</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css">
+<script src="../v2.js"></script>
+<script type="application/json" id="scenarios">{ "safe": { "seed": 5, "peak": 2.4 }, "main": { "seed": 7 } }</script>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span><span class="muted">States every direction must handle (ARCHITECTURE §3.1 error codes, IDEA.md cut order)</span><span class="spacer"></span><a class="btn" href="index.html" style="color:inherit;text-decoration:none">← all directions</a></header>
+  <div class="states">
+    <section class="box state"><div class="lbl">1 · Loading a region (once per region)</div>
+      <div class="kv"><span>manifest.json</span><b>done</b><span>ephemeris 2.1 MB</span><b>done</b><span>near tile 4.7 MB</span><b>3.1 / 4.7 MB</b><span>far tile 20.3 MB</span><b>waiting</b></div>
+      <div class="skel" style="height:90px"></div><div class="skel"></div><div class="skel" style="width:60%"></div>
+      <p class="ann">Panels keep their final size, so nothing jumps when the numbers arrive. The headline says "loading terrain", never a 0.</p>
+    </section>
+
+    <section class="box state"><div class="lbl">2 · Pin outside the DEM · OUT_OF_COVERAGE</div>
+      <div class="svgfill" data-heat='{"cols":20,"rows":10,"nodata":true,"pins":[{"x":0.86,"y":0.15,"label":""}]}'></div>
+      <div class="err"><b>No terrain here.</b> This point is outside the 20 m tile for Mons Mouton. <span class="muted">Move the pin into the shaded area, or pick another region.</span> <code>OUT_OF_COVERAGE</code></div>
+      <p class="ann">The last good result stays visible but greyed, labelled "previous pin".</p>
+    </section>
+
+    <section class="box state"><div class="lbl">2b · Date outside the ephemeris table · OUT_OF_RANGE</div>
+      <div class="input" style="display:inline-block">Landing date: 2031-03-02</div>
+      <div class="err"><b>We can't compute this date.</b> Sun and Earth positions are only loaded for 2026-01-01 to 2030-12-31. <span class="muted">Pick a date inside that range.</span> <code>OUT_OF_RANGE</code></div>
+      <p class="ann">P16 / T11: refused with the reason, never extrapolated. The date field shows the valid range before you type.</p>
+    </section>
+
+    <section class="box state"><div class="lbl">3 · No lethal shadow in the span (survival returns NaN) · e.g. a peak-top site</div>
+      <div><span class="num xl" data-out="safe.operable"></span><span class="unit">operable days of 30</span></div>
+      <div><span class="num">Survives 30 d</span> <span class="muted">no lethal shadow in the span</span></div>
+      <div class="svgfill" data-lanes="safe" data-opt='{"rows":["ill","soc"]}'></div>
+      <p class="ann">Never print "NaN" or "∞". Offer "Extend span to 90 d".</p>
+    </section>
+
+    <section class="box state"><div class="lbl">4 · Engine not ready · NOT_LOADED / version mismatch</div>
+      <div class="err"><b>The model didn't load.</b> The data files are version 2 but this page expects version 1. <span class="muted">Reload the page. If it persists, the deploy is mid-update.</span> <code>NOT_LOADED</code></div>
+      <p class="ann">api_version() must equal the manifest's version; the adapter refuses a mismatch instead of guessing.</p>
+    </section>
+
+    <section class="box state"><div class="lbl">5 · Slip fallback (cut order 3): precomputed horizons</div>
+      <div class="svgfill" data-heat='{"cols":20,"rows":10,"pins":[{"x":0.45,"y":0.5,"label":"snapped to 100 m grid"}]}'></div>
+      <p class="ann">Free clicking is lost: the pin snaps to the nearest precomputed point and says so. Panorama and timelines still work.</p>
+    </section>
+
+    <section class="box state"><div class="lbl">6 · Cut order 1: 2D map instead of 3D</div>
+      <div class="svgfill" data-heat='{"cols":24,"rows":12,"pins":[{"x":0.42,"y":0.5,"label":"","cone":true}]}'></div>
+      <p class="ann">Same model output, drawn top-down. Every direction already uses this map, so cutting 3D costs no layout change.</p>
+    </section>
+
+    <section class="box state" style="max-width:380px"><div class="lbl">7 · Phone width (judges on mobile)</div>
+      <div><span class="num" data-out="main.operable"></span><span class="unit">operable days</span></div>
+      <div class="muted">lethal <b class="mono" data-out="main.lethal"></b></div>
+      <div class="svgfill" data-pano="main" data-opt='{"h":160}'></div>
+      <div class="svgfill" data-lanes="main" data-opt='{"rows":["op","soc"]}'></div>
+      <p class="ann">Order on a phone: headline → panorama → timelines → map. Controls in a bottom sheet.</p>
+    </section>
+  </div>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

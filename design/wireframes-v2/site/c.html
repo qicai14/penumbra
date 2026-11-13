@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Site C: Which ridge casts the shadow</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css">
+<script src="../v2.js"></script>
+<script type="application/json" id="scenarios">{ "main": { "seed": 7 } }</script>
+<style>
+  main { display: grid; grid-template-columns: 1fr 280px; gap: 12px; padding: 12px; flex: 1; }
+  .col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span class="on">Site</span><span>Planner</span><span>Terrain</span><span>IM-2 replay</span><span>Validation</span></nav>
+    <span class="spacer"></span><span class="input">Mons Mouton · −84.61°, 1.32°E</span></header>
+  <main class="stack-sm">
+    <div data-t26="main"></div>
+    <section class="col">
+      <div class="box"><div class="lbl">Horizon, shaded by how far away it is</div><div class="svgfill" id="dist"></div>
+        <div class="note">Dark = near ridge (from the 20 m tile, within 7 km). Light = far ridge (240 m tile, up to 200 km). Hover a ridge to see it.</div></div>
+      <div class="box"><div class="lbl">Distance to the horizon at each azimuth</div><div class="svgfill" id="range"></div></div>
+    </section>
+    <aside class="col">
+      <div class="box"><div class="lbl">Hovered ridge · az 141°</div>
+        <div class="kv"><span>Distance</span><b>2.4 km</b><span>Elevation</span><b>0.88°</b><span>Height above pin</span><b>+37 m</b><span>Source</span><b>20 m tile</b></div>
+        <p class="ann">This ridge sets the next sunset. Moving the pin 300 m changes it; a 240 m far-field ridge wouldn't.</p></div>
+      <div class="box"><div class="lbl">Sunset drivers this month</div>
+        <table><tr><th>Sunset</th><th>Ridge</th><th>Range</th></tr><tr><td class="mono">+14d 06h</td><td>az 141°</td><td class="mono">2.4 km</td></tr><tr><td class="mono">+28d 20h</td><td>az 96°</td><td class="mono">38 km</td></tr></table></div>
+    </aside>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+<script>
+  addEventListener('DOMContentLoaded', () => {
+    const r = PenumbraFake.run({ seed: 7 }), W = 720, H = 220;
+    const y = e => H - 22 - (e + 2) * ((H - 40) / 8), x = az => az * 2;
+    const dist = az => 0.6 + 40 * (0.5 + 0.5 * Math.sin(az * Math.PI / 90 + 1)) ** 3;   // km, FAKE
+    let g = `<rect width="${W}" height="${H}" fill="#f4f4f2"/>`;
+    for (let az = 0; az < 360; az += 4) {
+      const d = dist(az), shade = d < 7 ? '#555' : d < 30 ? '#909090' : '#c4c4c0';
+      g += `<path d="M${x(az)} ${H - 20} L${x(az)} ${y(r.hor(az)).toFixed(1)} L${x(az + 4)} ${y(r.hor(az + 4)).toFixed(1)} L${x(az + 4)} ${H - 20}Z" fill="${shade}"/>`;
+    }
+    g += `<line x1="${x(141)}" x2="${x(141)}" y1="20" y2="${H - 20}" stroke="#1d1d1d" stroke-dasharray="3 3"/><rect x="${x(141) + 6}" y="24" width="122" height="22" fill="#fff" stroke="#1d1d1d"/><text x="${x(141) + 12}" y="40" font-size="12" fill="#1d1d1d">az 141° · 2.4 km</text>`;
+    ['N', 'E', 'S', 'W', 'N'].forEach((l, i) => g += `<text x="${Math.min(W - 10, Math.max(2, i * 180 - 4))}" y="${H - 6}" font-size="11" fill="#555">${l}</text>`);
+    document.getElementById('dist').innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Horizon shaded by distance">${g}</svg>`;
+    let p = '', h2 = 140, yy = d => h2 - 20 - Math.log10(d * 10) / Math.log10(2000) * (h2 - 30);
+    for (let az = 0; az <= 360; az += 2) p += `${az ? 'L' : 'M'}${x(az)} ${yy(dist(az)).toFixed(1)} `;
+    let g2 = `<rect width="${W}" height="${h2}" fill="#f4f4f2"/><line x1="0" x2="${W}" y1="${yy(7)}" y2="${yy(7)}" stroke="#1d1d1d" stroke-dasharray="4 3"/><text x="4" y="${yy(7) - 4}" font-size="11" fill="#1d1d1d">7 km: 20 m tile ends</text><path d="${p}" fill="none" stroke="#1d1d1d" stroke-width="2"/>`;
+    [1, 10, 100].forEach(k => g2 += `<text x="${W - 40}" y="${yy(k) + 4}" font-size="11" fill="#555">${k} km</text>`);
+    document.getElementById('range').innerHTML = `<svg viewBox="0 0 ${W} ${h2}" role="img" aria-label="Distance to horizon by azimuth, log scale">${g2}</svg>`;
+  });
+</script>
+</body>
+</html>

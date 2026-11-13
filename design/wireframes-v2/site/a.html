@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Site A: Lander's-eye view</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css">
+<script src="../v2.js"></script>
+<script type="application/json" id="scenarios">{ "main": { "seed": 7 } }</script>
+<style>
+  main { display: grid; grid-template-columns: 1fr 260px; gap: 12px; padding: 12px; flex: 1; }
+  .col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+  .lens { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span class="on">Site</span><span>Planner</span><span>Terrain</span><span>IM-2 replay</span><span>Validation</span></nav>
+    <span class="spacer"></span><span class="input">Mons Mouton · −84.61°, 1.32°E</span><span class="input">Eye height: mast 2.0 m ▾</span></header>
+  <main class="stack-sm">
+    <div data-t26="main"></div>
+    <section class="col">
+      <div class="box"><div class="lbl">What the lander's panels see, 2.0 m up · 2027-01-12 18:00 UTC</div>
+        <div class="svgfill" data-pano="main" data-opt='{"h":260}'></div>
+        <div class="note">Drag along the panorama to move through time; the Sun dot follows its track.</div>
+      </div>
+      <div class="box lens"><svg viewBox="0 0 150 120" role="img" aria-label="Close-up of the Sun disc, just clear of the ridge">
+          <rect width="150" height="120" fill="#f4f4f2"/><circle cx="75" cy="58" r="40" fill="#fff" stroke="#1d1d1d" stroke-width="3"/>
+          <path d="M0 108 L40 102 L80 110 L120 104 L150 108 L150 120 L0 120Z" fill="#b9b9b6"/><text x="6" y="114" font-size="11" fill="#1d1d1d">ridge</text></svg>
+        <div><div class="lbl">Sun disc close-up</div>
+          <div class="kv"><span>Disc showing (power)</span><b data-out="main.disc"></b><span>Any part visible (PGDA metric)</span><b data-out="main.lit"></b><span>Sun elevation</span><b data-out="main.sunEl"></b><span>Sun radius</span><b>0.27°</b></div>
+          <p class="ann">Two metrics kept apart on purpose: the disc fraction drives power; "any part visible" is only for the PGDA comparison.</p></div>
+      </div>
+      <div class="box"><div class="lbl">Next 30 days</div><div class="svgfill" data-lanes="main" data-opt='{"rows":["ill","vis","con"]}'></div></div>
+    </section>
+    <aside class="col">
+      <div class="box head"><div class="lbl">At this site</div>
+        <span class="num" data-out="main.operable"></span><span class="unit">operable days of 30</span>
+        <div class="muted">first lethal shadow <b class="mono" data-out="main.lethal"></b></div></div>
+      <div class="box"><div class="lbl">Eye height</div><div class="slider" style="--at:20%"></div><div class="kv"><span>Ground</span><b>0 m</b><span>Mast</span><b>2.0 m</b><span>Tower</span><b>10 m</b></div>
+        <p class="ann">Raising the eye lowers the horizon a little; the panorama redraws.</p></div>
+    </aside>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

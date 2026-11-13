@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Installed by scripts/bootstrap.sh (git config core.hooksPath .githooks).
+# Runs only the checks for the parts of the repo this commit touches.
+set -e
+staged=$(git diff --cached --name-only)
+if printf '%s\n' "$staged" | grep -qE '^(crates/|Cargo\.)'; then
+  cargo fmt --all --check
+  cargo clippy --workspace --all-targets -q -- -D warnings
+fi
+if printf '%s\n' "$staged" | grep -qE '^web/'; then
+  [ -d web/src/lib/wasm ] || bun run wasm
+  bun run check
+fi

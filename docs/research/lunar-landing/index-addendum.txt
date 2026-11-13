@@ -1,0 +1,31 @@
+UPDATE Nov 10, 2026: full-text replacements.
+The web-page sources below were abstract-only and have been DELETED. Each one is now a full-text PDF source, titled with a [full text] suffix. Where a table row above cites one of these URLs, use the matching [full text] source instead.
+
+- https://ntrs.nasa.gov/api/citations/20250002110/downloads/CMoye_SPA_MixingModel_LPSC2025_Abstract_Draft_v5.pdf  ->  ARTEMIS III Candidate Landing Regions: Assessing the Likelihood of Spa-Derived Materials Using Compositional Remote Sensing [full text]  [source 7a3910c4]
+- https://ntrs.nasa.gov/api/citations/20210026296/downloads/Scoville%20Final%20presentation%20-%20compressed.pptx.pdf  ->  Artemis III EVA Mission Capability for de Gerlache-Shackleton Ridge [full text]  [source 6f43cd0b]
+- https://ntrs.nasa.gov/api/citations/20250011660/downloads/AIIIUpdateLPSC2026.docx  ->  Artemis III Site Selection Update: Downselection From Thirteen to Nine Candidate Regions [full text]  [source 96f9d5d4]
+- https://ntrs.nasa.gov/api/citations/20200003145/downloads/20200003145.pdf  ->  Effective Crewed Surface Science near the Lunar South Pole: Some Illumination Considerations [full text]  [source c3bade00]
+- https://ntrs.nasa.gov/api/citations/20260004665/downloads/MazaricoEnhancedSTI.pdf  ->  Enhanced Topography Models for Selected Lunar South Pole Regions with Shape-from-Shading [full text]  [source 5076e930]
+- https://ntrs.nasa.gov/api/citations/20170007365/downloads/20170007365.pdf  ->  Illumination Conditions at the Lunar Poles: Implications for Future Exploration [full text]  [source da3c1d6c]
+- https://ntrs.nasa.gov/api/citations/20205009660/downloads/Mike%20Barker_%20Paper_%20Improved%20Lola.pdf  ->  Improved LOLA Elevation Maps for South Pole Landing Sites: Error Estimates and Their Impact on Illumination Conditions [full text]  [source b5251ef3]
+- https://ntrs.nasa.gov/api/citations/20070034951/downloads/20070034951.pdf  ->  Lunar South Pole Illumination: Review, Reassessment, and Power System Implications [full text]  [source e1760284]
+- https://ntrs.nasa.gov/api/citations/20170008884/downloads/20170008884.pdf  ->  Moon Trek: An Interactive Web Portal for Current and Future Lunar Missions [full text]  [source 46bb2292]
+- https://ntrs.nasa.gov/api/citations/20250007036/downloads/aasimndl.pdf  ->  Navigation Doppler Lidar Performance Assessment and Trajectory Reconstruction of the Intuitive Machines IM-1 Lunar Landing [full text]  [source 94de7ee6]
+- https://ntrs.nasa.gov/api/citations/20170009130/downloads/20170009130.pdf  ->  Numerical Simulation of Illumination and Thermal Conditions at the Lunar Poles Using LOLA DTMs [full text]  [source 74310de4]
+- https://ntrs.nasa.gov/api/citations/20080018575/downloads/20080018575.pdf  ->  Regionalized Lunar South Pole Surface Navigation System Analysis [full text]  [source 0388ee7f]
+- https://ntrs.nasa.gov/api/citations/20160008718/downloads/20160008718.pdf  ->  Summary of the Results from the Lunar Orbiter Laser Altimeter after Seven Years in Lunar Orbit [full text]  [source a11c9997]
+- https://ntrs.nasa.gov/api/citations/20205011608/downloads/Erwan_lucey_submitted.pdf  ->  The Spectral Radiance of Indirectly Illuminated Surfaces in Regions of Permanent Shadow on the Moon [full text]  [source 122c2712]
+- https://arxiv.org/pdf/1208.5587  ->  [1208.5587] Characterisation of Potential Landing Sites for the European Space Agency's Lunar Lander Project [full text]  [source 114cd0dd]
+- https://arxiv.org/pdf/1904.00236  ->  [1904.00236] Earthshine as an Illumination Source at the Moon [full text]  [source 653692c5]
+- https://arxiv.org/pdf/2005.05369  ->  [2005.05369] Micro Cold Traps on the Moon [full text]  [source 43a3958d]
+- https://arxiv.org/pdf/2102.11766  ->  [2102.11766] Towers on the Peaks of Eternal Light: Quantifying the Available Solar Power [full text]  [source 30275b36]
+- https://arxiv.org/pdf/2303.03911  ->  [2303.03911] Evidence for Widespread Hydrogen Sequestration within the Moon's South Polar Cold Traps [full text]  [source 293cfb1e]
+- https://arxiv.org/pdf/2307.16786  ->  [2307.16786] Recovery Policies for Safe Exploration of Lunar Permanently Shadowed Regions by a Solar-Powered Rover [full text]  [source a9f70387]
+- https://arxiv.org/pdf/2401.08558  ->  [2401.08558] Safe Mission-Level Path Planning for Exploration of Lunar Shadowed Regions by a Solar-Powered Rover [full text]  [source c433dd8b]
+- https://arxiv.org/pdf/2406.19863  ->  [2406.19863] Evaluating potential landing sites for the Artemis III mission using a multi-criteria decision making approach [full text]  [source 5c98fb8b]
+- https://ntrs.nasa.gov/citations/20120010094  ->  Mazarico 2011 (user-supplied PDF)  [source 7b941912]
+- https://ntrs.nasa.gov/citations/88786892701355  ->  Dynamic Secondary Illumination in Permanent Shadows within Artemis III Candidate Landing Regions (Mahanti et al. 2024, PSJ) [full text]  [source 25ba23c9]
+- https://ntrs.nasa.gov/citations/20170002253  ->  A New Lunar DEM from LOLA and SELENE Terrain Camera (Barker et al. 2016, Icarus 273) [full text]  [source 6b5bb6cc]
+- https://ntrs.nasa.gov/citations/20150014706  ->  Lunar Pole Illumination and Communications Maps Computed from GSSR Elevation Data (Bryant 2009, IPN Progress Report 42-176) [full text]  [source 018af83e]
+
+NOTE: this index is a navigation aid, not evidence. Quote values only from the paper sources themselves.

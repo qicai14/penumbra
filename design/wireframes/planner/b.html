@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planner B: Map console</title>
+<link rel="stylesheet" href="../wf.css">
+<style>
+  main { display: grid; grid-template-columns: 1fr 320px; flex: 1; }
+  .map { position: relative; min-height: 480px; border: 0; }
+  .panel { border-left: 1px solid var(--line); background: var(--paper); padding: 12px; overflow: auto; }
+  .sticky { position: sticky; bottom: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border-top: 2px solid var(--ink); }
+  .sticky > div { background: var(--paper); padding: 10px 14px; }
+  .pin { position: absolute; left: 40%; top: 50%; width: 16px; height: 16px; border: 3px solid var(--ink); border-radius: 50%; background: #fff; }
+  .tools { position: absolute; left: 16px; top: 16px; display: grid; gap: 4px; }
+  .tools span { width: 32px; height: 32px; border: 1px solid var(--ink); background: #fff; display: grid; place-items: center; }
+  h4 { margin: 14px 0 6px; font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span class="on">Planner</span><span>Terrain</span><span>IM-2 replay</span><span>Validation</span></nav></header>
+  <main class="stack-sm">
+    <section class="map">
+      <div class="ph dark" style="position:absolute;inset:0">Full-bleed map (hillshade + operable-days layer)</div>
+      <div class="tools"><span>+</span><span>−</span><span>⌖</span><span>▦</span></div>
+      <div class="pin"></div>
+    </section>
+    <aside class="panel">
+      <div class="lbl">Inputs</div>
+      <div class="ctl"><span class="lbl">Site</span><span class="input">Mons Mouton · 84.790°S 3.430°E</span></div>
+      <div class="ctl"><span class="lbl">Date</span><span class="input">2027-01-12 06:00 UTC</span></div>
+      <h4>Lander</h4>
+      <div class="ctl"><span class="lbl">Preset</span><span class="input">Generic CLPS medium ▾</span></div>
+      <div class="ctl"><span class="lbl">Panel height · orientation</span><span class="input">2.0 m · vertical, tracking</span></div>
+      <div class="ctl"><span class="lbl">Battery · load</span><span class="input">4 000 Wh · 180 W</span></div>
+      <div class="ctl"><span class="lbl">Min. DTE hours / day</span><span class="input">6 h</span></div>
+      <div class="note">Values we can't cite show "assumed".</div>
+      <h4>Mini timeline</h4>
+      <div class="lane"><span class="name">Operable</span><div class="track"><i style="left:0;width:22%"></i><i style="left:30%;width:18%"></i><i style="left:78%;width:22%"></i></div></div>
+      <div class="lane"><span class="name">SoC</span><div class="track"><i class="lt" style="left:0;width:100%"></i></div></div>
+    </aside>
+  </main>
+  <footer class="sticky stack-sm">
+    <div><div class="lbl">Operable</div><div class="num sm">11.4 d</div></div>
+    <div><div class="lbl">First lethal shadow</div><div class="num sm">T+6d 14h ±40m</div></div>
+    <div><div class="lbl">Earth contact</div><div class="num sm">18.2 d</div></div>
+    <div><div class="lbl">Verdict</div><div class="num sm">SHORT −2.6 d</div></div>
+  </footer>
+</div>
+<div class="fake" style="bottom:80px">FAKE DATA</div>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "design-system-font",
+        "value": "*",
+        "files": [
+          "design/wireframes-v2/**",
+          "design/wireframes/**"
+        ],
+        "createdAt": "2026-11-11T18:33:20.116Z",
+        "reason": "Lo-fi greyscale wireframes deliberately use a neutral system font stack, not the brand; DESIGN.md describes the hi-fi brand"
+      },
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-11-12T03:15:49.518Z",
+        "reason": "Charls's team: Inter is Axiom's specified fine-print font (design/brand/axiom-source.md), adopted in the Nov 12 full migration"
+      }
+    ]
+  }
+}

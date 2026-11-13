@@ -1,0 +1,17 @@
+notebook e35b0dac-a864-401a-addc-22f8e157d276
+Added source: 63edd66b-04bd-4e6e-bcc6-18af22ad4d13
+FAIL https://link.springer.com/article/10.1007/s11214-017-0369-1
+FAIL https://doi.org/10.1016/j.pss.2019.104750
+FAIL https://doi.org/10.1016/j.pss.2020.105119
+FAIL https://link.springer.com/article/10.1007/s11214-009-9529-2
+FAIL https://www.nature.com/articles/sdata2018214
+FAIL https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-020-00959-x
+FAIL https://www.sciencedirect.com/science/article/pii/S0032063321001781
+done ok=53 fail=7
+RECOVERED https://link.springer.com/article/10.1007/s11214-017-0369-1 -> https://pure.uva.nl/ws/files/29064528/10.1007_s11214_017_0369_1.pdf
+RECOVERED https://doi.org/10.1016/j.pss.2019.104750 -> https://eprints.bbk.ac.uk/id/eprint/29463/1/29463.pdf
+RECOVERED https://doi.org/10.1016/j.pss.2020.105119 -> https://ntrs.nasa.gov/api/citations/20205009660/downloads/Mike%20Barker_%20Paper_%20Improved%20Lola.pdf
+RECOVERED https://link.springer.com/article/10.1007/s11214-009-9529-2 -> https://authors.library.caltech.edu/records/86rbd-2dg57/files/art_10.1007_s11214-009-9529-2.pdf
+RECOVERED https://www.nature.com/articles/sdata2018214 -> https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6207062/
+RECOVERED https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-020-00959-x -> https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7831191/
+RECOVERED https://www.sciencedirect.com/science/article/pii/S0032063321001781 -> https://insu.hal.science/insu-03672353/document

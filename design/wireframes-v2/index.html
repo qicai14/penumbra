@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Penumbra Wireframes v2</title>
+<link rel="stylesheet" href="../wireframes/wf.css">
+<style>
+  body { padding: 24px 16px 64px; }
+  .wrap { max-width: 1440px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 24px; line-height: 1.3; }
+  h2 { margin: 40px 0 4px; font-size: 18px; line-height: 1.3; }
+  .lede { max-width: 900px; line-height: 1.5; }
+  .row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 12px; }
+  .opt { background: var(--paper); border: 1px solid var(--line); display: flex; flex-direction: column; }
+  .opt header { display: flex; align-items: base  line; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+  .opt header b { font: 700 14px var(--mono); }
+  .opt header a { margin-left: auto; color: var(--ink); font-size: 12px; }
+  .thumb { position: relative; width: 100%; aspect-ratio: 16 / 10; overflow: hidden; background: var(--bg); }
+  .thumb iframe { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; border: 0; transform-origin: 0 0; pointer-events: none; }
+  .opt p { margin: 0; padding: 10px 12px; color: var(--ink-2); font-size: 13px; line-height: 1.5; }
+  .opt p.trade { padding-top: 0; }
+  .src { font: 12px var(--mono); color: var(--ink-2); }
+  @media (max-width: 900px) { .row { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Penumbra lo-fi wireframes · round 2</h1>
+  <p class="muted lede">5 screens × 3 new directions, built from docs/IDEA.md, SCIENCE-SPEC.md and ARCHITECTURE.md. Same rules as <a href="../wireframes/" style="color:inherit">round 1</a>: greyscale, judge layout and flow, all numbers FAKE. Charts and headline numbers come from one shared fake model (v2.js), so a picture never disagrees with its number. Pick one letter per screen (round 1 or round 2, mixing is fine) and note it in design/DECISIONS.md. The earlier whole-app version is kept in <a href="flows/" style="color:inherit">flows/</a>.</p>
+
+  <h2>1 · Site: horizon panorama + timelines <span class="chip">Must</span></h2>
+  <div class="row">
+    <article class="opt"><header><b>A</b> Lander's-eye view<a href="site/a.html">Open ↗</a></header><div class="thumb"><iframe src="site/a.html" title="Site A" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Tall panorama at mast height, a close-up of how much Sun disc shows, and an eye-height slider.</p><p class="trade">+ Makes the two metrics (disc for power, visible for PGDA) obvious. − Live countdowns are smaller.</p><p class="src">from: SCIENCE-SPEC 1b, IDEA science model 3</p></article>
+    <article class="opt"><header><b>B</b> Countdown first<a href="site/b.html">Open ↗</a></header><div class="thumb"><iframe src="site/b.html" title="Site B" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Four big live clocks (Sun and Earth elevation, next sunset and Earthset with ±), panorama and timelines below.</p><p class="trade">+ Exactly the Must "large live readout". − Panorama gets less room.</p><p class="src">from: IDEA Must tier, SCIENCE-SPEC 1f</p></article>
+    <article class="opt"><header><b>C</b> Which ridge casts the shadow<a href="site/c.html">Open ↗</a></header><div class="thumb"><iframe src="site/c.html" title="Site C" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Horizon shaded by distance (near 20 m tile vs far 240 m tile), a range chart, and the ridges that set each sunset.</p><p class="trade">+ Explains <i>why</i>; uses the horizon's dist_m output. − More for experts than the public.</p><p class="src">from: ARCHITECTURE 3.2 horizon layout</p></article>
+  </div>
+
+  <h2>2 · Planner: inputs + survival headline <span class="chip">Must</span></h2>
+  <div class="row">
+    <article class="opt"><header><b>A</b> Step by step<a href="planner/a.html">Open ↗</a></header><div class="thumb"><iframe src="planner/a.html" title="Planner A" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Site → date → lander → answer, with preset cards and the answer previewing as you choose.</p><p class="trade">+ Easiest for first-time users and judges. − Slow for repeat runs.</p><p class="src">from: IDEA Decisions (presets, "assumed" labels)</p></article>
+    <article class="opt"><header><b>B</b> What changes what<a href="planner/b.html">Open ↗</a></header><div class="thumb"><iframe src="planner/b.html" title="Planner B" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Each input shows what it reruns (horizon / timeline / survival); a big battery chart; a bar chart of which input matters most.</p><p class="trade">+ Teaches the model and answers "what if" fast. − Busiest of the three.</p><p class="src">from: ARCHITECTURE 1.4 rerun table · builds on round-1 Planner C</p></article>
+    <article class="opt"><header><b>C</b> Landing-date calendar<a href="planner/c.html">Open ↗</a></header><div class="thumb"><iframe src="planner/c.html" title="Planner C" loading="lazy" tabindex="-1"></iframe></div>
+      <p>For one pin: operable days for every landing date 2026–2030, the best windows listed, the chosen date in detail.</p><p class="trade">+ Answers "when should we land" in one picture. − Many model runs per pin.</p><p class="src">from: IDEA Decisions (dates 2026–2030)</p></article>
+  </div>
+
+  <h2>3 · Terrain <span class="chip">Should</span></h2>
+  <div class="row">
+    <article class="opt"><header><b>A</b> Shadow sweep<a href="terrain/a.html">Open ↗</a></header><div class="thumb"><iframe src="terrain/a.html" title="Terrain A" loading="lazy" tabindex="-1"></iframe></div>
+      <p>3D with a day-by-day film strip and play button; readout of shadow-edge distance and when it reaches the pin.</p><p class="trade">+ The video shot. − Needs 3D (cut order 1).</p><p class="src">from: IDEA build roles (cinematographer)</p></article>
+    <article class="opt"><header><b>B</b> Region heatmap ranking<a href="terrain/b.html">Open ↗</a></header><div class="thumb"><iframe src="terrain/b.html" title="Terrain B" loading="lazy" tabindex="-1"></iframe></div>
+      <p>100 m cells coloured by operable days, top cells with slope, and the best cell within 1 km of IM-2.</p><p class="trade">+ Survives the 3D cut; it's the Should heatmap. − Only for baked dates and one preset.</p><p class="src">from: ARCHITECTURE 2.6 · builds on round-1 Terrain C</p></article>
+    <article class="opt"><header><b>C</b> Cross-section to the Sun<a href="terrain/c.html">Open ↗</a></header><div class="thumb"><iframe src="terrain/c.html" title="Terrain C" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Terrain profile from the pin toward the Sun, with the mast, the Sun ray, the blocking ridge and the Moon's curvature.</p><p class="trade">+ Cheap to build, very clear. − Shows one direction at a time.</p><p class="src">from: SCIENCE-SPEC 1a (curvature)</p></article>
+  </div>
+
+  <h2>4 · IM-2 replay <span class="chip">Should</span></h2>
+  <div class="row">
+    <article class="opt"><header><b>A</b> Pit model explained<a href="replay/a.html">Open ↗</a></header><div class="thumb"><iframe src="replay/a.html" title="Replay A" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Crater cross-section with the lander, panel height and Sun ray; depth slider; terrain-only vs with-crater answers.</p><p class="trade">+ The demo's key moment, made visual. − Needs the pit model (A3).</p><p class="src">from: IDEA demo step 2, SCIENCE-SPEC A3</p></article>
+    <article class="opt"><header><b>B</b> Timeline check (V4)<a href="replay/b.html">Open ↗</a></header><div class="thumb"><iframe src="replay/b.html" title="Replay B" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Published events on one row, model events on the row below, same time axis; a sourced verdict.</p><p class="trade">+ Honest and judge-proof. − Less dramatic.</p><p class="src">from: IDEA V4 · builds on round-1 Replay B</p></article>
+    <article class="opt"><header><b>C</b> Could it have survived?<a href="replay/c.html">Open ↗</a></header><div class="thumb"><iframe src="replay/c.html" title="Replay C" loading="lazy" tabindex="-1"></iframe></div>
+      <p>A goal sentence (more than 5 days, within 1 km, ±15 days) and the nearest better site and nearest better date.</p><p class="trade">+ IDEA's main planner use case. − Depends on the search working.</p><p class="src">from: IDEA Users · builds on round-1 Replay C</p></article>
+  </div>
+
+  <h2>5 · Validation scoreboard <span class="chip">Must (V1, V5)</span></h2>
+  <div class="row">
+    <article class="opt"><header><b>A</b> Evidence per check<a href="scoreboard/a.html">Open ↗</a></header><div class="thumb"><iframe src="scoreboard/a.html" title="Scoreboard A" loading="lazy" tabindex="-1"></iframe></div>
+      <p>One card per V1–V5: method, what it's judged against, target → result, status; run time and commit in the header.</p><p class="trade">+ Every claim traceable. − Text-heavy.</p><p class="src">from: IDEA Validation table</p></article>
+    <article class="opt"><header><b>B</b> Error plots<a href="scoreboard/b.html">Open ↗</a></header><div class="thumb"><iframe src="scoreboard/b.html" title="Scoreboard B" loading="lazy" tabindex="-1"></iframe></div>
+      <p>V1 error scatter with the 0.01° pass circle, V2 ours-vs-PGDA scatter, and the full V2 difference histogram.</p><p class="trade">+ Shows the tail, not just the median. − Needs chart literacy.</p><p class="src">from: SCIENCE-SPEC 3 · builds on round-1 Scoreboard C</p></article>
+    <article class="opt"><header><b>C</b> One-line verdict<a href="scoreboard/c.html">Open ↗</a></header><div class="thumb"><iframe src="scoreboard/c.html" title="Scoreboard C" loading="lazy" tabindex="-1"></iframe></div>
+      <p>A plain sentence ("3 of 4 checks pass"), a 5-box strip, the miss explained in words, and how we check.</p><p class="trade">+ Best for the public and a slide. − Detail is one click away.</p><p class="src">from: IDEA "Report misses honestly"</p></article>
+  </div>
+</div>
+<script>
+  // Scale each 1440×900 frame to its card width.
+  function fit() {
+    document.querySelectorAll('.thumb').forEach(t => {
+      const f = t.querySelector('iframe');
+      f.style.transform = 'scale(' + (t.clientWidth / 1440) + ')';
+    });
+  }
+  addEventListener('resize', fit); fit();
+</script>
+</body>
+</html>

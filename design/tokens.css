@@ -1,0 +1,85 @@
+/* Penumbra on Axiom · tokens (Nov 12 2026).
+   design/DESIGN.md is the source of truth: change a value there first, then mirror it here.
+   Base: design/brand/axiom-tokens.json (refero, extended). BerkeleyMono → IBM Plex Mono.
+   Link from any page in design/: <link rel="stylesheet" href="../tokens.css">
+   Fonts (Google Fonts): IBM Plex Mono 400/700, Inter 400; Archivo ital wdth 112 wght 800 for the wordmark only. */
+:root {
+  /* Colours · Axiom */
+  --color-void: #000000;
+  --color-carbon: #111111;
+  --color-graphite: #191919;
+  --color-iron: #202020;
+  --color-slate: #3a3a3a;
+  --color-pewter: #505050;
+  --color-steel: #606060;
+  --color-ash: #7e7e7e;
+  --color-fog: #b4b4b4;
+  --color-chalk: #d9d9d9;
+  --color-paper: #eeeeee;
+  --color-ember: #da5c2c;   /* the one orange: Sun, wordmark Sun, button, log bars, card border */
+
+  /* Colours · Penumbra */
+  --color-sun: var(--color-ember); /* sunlight; alias of ember (amber #f4a740 retired Nov 12) */
+  --color-earth: #0032A0;      /* NASA blue, fills only (2.0:1 on void) */
+  --color-earth-line: #4f7fd9; /* Earth lines and text on dark (5.4:1 on void) */
+
+  /* Surfaces */
+  --surface-void: var(--color-void);
+  --surface-carbon: var(--color-carbon);
+  --surface-graphite: var(--color-graphite);
+  --surface-iron: var(--color-iron);
+
+  /* Font families */
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --font-fine: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-wordmark: 'Archivo', sans-serif; /* wordmark only */
+  --font-weight-regular: 400;
+  --font-weight-bold: 700;
+
+  /* Type scale · web */
+  --text-caption: 12px;    --leading-caption: 1.5;
+  --text-body: 14px;       --leading-body: 1.71;
+  --text-heading-sm: 18px; --leading-heading-sm: 1.56;
+  --text-heading: 20px;    --leading-heading: 1.4;
+  --text-heading-lg: 24px; --leading-heading-lg: 1.33;
+  --text-display: 32px;    --leading-display: 1.25;
+  --text-sm: 13px;         --leading-sm: 1.5;
+  --text-base: 16px;       --leading-base: 1.5;
+
+  /* Type scale · slides (1920×1080) */
+  --slide-display: 64px;
+  --slide-title: 48px;
+  --slide-body: 28px;
+  --slide-caption: 22px;
+  --slide-data: 28px;
+  --slide-margin: 120px;
+
+  /* Spacing */
+  --spacing-unit: 8px;
+  --spacing-8: 8px;
+  --spacing-16: 16px;
+  --spacing-24: 24px;
+  --spacing-32: 32px;
+  --spacing-40: 40px;
+  --spacing-48: 48px;
+  --spacing-64: 64px;
+  --spacing-80: 80px;
+  --spacing-96: 96px;
+
+  /* Layout */
+  --page-max-width: 1200px;
+  --section-gap: 40px;
+  --card-padding: 32px;
+  --element-gap: 16px;
+
+  /* Radius */
+  --radius-sm: 2px;
+  --radius-full: 9999px;
+
+  /* Shadow (buttons and small interactive surfaces only) */
+  --shadow-subtle: rgba(0, 0, 0, 0.05) 0px 1px 2px 0px;
+
+  /* Motion */
+  --motion-draw: 400ms;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}

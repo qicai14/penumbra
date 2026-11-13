@@ -1,0 +1,15 @@
+{
+  "name": "penumbra",
+  "private": true,
+  "type": "module",
+  "workspaces": ["web"],
+  "scripts": {
+    "wasm": "cargo build -p penumbra-wasm --target wasm32-unknown-unknown --release && wasm-bindgen target/wasm32-unknown-unknown/release/penumbra_wasm.wasm --target web --out-dir web/src/lib/wasm",
+    "dev": "bun run wasm && bun run --cwd web dev",
+    "build": "bun run wasm && bun run --cwd web build",
+    "check": "bun run --cwd web check",
+    "test": "cargo test --workspace",
+    "smoke": "bun run --cwd web smoke",
+    "paper": "typst compile docs/paper/penumbra.typ docs/paper/penumbra.pdf"
+  }
+}

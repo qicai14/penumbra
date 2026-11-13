@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planner C: Landing-date calendar</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css">
+<script src="../v2.js"></script>
+<script type="application/json" id="scenarios">{ "main": { "seed": 7 } }</script>
+<style>
+  main { display: grid; gap: 12px; padding: 12px; flex: 1; }
+  .cal { display: grid; grid-template-columns: 48px 1fr; gap: 4px 8px; align-items: center; }
+  .cal .row { display: grid; grid-template-columns: repeat(183, 1fr); height: 26px; }
+  .cal .row i { display: block; }
+  .months { display: grid; grid-template-columns: repeat(12, 1fr); font: 11px var(--mono); color: var(--ink-2); }
+  .detail { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  @media (max-width: 800px) { .detail { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span class="on">Planner</span><span>Terrain</span><span>IM-2 replay</span><span>Validation</span></nav>
+    <span class="spacer"></span><span class="input">Mons Mouton · −84.61°, 1.32°E</span><span class="input">Generic 1 kW ▾</span></header>
+  <main>
+    <section class="box"><div class="lbl">When should we land here?</div>
+      <p class="note">Operable days for each landing date, 2026–2030, every 2 days.</p>
+      <div class="cal" id="cal"></div>
+      <div style="display:grid;grid-template-columns:48px 1fr 1fr;gap:8px;margin-top:8px;align-items:center"><span></span><span class="note" style="margin:0">Darker = fewer operable days. The dark stripes are landings just before a long night.</span><div><div class="legend6"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="axis" style="margin-left:0"><span>0</span><span>6</span><span>12 d</span></div></div></div>
+      <p class="ann">The pattern repeats about every 29.5 days (one lunar day); the year-to-year drift is libration. Click a cell to open that date.</p>
+    </section>
+    <div class="detail">
+      <section class="box head"><div class="lbl">Selected · land 2027-01-12 (outlined)</div>
+        <div><span class="num xl" data-out="main.operable"></span><span class="unit">operable days</span></div>
+        <div class="muted">first lethal shadow <b class="mono" data-out="main.lethal"></b> <span class="pm">±40 min</span></div>
+        <div class="svgfill" data-lanes="main" data-opt='{"rows":["op","soc"]}'></div></section>
+      <section class="box"><div class="lbl">Best landing windows in 2027</div>
+        <table id="best"><tr><th>Land on</th><th>Operable</th><th>Lethal shadow</th></tr></table></section>
+    </div>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+<script>
+  addEventListener('DOMContentLoaded', () => {
+    const F = PenumbraFake, greys = ['#2a2a2a', '#555', '#808080', '#aaa', '#cfcfcf', '#f0f0f0'];
+    const t0 = Date.UTC(2026, 0, 1), sel = Date.UTC(2027, 0, 12), all = [];
+    let html = '';
+    for (let y = 0; y < 5; y++) {
+      let row = '';
+      for (let c = 0; c < 183; c++) {
+        const dayN = y * 365.25 + c * 2, date = t0 + dayN * 864e5;
+        const days = (dayN - (sel - t0) / 864e5);      // Sun phase relative to the selected date (start 300°)
+        const r = F.run({ seed: 7, start: ((300 + 360 * days / 29.53) % 360 + 360) % 360 });
+        all.push([date, r]);
+        const b = Math.min(5, Math.floor(r.operable_d / 2.4));
+        const on = Math.abs(date - sel) < 864e5 * 1.01;
+        row += `<i style="background:${greys[b]}${on ? ';outline:2px solid #1d1d1d;outline-offset:-1px;position:relative;z-index:1' : ''}" title="${new Date(date).toISOString().slice(0, 10)}: ${r.operable_d.toFixed(1)} d"></i>`;
+      }
+      html += `<span class="mono">${2026 + y}</span><div class="row">${row}</div>`;
+    }
+    html += `<span></span><div class="months">${'JFMAMJJASOND'.split('').map(m => `<span>${m}</span>`).join('')}</div>`;
+    document.getElementById('cal').innerHTML = html;
+    const best = all.filter(([d]) => new Date(d).getUTCFullYear() === 2027).sort((a, b) => b[1].operable_d - a[1].operable_d);
+    const picked = [];
+    for (const e of best) { if (picked.every(p => Math.abs(p[0] - e[0]) > 10 * 864e5)) picked.push(e); if (picked.length === 4) break; }
+    document.getElementById('best').innerHTML += picked.sort((a, b) => a[0] - b[0]).map(([d, r]) => `<tr><td class="mono">${new Date(d).toISOString().slice(0, 10)}</td><td class="mono">${r.operable_d.toFixed(1)} d</td><td class="mono">${F.fmtLethal(r.lethal_h)}</td></tr>`).join('');
+  });
+</script>
+</body>
+</html>

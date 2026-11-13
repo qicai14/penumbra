@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Terrain C: 2D map first</title>
+<link rel="stylesheet" href="../wf.css">
+<style>
+  main { display: grid; grid-template-columns: 1fr 280px; gap: 12px; padding: 12px; flex: 1; }
+  .map { position: relative; min-height: 520px; }
+  .inset { position: absolute; right: 16px; bottom: 16px; width: 220px; height: 150px; border: 2px solid var(--ink); }
+  .legend { display: grid; grid-template-columns: repeat(6, 1fr); height: 12px; margin: 6px 0; }
+  .legend i:nth-child(1){background:#2a2a2a}.legend i:nth-child(2){background:#555}.legend i:nth-child(3){background:#808080}.legend i:nth-child(4){background:#aaa}.legend i:nth-child(5){background:#cfcfcf}.legend i:nth-child(6){background:#f0f0f0;border:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span class="on">Terrain</span><span>IM-2 replay</span><span>Validation</span></nav></header>
+  <main class="stack-sm">
+    <section class="box map">
+      <div class="lbl">Region map · top-down · coloured by the model</div>
+      <div class="ph" style="position:absolute;inset:32px 12px 12px">2D polar-stereographic map<br>Shadow at time t, or operable days over the window</div>
+      <div class="ph dark inset">3D preview (optional, Should tier)</div>
+    </section>
+    <aside style="display:grid;gap:12px;align-content:start">
+      <div class="box"><div class="lbl">Show</div><div>◉ Shadow at time</div><div>○ Operable days (heatmap)</div><div>○ Mean illumination</div></div>
+      <div class="box"><div class="lbl">Operable days</div><div class="legend"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="axis" style="margin-left:0"><span>0</span><span>15</span><span>30</span></div></div>
+      <div class="box"><div class="lbl">Time</div><div class="slider" style="--at:46%"></div><div class="mono">2027-01-25 18:00</div></div>
+      <div class="box"><div class="lbl">Top 3 cells in view</div><table><tr><td>1</td><td class="mono">22.1 d</td></tr><tr><td>2</td><td class="mono">21.7 d</td></tr><tr><td>3</td><td class="mono">20.9 d</td></tr></table></div>
+      <div class="note">This is also the fallback if 3D slips (cut order 1).</div>
+    </aside>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planner A: Step by step</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css">
+<script src="../v2.js"></script>
+<script type="application/json" id="scenarios">{ "main": { "seed": 7 } }</script>
+<style>
+  main { display: grid; gap: 12px; padding: 12px; flex: 1; max-width: 1100px; margin: 0 auto; width: 100%; }
+  .steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .steps div { border: 1px solid var(--line); padding: 8px 10px; background: var(--paper); font-size: 13px; }
+  .steps .done { border-color: var(--ink-2); }
+  .steps .now { border: 2px solid var(--ink); font-weight: 700; }
+  .steps small { display: block; font: 12px var(--mono); color: var(--ink-2); font-weight: 400; }
+  .body { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .presets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .presets div { border: 1px solid var(--line); padding: 10px; background: var(--paper); }
+  .presets .sel { border: 2px solid var(--ink); }
+  @media (max-width: 800px) { .steps, .presets { grid-template-columns: 1fr 1fr; } }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span class="on">Planner</span><span>Terrain</span><span>IM-2 replay</span><span>Validation</span></nav></header>
+  <main>
+    <div class="steps stack-sm">
+      <div class="done">1 · Site ✓<small>Mons Mouton −84.61°</small></div>
+      <div class="done">2 · Landing date ✓<small>2027-01-12 06:00</small></div>
+      <div class="now">3 · Lander<small>choose a preset</small></div>
+      <div>4 · Answer<small>operable days</small></div>
+    </div>
+    <div class="body stack-sm">
+      <section class="box"><div class="lbl">3 · Which lander?</div>
+        <div class="presets">
+          <div class="sel"><b>Generic 1 kW</b><div class="muted">1 500 Wh · 180 W</div></div>
+          <div><b>Small rover</b><div class="muted">600 Wh · 60 W</div></div>
+          <div><b>Custom…</b><div class="muted">enter values</div></div>
+        </div>
+        <div class="kv" style="margin-top:12px"><span>Panels<span class="assumed">assumed</span></span><b>Sun-tracking</b><span>Mast height<span class="assumed">assumed</span></span><b>2.0 m</b><span>Battery<span class="assumed">assumed</span></span><b>1 500 Wh</b><span>Minimum charge<span class="assumed">assumed</span></span><b>300 Wh</b><span>Load<span class="assumed">assumed</span></span><b>180 W</b><span>Needs Earth above<span class="assumed">assumed</span></span><b>2° (after De Rosa 2012)</b></div>
+        <p class="ann">Values we can't cite carry "assumed", in the app and in exports.</p>
+        <div style="margin-top:12px"><span class="btn">← Back</span> <span class="btn solid">See the answer →</span></div>
+      </section>
+      <section class="box head"><div class="lbl">4 · Answer (preview, updates as you choose)</div>
+        <div><span class="num xl" data-out="main.operable"></span><span class="unit">operable days of 30</span></div>
+        <div class="muted">Sun and Earth contact at the same time, until the battery runs out</div>
+        <div style="margin-top:8px"><div class="lbl">First lethal shadow</div><span class="num" data-out="main.lethal"></span> <span class="pm">±40 min</span></div>
+        <div class="svgfill" data-lanes="main" data-opt='{"rows":["op","soc"]}'></div>
+      </section>
+    </div>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

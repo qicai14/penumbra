@@ -1,0 +1,42 @@
+/* Lo-fi v2 additions on top of ../wireframes/wf.css. Greyscale, structure only. */
+.svgfill svg { display: block; width: 100%; height: auto; }
+.assumed { display: inline-block; border: 1px dashed var(--ink-2); padding: 0 5px; font: 600 11px/16px var(--sans); color: var(--ink-2); margin-left: 4px; }
+.pm { font: 600 13px var(--mono); color: var(--ink-2); }
+.head { display: grid; gap: 2px; }
+.head .num.xl { letter-spacing: -.02em; }
+.err { border: 2px solid var(--ink); background: var(--paper); padding: 12px; }
+.err code { font: 700 12px var(--mono); background: var(--fill); padding: 1px 4px; }
+.skel { background: repeating-linear-gradient(90deg, var(--fill) 0 40%, var(--fill-2) 50%, var(--fill) 60% 100%); min-height: 14px; margin: 6px 0; }
+.state { display: grid; gap: 6px; }
+.state > .lbl { margin: 0; }
+.states { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 12px; padding: 12px; }
+.ann { font-size: 12px; line-height: 1.5; color: var(--ink-2); margin: 8px 0 0; }
+.ann::before { content: "Note · "; font-weight: 700; color: var(--ink); }
+.kv { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13px; }
+.kv b { font: 600 13px var(--mono); }
+.rank li { display: grid; grid-template-columns: 22px 1fr 70px 110px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+.rank ol { list-style: none; margin: 0; padding: 0; }
+.rbar { height: 10px; background: var(--ink-2); }
+.toc { display: flex; gap: 6px; flex-wrap: wrap; }
+.toc span { border: 1px solid var(--line); padding: 2px 8px; font-size: 12px; border-radius: 999px; }
+.toc span.on { border-color: var(--ink); background: var(--ink); color: #fff; }
+.chap { border-top: 2px solid var(--ink); padding: 28px 0; display: grid; gap: 12px; }
+.chap h2 { margin: 0; font-size: 22px; line-height: 1.3; }
+.chap .step { font: 700 12px var(--mono); color: var(--ink-2); }
+.pass { font: 700 12px var(--mono); border: 1.5px solid var(--ink); padding: 3px 8px; display: inline-block; }
+.miss { font: 700 12px var(--mono); border: 1.5px dashed var(--ink); padding: 3px 8px; display: inline-block; }
+.legend6 { display: grid; grid-template-columns: repeat(6, 1fr); height: 12px; }
+.legend6 i:nth-child(1){background:#2a2a2a}.legend6 i:nth-child(2){background:#555}.legend6 i:nth-child(3){background:#808080}.legend6 i:nth-child(4){background:#aaa}.legend6 i:nth-child(5){background:#cfcfcf}.legend6 i:nth-child(6){background:#f0f0f0;border:1px solid var(--line)}
+/* T26 readout strip: Sun and Earth now + sunset / Earthset countdowns. On every site layout. */
+[data-t26] { grid-column: 1 / -1; min-width: 0; }
+.t26 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.t26 .num { white-space: nowrap; }
+.t26 .box { display: grid; gap: 4px; align-content: start; }
+@media (max-width: 900px) { .t26 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .t26 { grid-template-columns: 1fr; } }
+/* T13: Limitations + datasets, on every scoreboard layout */
+[data-limits] { display: grid; grid-template-columns: 1fr 1.6fr; gap: 12px; grid-column: 1 / -1; }
+@media (max-width: 900px) { [data-limits] { grid-template-columns: 1fr; } }
+.limits ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.6; }
+.limits table { font-size: 12px; }
+.cited { display: inline-block; border: 1px solid var(--ink); padding: 0 5px; font: 600 11px/16px var(--sans); color: var(--ink); margin-left: 4px; }

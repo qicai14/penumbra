@@ -1,0 +1,17 @@
+notebook 4e0c1818-18a4-4ad2-84bd-39b731fb4554
+Added source: 578edadf-e6bb-4802-bf36-3b275a3e54dc
+FAIL https://www.sciencedirect.com/science/article/pii/S0034425716300827
+FAIL https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2017JD027823
+FAIL https://www.sciencedirect.com/science/article/abs/pii/S0034425725005401
+FAIL https://www.sciencedirect.com/science/article/pii/S2666017223000123
+FAIL https://onlinelibrary.wiley.com/doi/10.1111/gcb.70891
+FAIL https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2024GL114492
+FAIL https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2025AV002092
+done ok=52 fail=7
+RECOVERED https://www.sciencedirect.com/science/article/pii/S0034425716300827 -> https://www.ncbi.nlm.nih.gov/pmc/articles/PMC6110110/
+RECOVERED https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2017JD027823 -> https://repository.library.noaa.gov/view/noaa/49896/noaa_49896_DS1.pdf
+RECOVERED https://agupubs.onlinelibrary.wiley.com/doi/10.1029/2025AV002092 -> https://doi.org/10.1029/2025AV002092
+NO-OA https://www.sciencedirect.com/science/article/abs/pii/S0034425725005401 (Comprehensive global fire radiative power evaluation by minimizing detection bias with intercomparison and extended triple collocation analysis, DOI 10.1016/j.rse.2025.115136)
+NO-OA https://onlinelibrary.wiley.com/doi/10.1111/gcb.70891 (Persistent 2023-2025 Wildfire Extremes in Canada Produced Unprecedented Emissions and Air-Quality Impacts, DOI 10.1111/gcb.70891)
+NO-OA https://agupubs.onlinelibrary.wiley.com/doi/full/10.1029/2024GL114492 (Increased Atmospheric Aridity and Reduced Precipitation Drive the 2023 Extreme Wildfire Season in Canada, DOI 10.1029/2024GL114492; OA only on publisher domain, NotebookLM add errored)
+NO-OA https://www.sciencedirect.com/science/article/pii/S2666017223000123 (Sentinel-3 SLSTR active fire (AF) detection and FRP daytime product, DOI 10.1016/j.srs.2023.100087; KCL copy add errored)

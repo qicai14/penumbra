@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Replay C: Could it have survived?</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css">
+<script src="../v2.js"></script>
+<script type="application/json" id="scenarios">{ "pit": { "seed": 7, "start": 20, "pit": 1.85 }, "moved": { "seed": 5, "start": 20 } }</script>
+<style>
+  main { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 12px; flex: 1; }
+  .col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+  .goal { grid-column: 1 / -1; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span>Terrain</span><span class="on">IM-2 replay</span><span>Validation</span></nav></header>
+  <main class="stack-sm">
+    <div class="box goal"><div class="lbl" style="margin:0">Goal</div><span>Find the nearest change that gives IM-2 more than</span><span class="input">5 days ▾</span><span>of operations, searching</span><span class="input">within 1 km ▾</span><span>and</span><span class="input">± 15 days ▾</span></div>
+    <section class="col">
+      <div class="box"><div class="lbl">Nearest better site (same date)</div>
+        <div class="svgfill" data-heat='{"cols":24,"rows":16,"pins":[{"x":0.4,"y":0.55,"label":"IM-2"},{"x":0.55,"y":0.45,"label":"+300 m NE"}],"ring":[0.4,0.55,150]}'></div>
+        <div class="kv" style="margin-top:8px"><span>Distance</span><b>300 m NE</b><span>Operable</span><b data-out="moved.operable"></b><span>Lethal shadow</span><b data-out="moved.lethal"></b><span>Slope there</span><b>6°</b></div>
+      </div>
+    </section>
+    <section class="col">
+      <div class="box"><div class="lbl">Nearest better date (same spot, with the crater)</div><table id="dates"><tr><th>Land on</th><th>Operable</th><th></th></tr></table>
+        <p class="ann">Searched every 12 h within ±15 days of 2025-03-06. Shows whatever the model returns, even "none".</p></div>
+      <div class="box head"><div class="lbl">As landed</div><span class="num" data-out="pit.operable"></span><span class="unit">operable days</span><div class="muted">lethal <b class="mono" data-out="pit.lethal"></b></div></div>
+    </section>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+<script>
+  addEventListener('DOMContentLoaded', () => {
+    const F = PenumbraFake, t0 = Date.UTC(2025, 2, 6), out = [];
+    for (let h = -360; h <= 360; h += 12) {
+      const r = F.run({ seed: 7, pit: 1.85, start: ((20 + 360 * (h / 24) / 29.53) % 360 + 360) % 360 });
+      out.push([h, r.operable_d]);
+    }
+    const good = out.filter(([, d]) => d > 5).sort((a, b) => Math.abs(a[0]) - Math.abs(b[0])).slice(0, 3);
+    document.getElementById('dates').innerHTML += (good.length ? good : [[null, 0]]).map(([h, d]) => h === null
+      ? '<tr><td colspan="3">No date in ±15 days gives more than 5 days.</td></tr>'
+      : `<tr><td class="mono">${new Date(t0 + h * 36e5).toISOString().slice(0, 13).replace('T', ' ')}:00</td><td class="mono">${d.toFixed(1)} d</td><td class="muted">${h > 0 ? '+' : '−'}${Math.abs(h / 24).toFixed(1)} d</td></tr>`).join('');
+  });
+</script>
+</body>
+</html>

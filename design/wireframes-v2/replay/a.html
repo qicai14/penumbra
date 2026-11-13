@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Replay A: Pit model explained</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css">
+<script src="../v2.js"></script>
+<script type="application/json" id="scenarios">{ "terrain": { "seed": 7, "start": 20 }, "pit": { "seed": 7, "start": 20, "pit": 1.85 } }</script>
+<style>
+  main { display: grid; grid-template-columns: 1fr 320px; gap: 12px; padding: 12px; flex: 1; }
+  .col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+  .vs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+</style>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span>Terrain</span><span class="on">IM-2 replay</span><span>Validation</span></nav>
+    <span class="spacer"></span><span class="input">IM-2 Athena · near Mons Mouton · 2025-03-06</span></header>
+  <main class="stack-sm">
+    <section class="col">
+      <div class="box"><div class="lbl">Why a small crater can hide the panels · cross-section, to scale horizontally</div>
+        <div class="svgfill"><svg viewBox="0 0 720 260" role="img" aria-label="Crater cross-section with the lander on its side and a low Sun ray">
+          <rect width="720" height="260" fill="#f4f4f2"/>
+          <path d="M0 120 L150 120 Q260 210 360 212 Q460 210 570 120 L720 120 L720 260 L0 260Z" fill="#b9b9b6"/>
+          <rect x="300" y="180" width="70" height="30" fill="#fff" stroke="#1d1d1d" stroke-width="2.5"/><text x="306" y="200" font-size="12" fill="#1d1d1d">lander</text>
+          <line x1="370" y1="182" x2="392" y2="182" stroke="#1d1d1d" stroke-width="4"/><text x="396" y="186" font-size="12" fill="#1d1d1d">panel, 0.8 m up</text>
+          <line x1="720" y1="105" x2="160" y2="196" stroke="#1d1d1d" stroke-width="2" stroke-dasharray="7 4"/><text x="470" y="98" font-size="12" font-weight="700" fill="#1d1d1d">Sun ray, 0.9° (exaggerated)</text>
+          <line x1="150" y1="120" x2="150" y2="212" stroke="#555" stroke-dasharray="2 3"/><line x1="140" y1="212" x2="160" y2="212" stroke="#555"/><text x="60" y="172" font-size="12" fill="#333">depth 1.94 m</text>
+          <line x1="150" y1="236" x2="570" y2="236" stroke="#555"/><text x="320" y="252" font-size="12" fill="#333">diameter 20 m</text>
+          <text x="580" y="140" font-size="12" fill="#1d1d1d">rim blocks the ray</text>
+        </svg></div>
+        <div class="kv" style="margin-top:8px"><span>Crater depth</span><b>1.94 m · 11° wall <span class="assumed">spec default</span></b></div><div class="slider" style="--at:40%"></div>
+        <div class="muted">Depth needed to hide this panel from a 0.9° Sun: <b class="mono">0.96 m</b> (0.8 m + 10 m × tan 0.9°). At 1.94 m the rim stands 6.5° above the panel.</div>
+      </div>
+      <div class="vs">
+        <div class="box"><div class="lbl">Terrain map only</div><span class="num" data-out="terrain.operable"></span><span class="unit">operable days</span><div class="muted">lethal <b class="mono" data-out="terrain.lethal"></b></div></div>
+        <div class="box"><div class="lbl">Plus the crater</div><span class="num" data-out="pit.operable"></span><span class="unit">operable days</span><div class="muted">lethal <b class="mono" data-out="pit.lethal"></b></div></div>
+      </div>
+    </section>
+    <aside class="col">
+      <div class="box"><div class="lbl">Pit model inputs</div><div class="kv"><span>Diameter <span class="assumed">assumed</span></span><b>20 m</b><span>Depth <span class="assumed">assumed</span></span><b>1.94 m</b><span>Panel height<span class="assumed">assumed</span></span><b>0.8 m</b><span>Lander attitude <span class="cited">cited</span></span><b>on its side</b></div>
+        <p class="ann">The crater is smaller than one 20 m map pixel, so the terrain map can't see it. The pit model adds its rim to the horizon (pit_horizon).</p></div>
+      <div class="box"><div class="lbl">Battery with the crater</div><div class="svgfill" data-lanes="pit" data-opt='{"rows":["ill","soc"],"bands":false}'></div></div>
+    </aside>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>
