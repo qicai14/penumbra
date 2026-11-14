@@ -141,19 +141,14 @@ fn eph(out_dir: &Path) -> Result<()> {
 
 /// Near tile side, pixels: 30.72 km at 20 m, so a site at the centre has 15.36 km of margin (ARCHITECTURE §2.1).
 const NEAR_PX: u32 = 1536;
-/// Middle tile side, 80 m pixels (4 × 4 means of the 20 m source), same centre as the near tile:
-/// ±39.68 km covers the 8.31 km half-width of the pickable area plus the 31 km mid range at map
-/// scale ≤ 1.0032 (#48, SCIENCE-SPEC §1a tiers).
-const MID_PX: u32 = 992;
-/// Source pixels per middle-tile pixel side: 4 × 20 m = 80 m.
-const MID_BLOCK_PX: u32 = 4;
 /// Far tile side, pixels: ±382.08 km at 240 m about the pole (ARCHITECTURE §2.1).
 const FAR_PX: u32 = 3184;
 
 fn dem(out_dir: &Path) -> Result<()> {
     use penumbra_core::geometry::{LatLon, MapXy, latlon_to_xy};
     use penumbra_pipeline::dem::{
-        GeoTiff, build_tile, encode_far, encode_finest, tile_json, to_le_bytes,
+        GeoTiff, MID_BLOCK_PX, MID_PX, build_tile, encode_far, encode_finest, tile_json,
+        to_le_bytes,
     };
     let src_dir = PathBuf::from(std::env::var("PENUMBRA_DATA").map_err(|_| "set PENUMBRA_DATA")?);
     let im2 = latlon_to_xy(LatLon {

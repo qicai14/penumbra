@@ -10,7 +10,8 @@ use penumbra_core::horizon::{
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-/// Reference near range: 7000 + 240·388 m, so its far samples beyond fall on the shipped ones.
+/// Reference 20 m range: the float window is both the near and the middle tier out to here.
+/// 7000 + 240·388 m, so its far samples beyond fall on the shipped ones.
 const REF_NEAR_RANGE_M: f64 = 100_120.0;
 /// Half-width of the float reference window around the site, map metres (> REF_NEAR_RANGE_M).
 const REF_HALF_M: f64 = 101_000.0;
@@ -255,7 +256,7 @@ pub fn tier_ablation(t: &ShippedTiles, src: &mut GeoTiff) -> Result<Vec<Ablation
         "\nT-1a-4 shipped (int16 20 m to 7 km, 80 m to 31 km, then 240 m) vs float 20 m to {REF_NEAR_RANGE_M} m + same 240 m"
     );
     let ref_opts = HorizonOptions {
-        near_range_m: REF_NEAR_RANGE_M,
+        mid_range_m: REF_NEAR_RANGE_M,
         ..HorizonOptions::default()
     };
     let mut rows = Vec::new();
@@ -279,7 +280,7 @@ pub fn tier_ablation(t: &ShippedTiles, src: &mut GeoTiff) -> Result<Vec<Ablation
         );
         for mast_m in [0.0, 2.0] {
             let ship = t.horizon(region, site, mast_m, &HorizonOptions::default())?;
-            let reference = horizon(&win, &t.far, site, mast_m, &ref_opts).map_err(err)?;
+            let reference = horizon(&win, &win, &t.far, site, mast_m, &ref_opts).map_err(err)?;
             let max_dev_deg = compare(&format!("H = {mast_m} m"), &ship, &reference);
             rows.push(AblationRow {
                 point: name,

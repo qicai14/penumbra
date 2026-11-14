@@ -101,7 +101,7 @@ fn point_sun_mask_agrees_with_the_full_horizon_where_the_disc_is_whole() {
                 y_m: y0 - NEAR_PX_M * (f64::from(j * STRIDE) + 0.5),
             };
             let site = xy_to_latlon(xy).unwrap();
-            let h = horizon(&near, &far, site, MAST_M, &HorizonOptions::default()).unwrap();
+            let h = horizon(&near, &far, &far, site, MAST_M, &HorizonOptions::default()).unwrap();
             let up = latlon_to_unit(site).unwrap();
             let obs = up.scale(R + ground_height_m(&near, site).unwrap() + MAST_M);
             let ae = EnuFrame::at(up).unwrap().az_el(obs, sun).unwrap();

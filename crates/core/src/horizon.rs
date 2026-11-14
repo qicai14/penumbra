@@ -25,10 +25,9 @@ pub struct HorizonOptions {
     /// Stop an azimuth when the far tile's highest point can no longer beat the current maximum
     /// (only armed when that point is above the observer, N11). Never changes the result.
     pub early_exit: bool,
-    /// Ground distance, metres, after which the march switches from the near to the far tile.
+    /// Ground distance, metres, after which the march switches from the near to the middle tile.
     pub near_range_m: f64,
-    /// Ground distance, metres, after which `horizon_with_mid` switches from the middle to the far
-    /// tile. `horizon` (no middle tier) does not read it.
+    /// Ground distance, metres, after which the march switches from the middle to the far tile.
     pub mid_range_m: f64,
     /// Ground distance, metres, beyond which no sample is taken; `INFINITY` marches to the tile edge.
     pub max_range_m: f64,
@@ -187,36 +186,13 @@ pub fn point_sun_mask(
 }
 
 /// Horizon at `site` (MOON_ME lat, east lon) for an observer `mast_m` metres above the near tile's
-/// ground. Each azimuth follows the great circle (P10), skips the observer's own pixel (P13), samples
-/// every near pixel to `near_range_m` and every far pixel beyond. Near-tile gaps or nodata, and a far
-/// tile ending inside `REQUIRED_RANGE_M`, are errors, never 0 m (P5).
-pub fn horizon<N: Terrain, F: Terrain>(
-    near: &N,
-    far: &F,
-    site: LatLon,
-    mast_m: f64,
-    opts: &HorizonOptions,
-) -> Result<Horizon, DemError> {
-    march::<N, DemTile, F>(near, None, far, site, mast_m, opts)
-}
-
-/// `horizon` with a middle tier (the shipped layout, #48): every near pixel to `near_range_m`,
-/// every `mid` pixel to `mid_range_m`, every far pixel beyond. Middle-tile gaps or nodata are
-/// errors, as in the near tier (P5).
-pub fn horizon_with_mid<N: Terrain, M: Terrain, F: Terrain>(
+/// ground, over the three tiers (#48). Each azimuth follows the great circle (P10), skips the
+/// observer's own pixel (P13), samples every near pixel to `near_range_m`, every `mid` pixel to
+/// `mid_range_m` and every far pixel beyond. Near- or middle-tile gaps or nodata, and a far tile
+/// ending inside `REQUIRED_RANGE_M`, are errors, never 0 m (P5).
+pub fn horizon<N: Terrain, M: Terrain, F: Terrain>(
     near: &N,
     mid: &M,
-    far: &F,
-    site: LatLon,
-    mast_m: f64,
-    opts: &HorizonOptions,
-) -> Result<Horizon, DemError> {
-    march(near, Some(mid), far, site, mast_m, opts)
-}
-
-fn march<N: Terrain, M: Terrain, F: Terrain>(
-    near: &N,
-    mid: Option<&M>,
     far: &F,
     site: LatLon,
     mast_m: f64,
@@ -251,24 +227,18 @@ fn march<N: Terrain, M: Terrain, F: Terrain>(
         .take_while(|st| st.s_m <= near_end_m.min(opts.max_range_m))
         .collect();
     // Middle steps continue from the near range; the far march starts where they end.
-    let (mid_steps, far_start_m) = match mid {
-        None => (Vec::new(), near_end_m),
-        Some(m) => {
-            let p_m = m.pixel_m();
-            let n_mid = ((opts.mid_range_m - near_end_m) / p_m + 1e-9).floor();
-            if !n_mid.is_finite() || n_mid < 1.0 {
-                return Err(DemError::BadInput(
-                    "mid range must be finite and at least one mid pixel past the near range",
-                ));
-            }
-            let mid_end_m = near_end_m + n_mid * p_m;
-            let steps: Vec<Step> = (1..)
-                .map(|k| Step::at(near_end_m + p_m * f64::from(k)))
-                .take_while(|st| st.s_m <= mid_end_m.min(opts.max_range_m))
-                .collect();
-            (steps, mid_end_m)
-        }
-    };
+    let p_m = mid.pixel_m();
+    let n_mid = ((opts.mid_range_m - near_end_m) / p_m + 1e-9).floor();
+    if !n_mid.is_finite() || n_mid < 1.0 {
+        return Err(DemError::BadInput(
+            "mid range must be finite and at least one mid pixel past the near range",
+        ));
+    }
+    let far_start_m = near_end_m + n_mid * p_m;
+    let mid_steps: Vec<Step> = (1..)
+        .map(|k| Step::at(near_end_m + p_m * f64::from(k)))
+        .take_while(|st| st.s_m <= far_start_m.min(opts.max_range_m))
+        .collect();
     // Far steps are shared by all azimuths and grown on demand: the tile edge sets the length.
     let mut far_steps: Vec<Step> = Vec::new();
     // Half way round the Moon every great circle has left any tile: a hard stop for the loop.
@@ -290,12 +260,10 @@ fn march<N: Terrain, M: Terrain, F: Terrain>(
                 (best_num, best_den, best_s) = (num, den, st.s_m);
             }
         }
-        if let Some(m) = mid {
-            for st in &mid_steps {
-                let (num, den) = sample(m, up, d, r_o, st)?;
-                if num * best_den > best_num * den {
-                    (best_num, best_den, best_s) = (num, den, st.s_m);
-                }
+        for st in &mid_steps {
+            let (num, den) = sample(mid, up, d, r_o, st)?;
+            if num * best_den > best_num * den {
+                (best_num, best_den, best_s) = (num, den, st.s_m);
             }
         }
         for j in 0.. {

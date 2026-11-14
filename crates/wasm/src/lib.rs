@@ -199,7 +199,7 @@ impl Engine {
             .far
             .as_ref()
             .ok_or_else(|| JsError::new("NOT_LOADED: far tile"))?;
-        penumbra_core::horizon::horizon_with_mid(
+        penumbra_core::horizon::horizon(
             near,
             mid,
             far,

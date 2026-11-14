@@ -9,7 +9,7 @@ use penumbra_core::eph::{
     Ephemeris, IM2_TOUCHDOWN_UNIX_S, REPLAY_IM2_STEP_S, REPLAY_IM2_T0_UNIX_S, Site, sun_earth_track,
 };
 use penumbra_core::geometry::{AzEl, LatLon};
-use penumbra_core::horizon::{HorizonOptions, ground_height_m, horizon};
+use penumbra_core::horizon::{HorizonOptions, ground_height_m};
 use penumbra_core::pit::{
     degraded_crater_depth_m, depth_to_hide_m, pit_elevation_rad, with_pit_rad,
 };
@@ -46,8 +46,7 @@ pub fn im2_statement3(data_dir: &Path) -> Result<serde_json::Value> {
 
     let mut rows = Vec::new();
     for h_m in PANEL_HEIGHTS_M {
-        let hor = horizon(near, &tiles.far, site, h_m, &HorizonOptions::default())
-            .map_err(|e| err(&e))?;
+        let hor = tiles.horizon("mons-mouton", site, h_m, &HorizonOptions::default())?;
         let track = sun_earth_track(
             &eph,
             &Site {

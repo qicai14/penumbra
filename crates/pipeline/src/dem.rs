@@ -11,6 +11,12 @@ pub const MAX_SCALE_M: f64 = 0.25;
 pub const FAR_SCALES_M: [f64; 1] = [0.5];
 /// Count written for a source NaN (the GeoTIFF no-data value).
 pub const NODATA: i16 = i16::MIN;
+/// Middle tile side, 80 m pixels (4 × 4 means of the 20 m source), same centre as the near tile:
+/// ±39.68 km covers the 8.31 km half-width of the pickable area plus the 31 km mid range at map
+/// scale ≤ 1.0032 (#48, SCIENCE-SPEC §1a tiers).
+pub const MID_PX: u32 = 992;
+/// Source pixels per middle-tile pixel side: 4 × 20 m = 80 m.
+pub const MID_BLOCK_PX: u32 = 4;
 
 /// A tile's counts and the scale and offset that decode them: h = offset_m + scale_m × count.
 #[derive(Debug, Clone)]
@@ -330,7 +336,7 @@ impl ShippedTiles {
         opts: &penumbra_core::horizon::HorizonOptions,
     ) -> Result<penumbra_core::horizon::Horizon> {
         let (near, mid) = (self.near(id)?, self.mid(id)?);
-        penumbra_core::horizon::horizon_with_mid(near, mid, &self.far, site, mast_m, opts)
+        penumbra_core::horizon::horizon(near, mid, &self.far, site, mast_m, opts)
             .map_err(|e| format!("{id}: {e:?}").into())
     }
 }

@@ -49,7 +49,7 @@ Read Nov 14 from the files themselves, before any crop. Asserted by `dem_source:
 
 Run Nov 14: `PENUMBRA_DATA=D:\DownloadHDD\penumbra-resource target/release/penumbra-pipeline horizon web/public/data` (release, LTO). Machine: Windows 11 Pro desktop, AMD Zen 2 (AMD64 Family 23 Model 113), 8 logical CPUs, 16 GB RAM, DEM on HDD. The output is deterministic; two runs gave the same angles.
 
-**Shipped-tile cross-check, IM-2, H = 2 m** (`horizon_shipped::im2_*`, runs in CI): h_s = 5321.92 m. The highest horizon is 4.0427° at az 117.5° (obstacle 16 600 m away), the lowest −1.4750° at az 328.5° (14 920 m). No bin has its obstacle under 60 m, and early exit on and off give bitwise-equal results. This matches the TS reference marcher in the T07 design.
+**Shipped-tile cross-check, IM-2, H = 2 m** (`horizon_shipped::im2_*`, runs in CI): h_s = 5321.92 m. Near + mid + far (#48): the highest horizon is 4.0617° at az 117.5° (obstacle 16 520 m away), the lowest −1.4703° at az 328.0° (15 160 m). No bin has its obstacle under 60 m, and early exit on and off give bitwise-equal results. Before #48 (near + far only) it was 4.0427° at 16 600 m and −1.4750° at az 328.5° (14 920 m), which matched the TS reference marcher in the T07 design; the three-tier values have no outside reference beyond T-1a-4 (0.05° of the float 20 m DEM).
 
 ### U18: time for one horizon
 
