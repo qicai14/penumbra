@@ -28,24 +28,20 @@
   let tileError = $state<string | null>(null); // kept apart so a later compute success cannot hide it
   loadNearTile().then((t) => (tile = t), (e) => (tileError = String(e?.message ?? e)));
   // A new region puts the site at the middle of its tile, which is always inside the 7.05 km border.
-  function onregion(id: string) {
+  function onregion(id: string, at?: [number, number]) { // `at` (lat, lon) overrides the tile middle
     loadNearTile(id).then((t) => {
       tile = t; tileError = null;
       const { x0_m, y0_m, width, height, pixel_m } = t.meta;
       const [lat, lon] = xyToLatlon(x0_m + (width * pixel_m) / 2, y0_m - (height * pixel_m) / 2);
-      controls.lat = +lat.toFixed(4); controls.lon = +lon.toFixed(4);
+      controls.lat = at ? at[0] : +lat.toFixed(4); controls.lon = at ? at[1] : +lon.toFixed(4);
     }, (e) => (tileError = String(e?.message ?? e)));
   }
 
   // Regional point grid (T24) for the picked region, if the manifest lists one; the app works without it.
-  let grid = $state.raw<Grid | null>(null);
-  $effect(() => {
-    const id = tile?.region.id;
-    let live = true;
-    grid = null;
-    if (id) loadManifest().then((m) => { const g = m.grids?.find((x) => x.region === id); return g ? fetchGrid(g) : null; }).then((g) => { if (live) grid = g; }, (e) => { if (live) tileError = `Heatmap not loaded: ${e?.message ?? e}`; });
-    return () => { live = false; };
-  });
+  // Every region's grid is loaded once, for the picker's best-cell block; `grid` is the picked region's.
+  let grids = $state.raw<Grid[]>([]);
+  loadManifest().then((m) => Promise.all((m.grids ?? []).map(fetchGrid))).then((g) => (grids = g), (e) => (tileError = `Heatmap not loaded: ${e?.message ?? e}`));
+  const grid = $derived(grids.find((g) => g.meta.region === tile?.region.id) ?? null);
   const gridK = $derived(grid ? dateIndex(grid, controls.date) : -1);
   const nearby = $derived.by(() => {
     if (!grid || gridK < 0) return null;
@@ -126,7 +122,7 @@
     {#if cmp}<Compare {controls} pairs={cmp.pairs} base={cmp.base} metas={cmp.metas} eph={cmp.eph} />{:else if !cmpError}<p class="msg">Loading…</p>{/if}
   {:else}
   <p class="tag">~/site</p>
-  {#if tile}<SitePicker {controls} {tile} {onregion} feed={maskFeed} {grid} {gridK} />{/if}
+  {#if tile}<SitePicker {controls} {tile} {onregion} feed={maskFeed} {grid} {gridK} {grids} />{/if}
   {#if tileError}<p class="msg" role="alert">{tileError}</p>{/if}
   {#if error}<p class="msg" role="alert">{error}</p>{/if}
   {#if scenario && computedFor}

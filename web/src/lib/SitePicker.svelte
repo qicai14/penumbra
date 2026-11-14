@@ -6,10 +6,10 @@
   import { rgb } from "./color";
   import type { MaskFeed } from "./maskFeed.svelte";
   import { fmtUtc } from "./panorama";
-  import { contour, CONTOUR_H, NODATA, type Grid } from "./grid";
+  import { bestCell, contour, CONTOUR_H, dateIndex, NODATA, type Grid } from "./grid";
 
   // `feed` is the shared point-Sun mask for the time marker; the 3D terrain paints the same one.
-  let { controls, tile, onregion, feed, grid = null, gridK = -1 }: { controls: Controls; tile: NearTile & { regions: Region[]; eph: EphSegment[] }; onregion: (id: string) => void; feed: MaskFeed; grid?: Grid | null; gridK?: number } = $props();
+  let { controls, tile, onregion, feed, grid = null, gridK = -1, grids = [] }: { controls: Controls; tile: NearTile & { regions: Region[]; eph: EphSegment[] }; onregion: (id: string, at?: [number, number]) => void; feed: MaskFeed; grid?: Grid | null; gridK?: number; grids?: Grid[] } = $props();
 
   let canvas: HTMLCanvasElement;
   // svelte-ignore state_referenced_locally -- drafts start from the current value, then follow typing
@@ -126,6 +126,17 @@
     const [lat, lon] = xyToLatlon(x, y);
     setSite(+lat.toFixed(4), +lon.toFixed(4));
   }
+  // Best cell of each region's grid on the picked date (first in row-major order on a tie); null for a region whose grid lacks the date.
+  const bests = $derived(grids.map((g) => {
+    const k = dateIndex(g, controls.date), b = k < 0 ? null : bestCell(g, k);
+    const [lat, lon] = b ? xyToLatlon(b.x, b.y) : [0, 0];
+    return { g, b, lat: +lat.toFixed(4), lon: +lon.toFixed(4), name: tile.regions.find((r) => r.id === g.meta.region)?.name ?? g.meta.region };
+  }));
+  const gridDates = $derived([...new Set(grids.flatMap((g) => g.meta.dates))].sort().join(", "));
+  const gridDiffers = $derived(grids.length > 0 && (controls.preset !== null || controls.mastM !== grids[0].meta.mast_m || controls.spanDays !== grids[0].meta.span_days));
+  function goBest(id: string, lat: number, lon: number) {
+    if (id === tile.region.id) setSite(lat, lon); else onregion(id, [lat, lon]);
+  }
   function onclick(e: MouseEvent) {
     const r = canvas.getBoundingClientRect();
     pick(m.x0_m + ((e.clientX - r.left) / r.width) * m.width * m.pixel_m, m.y0_m - ((e.clientY - r.top) / r.height) * m.height * m.pixel_m);
@@ -221,6 +232,24 @@
         <output>{controls.mastM.toFixed(1)} m</output>
       </label>
 
+      {#if grids.length}
+        <div class="best" data-testid="best-cells">
+          {#each bests as { g, b, lat, lon, name } (g.meta.region)}
+            <div class="col" data-testid="best-{g.meta.region}">
+              <p class="who">{name}</p>
+              {#if b}
+                <p class="days">{(b.operableH / 24).toFixed(1)} operable days</p>
+                <p>{lat.toFixed(4)}°, {lon.toFixed(4)}°E</p>
+                <button type="button" onclick={() => goBest(g.meta.region, lat, lon)}>Move site here</button>
+              {:else}
+                <p>No grid for {controls.date}.</p>
+              {/if}
+            </div>
+          {/each}
+          <p class="note">Best cell of each {grids[0].meta.pixel_m} m point grid on the landing date; a tie goes to the first cell, top row then left to right on the map.{#if gridDates && bests.every((x) => !x.b)} Grid landing dates: {gridDates}.{/if} Built for the default preset, mast {grids[0].meta.mast_m} m and {grids[0].meta.span_days} d span{gridDiffers ? "; your controls differ, so these days will not match the headline" : ""}.</p>
+        </div>
+      {/if}
+
       {#if refusal}
         <p class="refusal" role="alert" data-testid="refusal">Refused. {refusal}</p>
       {/if}
@@ -262,6 +291,12 @@
   }
   .now { margin: calc(-1 * var(--spacing-8)) 0 0; color: var(--color-fog); font-variant-numeric: tabular-nums; }
   .refusal { margin: 0; padding: var(--spacing-8) var(--spacing-16); border: 1px solid var(--color-pewter); border-radius: var(--radius-sm); background: var(--surface-iron); color: var(--color-paper); }
+  .best { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--spacing-8) var(--spacing-16); border: 1px solid var(--color-slate); border-radius: var(--radius-sm); padding: var(--spacing-8) var(--spacing-16); }
+  .best .col p, .best .note { margin: 0 0 4px; }
+  .best .who { color: var(--color-paper); }
+  .best .days { color: var(--color-fog); font-variant-numeric: tabular-nums; }
+  .best .note { grid-column: 1 / -1; color: var(--color-ash); }
+  .best button { margin-left: 0; border-radius: var(--radius-sm); }
   .group { display: flex; }
   button {
     font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-fog); background: transparent;

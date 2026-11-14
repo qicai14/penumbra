@@ -98,3 +98,16 @@ export function contour(g: Grid, k: number, level = CONTOUR_H): [number, number,
     }
   return out;
 }
+
+export type Best = { operableH: number; i: number; j: number; x: number; y: number };
+
+/** Cell with the most operable hours on date index `k`. Ties go to the first in row-major order (top row first, then left to
+ *  right in the map frame); null when every cell is no-data. */
+export function bestCell(g: Grid, k: number): Best | null {
+  const m = g.meta, a = g.operable[k];
+  let bi = -1, bh = -1;
+  for (let n = 0; n < a.length; n++) if (a[n] !== NODATA && a[n] > bh) { bh = a[n]; bi = n; }
+  if (bi < 0) return null;
+  const i = bi % m.width, j = Math.floor(bi / m.width);
+  return { operableH: bh, i, j, x: m.x0_m + (i + 0.5) * m.pixel_m, y: m.y0_m - (j + 0.5) * m.pixel_m };
+}
