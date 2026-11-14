@@ -22,7 +22,8 @@ fn im2() -> LatLon {
 // IM-2, H = 2 m on Mons Mouton near + mid + far (#48): h_s = 5321.92 m; el max 4.0617° at az 117.5°
 // (16 520 m); el min −1.4703° at az 328.0° (15 160 m); no bin under 60 m (P13); exit on == off (N11).
 // [U] The two-tier values (4.0427° at 16 600 m, −1.4750° at az 328.5°, 14 920 m) matched the T07 TS
-// reference marcher; these three-tier values are this marcher's own, bounded by T-1a-4 (0.05°).
+// reference marcher; these three-tier values are this marcher's own (no independent oracle yet),
+// bounded only by T-1a-4 (0.05°).
 #[test]
 fn im2_horizon_on_the_shipped_tiles_matches_the_reference() {
     let t = shipped();

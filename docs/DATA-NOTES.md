@@ -231,7 +231,7 @@ P7 residual map, 64 × 64 cells of 60 m centred at (−11.0, −12.0) km; row 0 
 ...+..+..........++.........-+.....+.........+..............+...
 ```
 
-Known gaps (stated, not fixed): AVGVISIB is not the Mazarico 2011 run (its max 88.44 % is below SP-01's 92.66 % (E16e), so it is not cross-checked against E16); beyond 7 km our field is 80 m to 31 km and 240 m beyond, against their 60 m (not measured; the nearest number we have is T-1a-4's up to 0.075° for 240 m against a 20 m reference); 163 048 steps against Barker's 165 000 (E93). Measured cost is about 0.28 core-seconds per pixel (524 s × 8 threads ÷ 14 950 evaluations), about 20× the spec's 15 ms/pixel line (U18).
+Known gaps (stated, not fixed): AVGVISIB is not the Mazarico 2011 run (its max 88.44 % is below SP-01's 92.66 % (E16e), so it is not cross-checked against E16); beyond 7 km our field is 80 m to 31 km and 240 m beyond, against their 60 m (not measured; the nearest number we have is T-1a-4's up to 0.038° (0.075° before #48) for 240 m against a 20 m reference); 163 048 steps against Barker's 165 000 (E93). Measured cost is about 0.28 core-seconds per pixel (524 s × 8 threads ÷ 14 950 evaluations), about 20× the spec's 15 ms/pixel line (U18).
 
 ## Validator re-run on the three-tier horizon (#48, Nov 15)
 
