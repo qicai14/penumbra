@@ -208,3 +208,120 @@ fn solar_radius_at_one_au_is_0_26657_deg() {
     );
     assert_close("R_EARTH_KM", R_EARTH_KM, 6378.137, 0.0);
 }
+
+/// The committed main table, `web/public/data/eph-main.<hash6>.bin`, loaded as the main segment.
+fn shipped_main_table() -> Vec<f64> {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../web/public/data");
+    let mut bins: Vec<_> = std::fs::read_dir(&dir)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| {
+            let name = p.file_name().unwrap().to_str().unwrap();
+            name.starts_with("eph-main.") && name.ends_with(".bin")
+        })
+        .collect();
+    assert_eq!(bins.len(), 1, "exactly one eph-main.*.bin in {dir:?}");
+    let bytes = std::fs::read(bins.pop().unwrap()).unwrap();
+    assert_eq!(bytes.len(), 6 * 8 * MAIN_ROWS, "2 103 600 bytes");
+    let (words, _) = bytes.as_chunks::<8>();
+    words.iter().map(|w| f64::from_le_bytes(*w)).collect()
+}
+
+fn shipped_ephemeris() -> Ephemeris {
+    let mut eph = Ephemeris::default();
+    eph.add(MAIN_T0_UNIX_S, MAIN_STEP_S, shipped_main_table())
+        .unwrap();
+    eph
+}
+
+// Brief row 11 (step 8): frame and sign checks on every row of the shipped table.
+// Bounds [D] from E101, E102, E104, E107: distances, ME frame with +X toward the Earth, sub-solar motion.
+#[test]
+fn shipped_table_sanity_bounds() {
+    let data = shipped_main_table();
+    let norm = |v: &[f64]| v.iter().map(|c| c * c).sum::<f64>().sqrt();
+    let mut prev_subsolar_lon_deg: Option<f64> = None;
+    for (k, row) in data.chunks(6).enumerate() {
+        let (sun, earth) = (&row[0..3], &row[3..6]);
+        let (s, e) = (norm(sun), norm(earth));
+        assert!((146.6e6..=152.6e6).contains(&s), "row {k}: |Sun| {s} km");
+        assert!(
+            (356_000.0..=407_000.0).contains(&e),
+            "row {k}: |Earth| {e} km"
+        );
+        let sub_earth_lat = (earth[2] / e).asin().to_degrees();
+        let sub_earth_lon = earth[1].atan2(earth[0]).to_degrees();
+        assert!(
+            sub_earth_lat.abs() <= 6.9,
+            "row {k}: sub-Earth lat {sub_earth_lat}"
+        );
+        assert!(
+            sub_earth_lon.abs() <= 8.2,
+            "row {k}: sub-Earth lon {sub_earth_lon}"
+        );
+        let sub_solar_lat = (sun[2] / s).asin().to_degrees();
+        assert!(
+            sub_solar_lat.abs() <= 1.6,
+            "row {k}: sub-solar lat {sub_solar_lat}"
+        );
+        let lon = sun[1].atan2(sun[0]).to_degrees();
+        if let Some(prev) = prev_subsolar_lon_deg {
+            let d = (lon - prev + 540.0).rem_euclid(360.0) - 180.0;
+            assert!(
+                (-0.53..=-0.49).contains(&d),
+                "row {k}: sub-solar dlon {d}°/h"
+            );
+        }
+        prev_subsolar_lon_deg = Some(lon);
+    }
+}
+
+/// Azimuth and elevation (degrees) of the single $$SOE row of a stored Horizons response,
+/// after asserting the request parameters the comparison depends on (P15).
+fn horizons_az_el(fixture: &str) -> (f64, f64) {
+    for header in [
+        "MEAN_ME",
+        "1737.4, 1737.4, 1737.4",
+        "29.1957, -84.7906, .002",
+        "AIRLESS",
+    ] {
+        assert!(fixture.contains(header), "fixture header lacks {header:?}");
+    }
+    assert!(fixture.contains("\"request\": \"https://ssd.jpl.nasa.gov/api/horizons.api?"));
+    let soe = fixture.split("$$SOE").nth(1).unwrap();
+    let fields: Vec<&str> = soe.split("$$EOE").next().unwrap().split(',').collect();
+    assert!(fields[0].contains("2026-Nov-14 00:00:00.000"));
+    (
+        fields[3].trim().parse().unwrap(),
+        fields[4].trim().parse().unwrap(),
+    )
+}
+
+// V1 tracer pair (brief row 13, T02 design): IM-2, mast 2 m, 2026-11-14T00Z through the shipped table
+// vs JPL Horizons, Δaz·cos(el) and Δel within 0.002° (tight enough to see P3 at 0.0056° and P4 at 0.0097°).
+#[test]
+fn v1_tracer_im2_matches_horizons_through_shipped_table() {
+    let im2 = Site {
+        lat_rad: (-84.7906f64).to_radians(),
+        lon_east_rad: 29.1957f64.to_radians(),
+        ground_m: 0.0,
+        mast_m: 2.0,
+    };
+    let t = sun_earth_track(&shipped_ephemeris(), &im2, 1_794_614_400.0, 3600.0, 1).unwrap();
+    for (body, az_col) in [("sun", 1), ("earth", 5)] {
+        let fixture = std::fs::read_to_string(format!(
+            "{}/tests/fixtures/horizons/tracer-{body}.json",
+            env!("CARGO_MANIFEST_DIR")
+        ))
+        .unwrap();
+        let (hz_az, hz_el) = horizons_az_el(&fixture);
+        let (az, el) = (t[az_col], t[az_col + 1]);
+        let d_az = ((az - hz_az + 540.0).rem_euclid(360.0) - 180.0) * hz_el.to_radians().cos();
+        let d_el = el - hz_el;
+        println!(
+            "{body}: ours az {az:.9} el {el:.9}; Horizons {hz_az} {hz_el}; Δaz·cos(el) {d_az:+.2e}° Δel {d_el:+.2e}°"
+        );
+        assert!(d_az.abs() <= 0.002, "{body} Δaz·cos(el) {d_az}°");
+        assert!(d_el.abs() <= 0.002, "{body} Δel {d_el}°");
+    }
+}
