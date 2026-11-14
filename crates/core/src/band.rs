@@ -28,9 +28,10 @@ pub fn sigma_el_rad(
     Ok(sigma_obstacle_m.hypot(sigma_observer_m) / obstacle_dist_m)
 }
 
-/// Upper bound on a half width, minutes: one 29.5-day synodic month (E118). A grazing crossing
-/// (rate → 0) is ill-conditioned; past a month the Sun's geometry repeats, so a wider band says
-/// nothing more. Keeps every band finite, never inf (§1f "the band is hours").
+/// Upper bound on a half width, minutes: one 29.5-day synodic month (length from E118). A design
+/// choice [D], not in §1f: a grazing crossing (rate → 0) is ill-conditioned, and past a month the
+/// Sun's geometry repeats, so a wider band says nothing more. Keeps every band finite, never inf.
+/// Callers (T18) must read `half_width_min == MAX_HALF_WIDTH_MIN` as "unbounded", not a real width.
 pub const MAX_HALF_WIDTH_MIN: f64 = 29.5 * 24.0 * 60.0;
 
 /// Columns of the API timeline (docs/API.md); the band reads t (0), Sun az (1) and Sun el (2).
@@ -52,6 +53,18 @@ pub fn window_bands(
 ) -> Result<Vec<f64>, EphError> {
     if !timeline.len().is_multiple_of(COLS) {
         return Err(EphError::BadInput("timeline must be 10 × n"));
+    }
+    // σ_z > 0: zero would give a single time, which §1f forbids; NaN horizons would skip events.
+    if !(sigma_z_m > 0.0 && sigma_z_m.is_finite()) {
+        return Err(EphError::BadInput("σ_z must be finite > 0"));
+    }
+    if horizon
+        .el_rad
+        .iter()
+        .chain(&horizon.dist_m)
+        .any(|v| !v.is_finite())
+    {
+        return Err(EphError::BadInput("horizon values must be finite"));
     }
     let n = timeline.len() / COLS;
     let col = |c: usize| &timeline[c * n..(c + 1) * n];

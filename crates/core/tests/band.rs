@@ -168,7 +168,7 @@ fn crossing_north_reads_the_distance_on_the_near_side() {
     assert_close(b[2], 23.93, 0.01);
 }
 
-// §1f worked example, the E28 proxy (a 5 m mast clears the near field, so obstacles are ≥ 1 km):
+// §1f worked example only; NOT the E28 check (that needs a real IM-2 horizon, brief row 9):
 // the Sun moving 0.5°/h in azimuth (E107) at constant elevation over a horizon falling 0.1° per
 // degree gives dm/dt = 0.05°/h. With D = 1 km, σ_el = 0.040514° (row 1), so the half width is
 // 0.040514 / 0.05 h = 48.62 min: small, under an hour (brief row 9).
@@ -194,4 +194,32 @@ fn bad_timeline_length_is_bad_input() {
     t.pop();
     let e = window_bands(&t, &flat(1.0, 2_000.0), ASSUMED_SIGMA_Z_M).unwrap_err();
     assert_eq!(e.code(), "BAD_INPUT");
+}
+
+// Review fix: σ_z ≤ 0 would give a zero-width band (a single time), NaN would silently skip events.
+#[test]
+fn non_positive_or_nan_sigma_z_is_bad_input() {
+    let t = tl(&[100.0, 100.0], &[1.004_233, 0.995_767]);
+    for s in [0.0, -0.5, f64::NAN] {
+        let e = window_bands(&t, &flat(1.0, 2_000.0), s).unwrap_err();
+        assert_eq!(e.code(), "BAD_INPUT", "σ_z = {s}");
+    }
+}
+
+// Review fix: a NaN in the horizon makes m NaN, which no sign test catches, so it must throw.
+#[test]
+fn non_finite_horizon_is_bad_input() {
+    let t = tl(&[100.0, 100.0], &[1.004_233, 0.995_767]);
+    let mut h = flat(1.0, 2_000.0);
+    h.el_rad[200] = f64::NAN;
+    assert_eq!(
+        window_bands(&t, &h, ASSUMED_SIGMA_Z_M).unwrap_err().code(),
+        "BAD_INPUT"
+    );
+    let mut h = flat(1.0, 2_000.0);
+    h.dist_m[5] = f64::INFINITY;
+    assert_eq!(
+        window_bands(&t, &h, ASSUMED_SIGMA_Z_M).unwrap_err().code(),
+        "BAD_INPUT"
+    );
 }
