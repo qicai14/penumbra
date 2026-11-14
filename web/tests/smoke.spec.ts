@@ -77,7 +77,8 @@ test("scoreboard lists V1-V5 and shows 'not run' for checks that have not run", 
 });
 
 // T13 (#14): every dataset carries its role and an evidence-ledger citation, none left pending (rubric 4 and 10).
-test("every dataset row has a role and a SCIENCE-SPEC §6 citation", async ({ page }) => {
+// Each citation links to its original source, and every link is one the research lists or a ledger W row already name.
+test("every dataset row has a role, SCIENCE-SPEC §6 ids and links to the original sources", async ({ page }) => {
   await page.goto("/");
   const rows = page.getByTestId("datasets").locator("tbody tr");
   await expect(rows).toHaveCount(6);
@@ -85,11 +86,23 @@ test("every dataset row has a role and a SCIENCE-SPEC §6 citation", async ({ pa
   // Every cited id must be a real row of the ledger, so a typo such as E999 fails.
   const ledger = readFileSync(fileURLToPath(new URL("../../docs/SCIENCE-SPEC.md", import.meta.url)), "utf8");
   const known = new Set([...ledger.matchAll(/^\| ([EW]\d+[a-z]?) \|/gm)].map((m) => m[1]));
+  const research = (f: string) => readFileSync(fileURLToPath(new URL(`../../docs/research/lunar-landing/${f}`, import.meta.url)), "utf8");
+  const bare = (u: string) => u.replace(/^https?:\/\//, ""); // the W1 row says http://, the page links https://
+  const listed = bare([ledger, research("sources.txt"), research("index-addendum.txt")].join("\n"));
   const cells = await page.getByTestId("citation").all();
   expect(cells).toHaveLength(6);
   for (const cell of cells) {
-    await expect(cell.locator("a")).toHaveAttribute("href", /SCIENCE-SPEC\.md#6-evidence-ledger$/);
-    const ids = ((await cell.textContent()) ?? "").replace(/^.*§6:\s*/, "").split(/,\s*/);
+    const links = await cell.locator("a").all();
+    expect(links.length).toBeGreaterThan(0);
+    for (const a of links) {
+      const href = (await a.getAttribute("href")) ?? "";
+      expect(href, "absolute https link").toMatch(/^https:\/\//);
+      expect(href, "not the project's own repo").not.toContain("github.com");
+      expect(listed.includes(bare(href)), `${href} in sources.txt, index-addendum.txt or a §6 W row`).toBe(true);
+      await expect(a).toHaveAttribute("target", "_blank");
+      await expect(a).toHaveAttribute("rel", "noopener noreferrer");
+    }
+    const ids = ((await cell.getByTestId("ids").textContent()) ?? "").replace(/^.*§6:\s*/, "").split(/,\s*/);
     expect(ids.length).toBeGreaterThan(0);
     for (const id of ids) {
       const range = id.match(/^([EW]\d+)([a-z])–([a-z])$/); // "E75a–c" stands for E75a, E75b, E75c
