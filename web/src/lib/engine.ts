@@ -140,6 +140,16 @@ function fetchTile(t: TileMeta): Promise<Int16Array> {
   return p;
 }
 
+async function fetchSegment(seg: EphSegment): Promise<Float64Array> {
+  const res = await fetch(`${import.meta.env?.BASE_URL ?? "/"}${seg.url}`);
+  if (!res.ok) throw new Error(`NO_DATA: ${seg.url} returned ${res.status}`);
+  const buf = await res.arrayBuffer();
+  if (buf.byteLength % 8) throw new Error(`BAD_INPUT: ${seg.url} is ${buf.byteLength} bytes, not whole f64s`);
+  const data = new Float64Array(buf);
+  if (data.length !== 6 * seg.rows) throw new Error(`BAD_INPUT: ${seg.url} has ${data.length} values, expected ${6 * seg.rows}`);
+  return data;
+}
+
 type WasmEngine = InstanceType<typeof import("./wasm/penumbra_wasm.js").Engine>;
 let engineLoad: Promise<WasmEngine> | undefined;
 /** The WASM Engine with the shipped ephemeris table loaded; built once and cached (a failed load is retried). */
@@ -148,15 +158,10 @@ export function loadEngine(): Promise<WasmEngine> {
     const wasm = await import("./wasm/penumbra_wasm.js");
     await wasm.default();
     const m = await loadManifest();
-    const seg = m.ephemeris[0];
-    const res = await fetch(`${import.meta.env?.BASE_URL ?? "/"}${seg.url}`);
-    if (!res.ok) throw new Error(`NO_DATA: ${seg.url} returned ${res.status}`);
-    const buf = await res.arrayBuffer();
-    if (buf.byteLength % 8) throw new Error(`BAD_INPUT: ${seg.url} is ${buf.byteLength} bytes, not whole f64s`);
-    const data = new Float64Array(buf);
-    if (data.length !== 6 * seg.rows) throw new Error(`BAD_INPUT: ${seg.url} has ${data.length} values, expected ${6 * seg.rows}`);
+    // Every segment, fetched together and loaded in manifest order (docs/API.md: load_ephemeris once per segment).
+    const segs = await Promise.all(m.ephemeris.map(fetchSegment));
     const engine = new wasm.Engine();
-    engine.load_ephemeris(seg.t0_unix_s, seg.step_s, data);
+    m.ephemeris.forEach((seg, i) => engine.load_ephemeris(seg.t0_unix_s, seg.step_s, segs[i]));
     const far = await fetchTile(m.far);
     engine.load_far(far, m.far.width, m.far.height, m.far.x0_m, m.far.y0_m, m.far.pixel_m, m.far.scale_m, m.far.offset_m, m.far.nodata);
     return engine;
@@ -184,6 +189,7 @@ export function loadTracerTrack(): Promise<Track> {
 
 import { edgeDistanceM } from "./site";
 import { serialize } from "./serialize";
+import { checkPit, DEGRADED_SLOPE_DEG } from "./replay";
 import { latlonToXy } from "./fixture-projection";
 // ---- Site picker and recompute (T11) ----
 // The projection is still a fixture stand-in until T01 #2 merges; the model calls above are the WASM Engine.
@@ -203,8 +209,7 @@ export async function loadNearTile(regionId?: string): Promise<NearTile & { regi
   const region = regionId === undefined ? m.regions[0] : m.regions.find((r) => r.id === regionId);
   if (!region) throw new Error(`BAD_INPUT: unknown region ${regionId}`);
   const { url, ...meta } = region.near;
-  // shortcut: only ephemeris[0] is loaded (line 151), so only it is offered; T16 (#17) loads the replay segment too.
-  return { fake: false, region: { id: region.id, name: region.name }, regions: m.regions.map(({ id, name }) => ({ id, name })), eph: m.ephemeris.slice(0, 1), meta, data: await fetchTile(region.near) };
+  return { fake: false, region: { id: region.id, name: region.name }, regions: m.regions.map(({ id, name }) => ({ id, name })), eph: m.ephemeris, meta, data: await fetchTile(region.near) };
 }
 
 let nearId: string | undefined; // region now in the Engine
@@ -224,6 +229,20 @@ export const TERRAIN_FAKE = false;
 /** Survival (headline, charge, lethal time) is the WASM `survival` since T09 (#10); same pattern as TERRAIN_FAKE. */
 export const SURVIVAL_FAKE = false;
 
+/** Timeline (T08) and survival (T09) for one horizon in the 1440 layout; landing is the first step. NaN lethal_h = none in span. */
+async function timelineAndSurvival(engine: WasmEngine, rawHorizon: Float64Array, site: Site, preset: Preset, t0: number, step_s: number, n: number) {
+  const flat = engine.timeline(rawHorizon, site.lat_deg, site.lon_deg, site.ground_m, site.mast_m, t0, step_s, n, preset.earth_margin_deg);
+  const timeline = Object.fromEntries(TIMELINE_COLUMNS.map((k, i) => [k, flat.slice(i * n, (i + 1) * n)])) as Timeline;
+  validate(timeline);
+  const wasm = await import("./wasm/penumbra_wasm.js");
+  const pn = preset.panel === "tracking" ? [0, 0, 0, 0] : [1, preset.panel.east, preset.panel.north, preset.panel.up];
+  const sv = wasm.survival(flat, Float64Array.of(preset.capacity_wh, preset.start_wh, preset.min_wh, preset.panel_area_m2, preset.efficiency, ...pn, preset.load_w, 0, 0), t0);
+  const survival: Survival = { operable_h: sv[0], lethal_h: Number.isNaN(sv[1]) ? null : sv[1], longest_dark_h: sv[2],
+    longest_any_sun_h: sv[3], sunlit_h: sv[4], contact_h: sv[5], soc_wh: sv.slice(8, 8 + sv[7]) };
+  validate(survival);
+  return { timeline, survival };
+}
+
 let fixtureBase: Promise<Scenario> | undefined;
 /**
  * Everything is the WASM Engine on the landing date and span at the fixture's 10-minute step: the panorama track, the
@@ -242,20 +261,43 @@ async function computeNow(inp: Inputs): Promise<Scenario> {
   const preset = inp.preset ?? s.preset, t0 = inp.start_unix_s, n = Math.round((inp.span_days * 86400) / s.step_s);
   if (!(n >= 1) || !Number.isFinite(t0)) throw new Error(`BAD_INPUT: span ${inp.span_days} d from ${t0} gives no time steps`);
   const track = await sunEarthTrack(site, t0, s.step_s, n);
-  // Timelines from the WASM Engine (T08 #9), on the same grid and against the same horizon.
-  const flat = engine.timeline(raw, site.lat_deg, site.lon_deg, ground_m, inp.mast_m, t0, s.step_s, n, preset.earth_margin_deg);
-  const timeline = Object.fromEntries(TIMELINE_COLUMNS.map((k, i) => [k, flat.slice(i * n, (i + 1) * n)])) as Timeline;
-  validate(timeline);
-  // Survival from the WASM free function (T09 #10) on that timeline; landing is its first step. NaN lethal_h = none in span.
-  const wasm = await import("./wasm/penumbra_wasm.js");
-  const pn = preset.panel === "tracking" ? [0, 0, 0, 0] : [1, preset.panel.east, preset.panel.north, preset.panel.up];
-  const sv = wasm.survival(flat, Float64Array.of(preset.capacity_wh, preset.start_wh, preset.min_wh, preset.panel_area_m2, preset.efficiency, ...pn, preset.load_w, 0, 0), t0);
-  const survival: Survival = { operable_h: sv[0], lethal_h: Number.isNaN(sv[1]) ? null : sv[1], longest_dark_h: sv[2],
-    longest_any_sun_h: sv[3], sunlit_h: sv[4], contact_h: sv[5], soc_wh: sv.slice(8, 8 + sv[7]) };
-  validate(survival);
+  const { timeline, survival } = await timelineAndSurvival(engine, raw, site, preset, t0, s.step_s, n);
   return { ...s, fake: false, note: "", start_unix_s: t0, count: n, preset, site, track, horizon, timeline, survival };
 }
 
 // The Engine holds one near tile at a time (ensureNear swaps it), so two computes must never interleave.
 /** computeNow, one at a time: a second call waits for the first (the compare view runs A then B, and the site view may be mid-compute). */
 export const computeScenario = serialize(computeNow);
+
+// ---- IM-2 replay (T16 #17): the same site and times with the horizon raised to a pit rim ----
+/**
+ * A copy of `base` whose horizon is the WASM `pit_horizon` (SCIENCE-SPEC 1f) and whose timeline and survival are recomputed against it.
+ * The panel height H is base.site.mast_m, measured from the pit floor. Throws BAD_INPUT for a refused pit.
+ */
+export async function computePit(base: Scenario, pit: { diameter_m: number; depth_m: number }): Promise<Scenario> {
+  const bad = checkPit({ ...pit, panel_m: base.site.mast_m });
+  if (bad) throw new Error(`BAD_INPUT: ${bad}`);
+  const wasm = await import("./wasm/penumbra_wasm.js");
+  await wasm.default();
+  const regional = new Float64Array(1440);
+  regional.set(base.horizon.el_deg); regional.set(base.horizon.dist_m, 720);
+  const raw = wasm.pit_horizon(regional, pit.diameter_m, pit.depth_m, base.site.mast_m);
+  const horizon: Horizon = { el_deg: raw.slice(0, 720), dist_m: raw.slice(720, 1440) };
+  validate(horizon);
+  const engine = await loadEngine();
+  const { timeline, survival } = await timelineAndSurvival(engine, raw, base.site, base.preset, base.start_unix_s, base.step_s, base.count);
+  return { ...base, horizon, timeline, survival };
+}
+
+/** d_c* in metres: the pit depth that hides the whole solar disc from a panel `panel_m` above the floor (V4 statement 3). WASM. */
+export async function pitDepthToHide(diameter_m: number, panel_m: number, sun_el_deg: number, sun_radius_deg: number): Promise<number> {
+  const wasm = await import("./wasm/penumbra_wasm.js");
+  await wasm.default();
+  return wasm.pit_depth_to_hide(diameter_m, panel_m, sun_el_deg, sun_radius_deg);
+}
+
+// The model refuses a Sun radius of 0, so the point source has a radius far below any depth tolerance (1e-9 deg moves 10 m by 2e-10 m).
+const TINY_SUN_DEG = 1e-9;
+/** The ESA degraded-crater depth (D/2)·tan 11° (E112) from the WASM: the depth that hides a (near) point source sitting 11° up, from the floor (H = 0).
+ *  shortcut: stands in for the unexported `degraded_crater_depth_m` (crates/core/src/pit.rs:29) until the WASM exports it (both-owners follow-up, api_version bump). */
+export const defaultPitDepth = (diameter_m: number) => pitDepthToHide(diameter_m, 0, DEGRADED_SLOPE_DEG, TINY_SUN_DEG);
