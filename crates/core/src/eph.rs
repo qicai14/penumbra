@@ -12,6 +12,16 @@ pub const MAIN_STEP_S: f64 = 3600.0;
 /// Rows of the main segment; the last row is 2031-01-01T00:00:00Z.
 pub const MAIN_ROWS: usize = 43_825;
 
+/// IM-2 replay segment `web/public/data/eph-replay-im2.<hash6>.bin`: 2025-02-20T00:00:00Z, Unix s UTC,
+/// 14 days before touchdown, so a 30-day timeline from touchdown fits (ARCHITECTURE §2.4).
+pub const REPLAY_IM2_T0_UNIX_S: f64 = 1_740_009_600.0;
+/// Row spacing of the replay segment, seconds of UTC (same grid rule as main, §1c).
+pub const REPLAY_IM2_STEP_S: f64 = 3600.0;
+/// Rows of the replay segment, 45 days hourly; the last row is 2025-04-06T00:00:00Z.
+pub const REPLAY_IM2_ROWS: usize = 1081;
+/// IM-2 touchdown, 2025-03-06T17:28:00Z, Unix s UTC. Assumed: no primary source gives the time (U8).
+pub const IM2_TOUCHDOWN_UNIX_S: f64 = 1_741_282_080.0;
+
 /// f64 per row: Sun x, y, z then Earth x, y, z, km, MOON_ME.
 const ROW_LEN: usize = 6;
 

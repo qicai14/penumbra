@@ -221,7 +221,7 @@ Ours, in two steps [D]:
     el_pit = atan( (d_c − H) / (D_c / 2) )
     el_hor′[i] = max( el_hor[i] , el_pit )      for every azimuth
 
-Default depth from ESA's degraded-crater model, an "11° slope from bottom to top of" the rim (E112): d_c = (D_c/2)·tan 11°. For D_c = 20 m that is 1.9 m. The Sun's highest possible elevation at latitude φ is 90° − |φ| + 1.54° (E104), which is 6.75° at IM-2's latitude [D]. Whether a panel is shaded depends on H: for D_c = 20 m, d_c = 1.94 m, el_pit is 11.0° at H = 0, 5.4° at H = 1 m, 2.9° at H = 1.44 m and −0.3° at H = 2 m. So report the pit depth d_c* = H + (D_c/2)·tan(el_sun + ρ) that would hide the whole disc, not an assertion of shadow.
+Default depth from ESA's degraded-crater model, an "11° slope from bottom to top of" the rim (E112): d_c = (D_c/2)·tan 11°. For D_c = 20 m that is 1.9 m. The Sun's highest possible elevation at latitude φ is 90° − |φ| + 1.54° (E104), which is 6.75° at IM-2's latitude [D]. Measured on the 2026–2030 table the peak is 6.78°: the sub-solar latitude reaches −1.588°, past E104's 1.54° (T15); treat 6.75° as approximate and hold tests to the V5 ±1.6° bound. Whether a panel is shaded depends on H: for D_c = 20 m, d_c = 1.94 m, el_pit is 11.0° at H = 0, 5.4° at H = 1 m, 2.9° at H = 1.44 m and −0.3° at H = 2 m. So report the pit depth d_c* = H + (D_c/2)·tan(el_sun + ρ) that would hide the whole disc, not an assertion of shadow.
 
 ---
 

@@ -53,9 +53,9 @@ impl Engine {
 
 // Should tier. Names frozen now; built in T15 and T17.
 #[wasm_bindgen] pub fn pit_horizon(horizon: &[f64], pit_diameter_m: f64, pit_depth_m: f64,
-                                   panel_height_m: f64) -> Vec<f64>;            // same layout as horizon
+                                   panel_height_m: f64) -> Result<Vec<f64>, JsError>; // same layout as horizon; throws BAD_INPUT
 #[wasm_bindgen] pub fn pit_depth_to_hide(pit_diameter_m: f64, panel_height_m: f64,
-                                         sun_el_deg: f64, sun_radius_deg: f64) -> f64;   // d_c* in m
+                                         sun_el_deg: f64, sun_radius_deg: f64) -> Result<f64, JsError>; // d_c* in m; throws BAD_INPUT
 #[wasm_bindgen] pub fn window_bands(timeline: &[f64], horizon: &[f64], sigma_z_m: f64) -> Vec<f64>;
 ```
 

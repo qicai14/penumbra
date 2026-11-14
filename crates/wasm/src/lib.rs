@@ -303,3 +303,62 @@ pub fn survival(
     out.extend(s.soc_wh);
     Ok(out)
 }
+
+fn geo_err(e: penumbra_core::geometry::GeometryError) -> JsError {
+    let penumbra_core::geometry::GeometryError::BadInput(why) = e;
+    JsError::new(&format!("BAD_INPUT: {why}"))
+}
+
+/// `horizon` (the 1 440-value layout `Engine.horizon` returns: topocentric ENU el_deg[720] then
+/// dist_m[720]) raised to the rim of a pit around the lander: el′ = max(el, el_pit) with
+/// el_pit = atan((d_c − H)/(D_c/2)) (SCIENCE-SPEC §1f A3). A raised bin's distance becomes the rim
+/// distance D_c/2. Throws BAD_INPUT instead of returning NaN (docs/API.md errors rule).
+#[wasm_bindgen]
+pub fn pit_horizon(
+    horizon: &[f64],
+    pit_diameter_m: f64,
+    pit_depth_m: f64,
+    panel_height_m: f64,
+) -> Result<Vec<f64>, JsError> {
+    use penumbra_core::horizon::N_AZ;
+    if horizon.len() != 2 * N_AZ {
+        return Err(JsError::new("BAD_INPUT: horizon must have 1440 values"));
+    }
+    if horizon.iter().any(|v| !v.is_finite()) {
+        return Err(JsError::new("BAD_INPUT: horizon values must be finite"));
+    }
+    let el_pit_rad =
+        penumbra_core::pit::pit_elevation_rad(pit_depth_m, pit_diameter_m, panel_height_m)
+            .map_err(geo_err)?;
+    let el_hor_rad: [f64; N_AZ] = std::array::from_fn(|i| horizon[i].to_radians());
+    let raised = penumbra_core::pit::with_pit_rad(&el_hor_rad, el_pit_rad).map_err(geo_err)?;
+    let mut out: Vec<f64> = raised.iter().map(|e| e.to_degrees()).collect();
+    out.extend((0..N_AZ).map(|i| {
+        if raised[i] > el_hor_rad[i] {
+            pit_diameter_m / 2.0
+        } else {
+            horizon[N_AZ + i]
+        }
+    }));
+    Ok(out)
+}
+
+/// Pit depth d_c* = H + (D_c/2)·tan(el_sun + ρ), metres, that hides the whole solar disc from a
+/// panel at `panel_height_m` above the pit floor (SCIENCE-SPEC §1f, V4 statement 3). `sun_el_deg`
+/// and `sun_radius_deg` are the topocentric ENU Sun-centre elevation and angular radius, degrees,
+/// as `sun_earth_track` returns them.
+#[wasm_bindgen]
+pub fn pit_depth_to_hide(
+    pit_diameter_m: f64,
+    panel_height_m: f64,
+    sun_el_deg: f64,
+    sun_radius_deg: f64,
+) -> Result<f64, JsError> {
+    penumbra_core::pit::depth_to_hide_m(
+        pit_diameter_m,
+        panel_height_m,
+        sun_el_deg.to_radians(),
+        sun_radius_deg.to_radians(),
+    )
+    .map_err(geo_err)
+}

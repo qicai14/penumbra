@@ -2,8 +2,8 @@
 //! Row numbers refer to the test table in docs/briefs/T02-ephemeris-tracer.md §5.
 
 use penumbra_core::eph::{
-    EphError, Ephemeris, MAIN_ROWS, MAIN_STEP_S, MAIN_T0_UNIX_S, R_EARTH_KM, R_SUN_KM, Site,
-    sun_earth_track,
+    EphError, Ephemeris, IM2_TOUCHDOWN_UNIX_S, MAIN_ROWS, MAIN_STEP_S, MAIN_T0_UNIX_S, R_EARTH_KM,
+    R_SUN_KM, REPLAY_IM2_ROWS, REPLAY_IM2_STEP_S, REPLAY_IM2_T0_UNIX_S, Site, sun_earth_track,
 };
 
 /// Table of brief row 1: t0 = 1000 s, step 3600 s, three rows.
@@ -355,4 +355,107 @@ fn v1_tracer_im2_matches_horizons_through_shipped_table() {
         assert!(d_az.abs() <= 0.002, "{body} Δaz·cos(el) {d_az}°");
         assert!(d_el.abs() <= 0.002, "{body} Δel {d_el}°");
     }
+}
+
+// T15 replay segment grid on calendar UTC (ARCHITECTURE §2.4: about 45 days around 2025-03-06, 1 081 rows).
+// 2025-02-20T00Z = 1 740 009 600; IM-2 touchdown 2025-03-06T17:28Z (U8, assumed) = 1 741 282 080 is
+// 14 days 17 h 28 min in; 2025-04-06T00Z = 1 743 897 600 is the last row, 1 080.
+#[test]
+#[allow(clippy::float_cmp)] // whole seconds, exact in f64
+fn replay_im2_segment_grid_matches_calendar_utc() {
+    assert_eq!(REPLAY_IM2_T0_UNIX_S, 1_740_009_600.0);
+    assert_eq!(REPLAY_IM2_STEP_S, 3600.0);
+    assert_eq!(REPLAY_IM2_ROWS, 1081);
+    assert_eq!(
+        IM2_TOUCHDOWN_UNIX_S - REPLAY_IM2_T0_UNIX_S,
+        14.0 * 86_400.0 + 17.0 * 3600.0 + 28.0 * 60.0
+    );
+    assert_eq!(
+        (1_743_897_600.0 - REPLAY_IM2_T0_UNIX_S) / REPLAY_IM2_STEP_S,
+        1080.0
+    );
+}
+
+/// The committed replay table, `web/public/data/eph-replay-im2.<hash6>.bin`.
+fn shipped_replay_table() -> Vec<f64> {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../web/public/data");
+    let mut bins: Vec<_> = std::fs::read_dir(&dir)
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        .filter(|p| {
+            let name = p.file_name().unwrap().to_str().unwrap();
+            name.starts_with("eph-replay-im2.") && name.ends_with(".bin")
+        })
+        .collect();
+    assert_eq!(bins.len(), 1, "exactly one eph-replay-im2.*.bin in {dir:?}");
+    let bytes = std::fs::read(bins.pop().unwrap()).unwrap();
+    assert_eq!(bytes.len(), 6 * 8 * REPLAY_IM2_ROWS, "51 888 bytes");
+    let (words, _) = bytes.as_chunks::<8>();
+    words.iter().map(|w| f64::from_le_bytes(*w)).collect()
+}
+
+// The manifest lists the replay segment after main (the app loads ephemeris[0] as main) with the core
+// constants. serde_json writes keys sorted, so the entry's text is fixed up to the file hash.
+#[test]
+fn shipped_manifest_lists_the_replay_segment_after_main() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../web/public/data");
+    let m = std::fs::read_to_string(dir.join("manifest.json")).unwrap();
+    assert!(
+        m.contains("\"ephemeris\":[{\"id\":\"main\""),
+        "main first: {m}"
+    );
+    let entry = format!(
+        "{{\"id\":\"replay-im2\",\"rows\":{REPLAY_IM2_ROWS},\"step_s\":{REPLAY_IM2_STEP_S},\"t0_unix_s\":{REPLAY_IM2_T0_UNIX_S},\"url\":\"data/"
+    );
+    let url = m
+        .split(entry.as_str())
+        .nth(1)
+        .unwrap_or_else(|| panic!("manifest.json lacks {entry}: {m}"))
+        .split('"')
+        .next()
+        .unwrap();
+    assert!(
+        dir.join(url).is_file(),
+        "manifest url data/{url} is not a shipped file"
+    );
+    shipped_replay_table();
+}
+
+/// Highest topocentric Sun-centre elevation at IM-2 (mast 0 m) over every hourly row of one segment.
+fn max_sun_el_at_im2_deg(eph: &Ephemeris, t0_unix_s: f64, rows: usize) -> f64 {
+    let im2 = Site {
+        lat_rad: (-84.7906f64).to_radians(),
+        lon_east_rad: 29.1957f64.to_radians(),
+        ground_m: 0.0,
+        mast_m: 0.0,
+    };
+    let t = sun_earth_track(eph, &im2, t0_unix_s, 3600.0, u32::try_from(rows).unwrap()).unwrap();
+    // column 2 is sun_el_deg (docs/API.md)
+    t[2 * rows..3 * rows]
+        .iter()
+        .fold(f64::NEG_INFINITY, |a, &b| a.max(b))
+}
+
+// §1f (E104): on the replay segment the Sun's centre stays below 90° − 84.7906° + 1.54° = 6.75° at IM-2.
+#[test]
+fn sun_elevation_at_im2_never_exceeds_6_75_deg_on_the_replay_segment() {
+    let mut eph = Ephemeris::default();
+    eph.add(
+        REPLAY_IM2_T0_UNIX_S,
+        REPLAY_IM2_STEP_S,
+        shipped_replay_table(),
+    )
+    .unwrap();
+    let worst = max_sun_el_at_im2_deg(&eph, REPLAY_IM2_T0_UNIX_S, REPLAY_IM2_ROWS);
+    println!("replay max Sun el at IM-2: {worst:.4}°");
+    assert!(worst <= 6.75, "Sun el {worst}° > 6.75°");
+}
+
+// Over 2026–2030 the sub-solar latitude reaches 1.588°, past E104's 1.54° (T15 finding), so the main
+// table is held to V5 case 2's ±1.6° bound instead: 90° − 84.7906° + 1.6° = 6.8094°.
+#[test]
+fn sun_elevation_at_im2_stays_within_the_v5_1_6_deg_bound_on_the_main_table() {
+    let worst = max_sun_el_at_im2_deg(&shipped_ephemeris(), MAIN_T0_UNIX_S, MAIN_ROWS);
+    println!("main max Sun el at IM-2: {worst:.4}°");
+    assert!(worst <= 6.8094, "Sun el {worst}° > 6.8094°");
 }

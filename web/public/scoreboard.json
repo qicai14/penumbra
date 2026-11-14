@@ -37,15 +37,15 @@
   },
   {
     "id": "V4",
-    "judge": "IM-1 / IM-2 published timelines",
-    "metric": "consistent with published timeline",
+    "judge": "IM-1 / IM-2 reconstruction (published reports)",
+    "metric": "consistent with reports (reconstruction, not validation)",
     "threshold": null,
     "value": null,
     "pass": null,
-    "sample_size": 2,
-    "notes": "not run",
+    "sample_size": 1,
+    "notes": "Reconstruction, consistent with reports; not validated. Only statement 3 (IM-2) attempted. At an assumed touchdown of 2025-03-06T17:28Z (U8) the model puts the Sun at 2.46 deg elevation, 0.81 deg above the regional horizon. The 20 m pit (degraded-crater depth 1.94 m) hides the whole disc for panel heights H = 0, 1 and 1.44 m (d_c* = 0.48, 1.48, 1.92 m) and not for H = 2 m (d_c* = 2.48 m). At H = 1.44 m the margin is only 2.7 cm; the Sun moves about 0.5°/h, so a few minutes of error in the assumed touchdown time (U8) can flip this row. Stated limit P6: the pit is below DEM resolution (20 m pixel), so it is a stated model, not terrain. IM-1 statements 1 and 2: not attempted (far field out of range, P5). pass left null: the three-statement pass condition is not met. Numbers from `cargo run --release -p penumbra-pipeline -- v4-im2 web/public/data`; uncommitted code, so commit is null.",
     "commit": null,
-    "date": null
+    "date": "2026-11-14"
   },
   {
     "id": "V5",

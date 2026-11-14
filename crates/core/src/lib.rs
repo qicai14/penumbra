@@ -4,6 +4,7 @@ pub mod dem;
 pub mod eph;
 pub mod geometry;
 pub mod horizon;
+pub mod pit;
 pub mod power;
 pub mod timeline;
 

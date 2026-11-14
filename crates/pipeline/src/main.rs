@@ -1,17 +1,21 @@
 //! Native offline pipeline. `penumbra-pipeline eph <out_dir>` builds the hourly ephemeris table
-//! from the kernels in PENUMBRA_DATA, writes `eph-main.<hash6>.bin` and `manifest.json` into
+//! from the kernels in PENUMBRA_DATA, writes `eph-main.<hash6>.bin`, the IM-2 replay segment
+//! `eph-replay-im2.<hash6>.bin` (2025-02-20 to 2025-04-06 UTC) and `manifest.json` into
 //! `out_dir`, and prints the tracer row (IM-2, 2026-11-14T00:00:00Z).
 //! `penumbra-pipeline dem <out_dir>` crops the two near tiles and the far tile (T06) and merges
 //! them into the same `manifest.json`.
 //! `penumbra-pipeline horizon <data_dir>` (release build) prints the T07 reports: T-1a-4 tier
 //! ablation against the float 20 m DEM in PENUMBRA_DATA, T-1a-5 range check and U18 native timing.
+//! `penumbra-pipeline v4-im2 <data_dir>` prints V4 statement 3 (IM-2 at its assumed touchdown,
+//! pit depth to hide the Sun per panel height) as JSON from the shipped files; no kernels needed.
 
 use penumbra_core::eph::{
-    Ephemeris, MAIN_ROWS, MAIN_STEP_S, MAIN_T0_UNIX_S, Site, sun_earth_track,
+    Ephemeris, MAIN_ROWS, MAIN_STEP_S, MAIN_T0_UNIX_S, REPLAY_IM2_ROWS, REPLAY_IM2_STEP_S,
+    REPLAY_IM2_T0_UNIX_S, Site, sun_earth_track,
 };
 use penumbra_pipeline::eph::{
-    MAIN_FILE_PREFIX, MAIN_FILE_SUFFIX, Result, build_table, hash6, load_almanac,
-    shipped_table_paths, to_le_bytes,
+    MAIN_FILE_PREFIX, MAIN_FILE_SUFFIX, REPLAY_IM2_FILE_PREFIX, Result, build_table, hash6,
+    load_almanac, shipped_table_paths, to_le_bytes,
 };
 use std::path::{Path, PathBuf};
 
@@ -26,42 +30,83 @@ fn main() -> Result<()> {
         [_, cmd, out_dir] if cmd == "eph" => eph(Path::new(out_dir)),
         [_, cmd, out_dir] if cmd == "dem" => dem(Path::new(out_dir)),
         [_, cmd, data_dir] if cmd == "horizon" => horizon_report::run(Path::new(data_dir)),
+        [_, cmd, data_dir] if cmd == "v4-im2" => {
+            let s = penumbra_pipeline::v4::im2_statement3(Path::new(data_dir))?;
+            println!("{}", serde_json::to_string_pretty(&s)?);
+            Ok(())
+        }
         _ => Err(
-            "usage: penumbra-pipeline eph|dem|horizon <dir>  (kernels and DEMs from PENUMBRA_DATA)"
+            "usage: penumbra-pipeline eph|dem|horizon|v4-im2 <dir>  (kernels and DEMs from PENUMBRA_DATA)"
                 .into(),
         ),
     }
 }
 
+/// A whole number of seconds as an integer, so the manifest reads `3600`, not `3600.0`.
+fn whole_s(t_s: f64) -> Result<i64> {
+    if t_s.fract() != 0.0 || t_s.abs() > 9.0e15 {
+        return Err(format!("{t_s} s is not a whole number of seconds").into());
+    }
+    #[allow(clippy::cast_possible_truncation)] // whole and below 2^53, checked above
+    Ok(t_s as i64)
+}
+
 fn eph(out_dir: &Path) -> Result<()> {
     let kernels = PathBuf::from(std::env::var("PENUMBRA_DATA").map_err(|_| "set PENUMBRA_DATA")?);
     let almanac = load_almanac(&kernels)?;
-    let data = build_table(&almanac, MAIN_T0_UNIX_S, MAIN_STEP_S, MAIN_ROWS)?;
-    let bytes = to_le_bytes(&data);
-    let name = format!("{MAIN_FILE_PREFIX}{}{MAIN_FILE_SUFFIX}", hash6(&bytes));
-
     std::fs::create_dir_all(out_dir)?;
-    std::fs::write(out_dir.join(&name), &bytes)?;
-    penumbra_pipeline::merge_manifest(
-        out_dir,
-        vec![(
-            "ephemeris",
-            serde_json::json!([{"id": "main", "url": format!("data/{name}"), "t0_unix_s": MAIN_T0_UNIX_S,
-                "step_s": MAIN_STEP_S, "rows": MAIN_ROWS}]),
-        )],
-    )?;
-    // remove older tables only after the new table and manifest are on disk
-    for old in shipped_table_paths(out_dir)? {
-        if old.file_name() != Some(std::ffi::OsStr::new(&name)) {
-            std::fs::remove_file(old)?;
+    let segments = [
+        (
+            "main",
+            MAIN_FILE_PREFIX,
+            MAIN_T0_UNIX_S,
+            MAIN_STEP_S,
+            MAIN_ROWS,
+        ),
+        (
+            "replay-im2",
+            REPLAY_IM2_FILE_PREFIX,
+            REPLAY_IM2_T0_UNIX_S,
+            REPLAY_IM2_STEP_S,
+            REPLAY_IM2_ROWS,
+        ),
+    ];
+    let mut entries = Vec::new();
+    let mut written = Vec::new();
+    let mut main_data = Vec::new();
+    for (id, prefix, t0_unix_s, step_s, rows) in segments {
+        let data = build_table(&almanac, t0_unix_s, step_s, rows)?;
+        let bytes = to_le_bytes(&data);
+        let name = format!("{prefix}{}{MAIN_FILE_SUFFIX}", hash6(&bytes));
+        std::fs::write(out_dir.join(&name), &bytes)?;
+        println!(
+            "wrote {} ({} bytes)",
+            out_dir.join(&name).display(),
+            bytes.len()
+        );
+        // main stays first: the app loads ephemeris[0] as the main table
+        entries.push(serde_json::json!({"id": id, "url": format!("data/{name}"),
+            "t0_unix_s": whole_s(t0_unix_s)?, "step_s": whole_s(step_s)?, "rows": rows}));
+        written.push((prefix, name));
+        if id == "main" {
+            main_data = data;
         }
     }
-    println!(
-        "wrote {} ({} bytes) and manifest.json",
-        out_dir.join(&name).display(),
-        bytes.len()
-    );
+    penumbra_pipeline::merge_manifest(
+        out_dir,
+        vec![("ephemeris", serde_json::Value::Array(entries))],
+    )?;
+    // remove older tables only after the new tables and manifest are on disk
+    for (prefix, name) in &written {
+        for old in shipped_table_paths(out_dir, prefix)? {
+            if old.file_name() != Some(std::ffi::OsStr::new(name)) {
+                std::fs::remove_file(old)?;
+            }
+        }
+    }
+    println!("wrote manifest.json");
 
+    let data = main_data;
     let mut eph = Ephemeris::default();
     eph.add(MAIN_T0_UNIX_S, MAIN_STEP_S, data)?;
     let im2 = Site {
