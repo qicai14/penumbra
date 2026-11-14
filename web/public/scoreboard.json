@@ -4,12 +4,12 @@
     "judge": "JPL Horizons",
     "metric": "worst az/el difference, deg",
     "threshold": 0.002,
-    "value": null,
-    "pass": null,
+    "value": 0.00011,
+    "pass": true,
     "sample_size": 20,
-    "notes": "not run",
-    "commit": null,
-    "date": null
+    "notes": "Worst over 20 site/time pairs (pole, 0.1 deg from pole, SP-01, IM-1, IM-2, two far-side points, De Rosa 2012 region centres CR1, GR1, LP1, MP1, SR1; 2026-2030 incl. the four libration extremes of the table and both sides of 2027-01-01; +5 km and -3 km sites), through the shipped hourly table and linear interpolation. Sun 0.000013 deg, Earth 0.00011 deg, as max of |daz*cos(el)| and |del|. Horizons quantity 4, UT, airless, coord@301 on the 1737.4 km sphere (DE441 on their side, DE440 on ours). Sensitivity: stellar aberration off moves the Sun 0.0055-0.0060 deg (P3); MOON_PA instead of ME moves it 0.019-0.029 deg (P8). Numbers from `cargo test -p penumbra-core --test v1_horizons -- --nocapture`.",
+    "commit": "5ff00a1",
+    "date": "2026-11-14"
   },
   {
     "id": "V2",
