@@ -135,3 +135,35 @@ export async function loadTracerTrack(): Promise<Track> {
   validate(track);
   return track;
 }
+
+// ---- Site picker and recompute (T11) ----
+// Fixture stand-ins until T01 #2 (projection) and the science tickets (model) merge.
+export { latlonToXy, xyToLatlon } from "./fixture-projection";
+
+export type NearMeta = {
+  width: number; height: number; x0_m: number; y0_m: number; pixel_m: number;
+  scale_m: number; offset_m: number; nodata: number;
+};
+export type NearTile = { fake: boolean; region: { id: string; name: string }; meta: NearMeta; data: Int16Array };
+export type Inputs = { lat_deg: number; lon_deg: number; mast_m: number; start_unix_s: number; span_days: number };
+
+/** The near tile of the first region in the manifest; the int16 counts exactly as shipped. */
+export async function loadNearTile(root = import.meta.env?.BASE_URL ?? "/"): Promise<NearTile> {
+  const res = await fetch(`${root}fixture/manifest.json`, { cache: "no-cache" });
+  if (!res.ok) throw new Error(`NO_DATA: manifest returned ${res.status}`);
+  const m = await res.json();
+  checkApiVersion(m.api_version, await engineApiVersion());
+  const region = m.regions[0], { url, ...meta } = region.near;
+  const tile = await fetch(`${root}${url}`);
+  if (!tile.ok) throw new Error(`NO_DATA: ${url} returned ${tile.status}`);
+  const data = new Int16Array(await tile.arrayBuffer());
+  if (data.length !== meta.width * meta.height) throw new Error(`BAD_INPUT: ${url} has ${data.length} values, expected ${meta.width * meta.height}`);
+  return { fake: m.fake === true, region: { id: region.id, name: region.name }, meta, data };
+}
+
+let fixtureBase: Promise<Scenario> | undefined;
+/** FIXTURE: returns the same fake data whatever the inputs; only `site` echoes lat, lon and mast. */
+export async function computeScenario(inp: Inputs): Promise<Scenario> {
+  const s = await (fixtureBase ??= loadFixture());
+  return { ...s, site: { ...s.site, lat_deg: inp.lat_deg, lon_deg: inp.lon_deg, mast_m: inp.mast_m } };
+}

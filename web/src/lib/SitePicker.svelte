@@ -1,0 +1,200 @@
+<script lang="ts">
+  import { latlonToXy, xyToLatlon, type NearTile } from "./engine";
+  import { checkDate, checkPick, edgeDistanceM, PICK_BORDER_M, SPANS_DAYS } from "./site";
+  import type { Controls } from "./state.svelte";
+
+  let { controls, tile }: { controls: Controls; tile: NearTile } = $props();
+
+  let canvas: HTMLCanvasElement;
+  // svelte-ignore state_referenced_locally -- drafts start from the current value, then follow typing
+  let latDraft = $state(String(controls.lat));
+  // svelte-ignore state_referenced_locally
+  let lonDraft = $state(String(controls.lon));
+  // svelte-ignore state_referenced_locally
+  let dateDraft = $state(controls.date);
+  let refusal = $state<string | null>(null);
+  let rejected = $state<[number, number] | null>(null); // last refused point, map metres
+
+  const m = $derived(tile.meta);
+  const heightM = (v: number) => m.offset_m + m.scale_m * v;
+
+  // Grey image straight from the int16 counts; nodata stays transparent.
+  const grey = $derived.by(() => {
+    let lo = Infinity, hi = -Infinity;
+    for (const v of tile.data) if (v !== m.nodata) { if (v < lo) lo = v; if (v > hi) hi = v; }
+    const img = new ImageData(m.width, m.height);
+    const k = hi > lo ? 255 / (hi - lo) : 0;
+    for (let i = 0; i < tile.data.length; i++) {
+      const v = tile.data[i];
+      if (v === m.nodata) continue;
+      const g = Math.round((v - lo) * k);
+      img.data.set([g, g, g, 255], i * 4);
+    }
+    return { img, lo_m: heightM(lo), hi_m: heightM(hi) };
+  });
+
+  const mapToPx = (x: number, y: number): [number, number] => [(x - m.x0_m) / m.pixel_m, (m.y0_m - y) / m.pixel_m];
+  const siteXy = $derived(latlonToXy(controls.lat, controls.lon));
+  const edgeKm = $derived(edgeDistanceM(siteXy[0], siteXy[1], m) / 1000);
+
+  function draw() {
+    const g = canvas.getContext("2d")!;
+    const s = getComputedStyle(canvas);
+    const c = (n: string) => s.getPropertyValue(n).trim();
+    canvas.width = m.width; canvas.height = m.height;
+    g.putImageData(grey.img, 0, 0);
+    // Dim the 7 km border: picks there are refused.
+    const b = PICK_BORDER_M / m.pixel_m;
+    const shade = new Path2D();
+    shade.rect(0, 0, m.width, m.height); shade.rect(b, b, m.width - 2 * b, m.height - 2 * b);
+    g.fillStyle = "rgba(0,0,0,0.6)"; g.fill(shade, "evenodd");
+    g.strokeStyle = c("--color-fog"); g.lineWidth = 1; g.setLineDash([3, 3]);
+    g.strokeRect(b + 0.5, b + 0.5, m.width - 2 * b, m.height - 2 * b);
+    g.setLineDash([]);
+    const mark = ([x, y]: [number, number], col: string, fill: boolean) => {
+      const [px, py] = mapToPx(x, y);
+      g.strokeStyle = col; g.fillStyle = col; g.lineWidth = 2;
+      g.beginPath(); g.arc(px, py, 5, 0, Math.PI * 2);
+      if (fill) g.fill(); else g.stroke();
+    };
+    if (rejected) mark(rejected, c("--color-ash"), false);
+    mark(siteXy, c("--color-paper"), true);
+  }
+  $effect(() => { draw(); });
+
+  function setSite(lat: number, lon: number) {
+    controls.lat = lat; controls.lon = lon;
+    latDraft = String(lat); lonDraft = String(lon);
+    refusal = null; rejected = null;
+  }
+  // P5 / ARCHITECTURE §2.1: a nodata pixel is an error, never 0 m.
+  function verdict(x: number, y: number) {
+    const v = checkPick(x, y, m);
+    if (!v.ok) return v;
+    const [px, py] = mapToPx(x, y);
+    return tile.data[Math.floor(py) * m.width + Math.floor(px)] === m.nodata
+      ? { ok: false as const, reason: "No terrain data at that point. Pick another site." }
+      : v;
+  }
+  function pick(x: number, y: number) {
+    const v = verdict(x, y);
+    if (!v.ok) { refusal = v.reason; rejected = [x, y]; return; }
+    const [lat, lon] = xyToLatlon(x, y);
+    setSite(+lat.toFixed(4), +lon.toFixed(4));
+  }
+  function onclick(e: MouseEvent) {
+    const r = canvas.getBoundingClientRect();
+    pick(m.x0_m + ((e.clientX - r.left) / r.width) * m.width * m.pixel_m, m.y0_m - ((e.clientY - r.top) / r.height) * m.height * m.pixel_m);
+  }
+  function onsubmit(e: SubmitEvent) {
+    e.preventDefault();
+    const lat = Number(latDraft), lon = Number(lonDraft);
+    if (!latDraft.trim() || !lonDraft.trim() || !Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 360) {
+      refusal = "Enter a latitude between −90 and 90 and a longitude between −180 and 360."; return;
+    }
+    const [x, y] = latlonToXy(lat, lon);
+    const v = verdict(x, y);
+    if (!v.ok) { refusal = v.reason; rejected = [x, y]; return; }
+    setSite(lat, lon);
+  }
+  function tryDate(date: string, span: number): boolean {
+    const v = checkDate(date, span);
+    refusal = v.ok ? null : v.reason;
+    return v.ok;
+  }
+  const ondate = () => { if (tryDate(dateDraft, controls.spanDays)) controls.date = dateDraft; else dateDraft = controls.date; };
+  const onspan = (s: number) => { if (tryDate(controls.date, s)) controls.spanDays = s; };
+</script>
+
+<section class="panel" aria-labelledby="site-h">
+  <header>
+    <h2 id="site-h">Site and date · where and when you land</h2>
+    {#if tile.fake}<span class="pill" data-testid="tile-fake">FAKE TILE</span>{/if}
+  </header>
+
+  <div class="body">
+    <figure>
+      <canvas
+        bind:this={canvas}
+        {onclick}
+        aria-label="Greyscale height image of the {tile.region.name} near tile. Click to pick a site, or type latitude and longitude."
+      ></canvas>
+      <figcaption>
+        {tile.region.name} · black {grey.lo_m.toFixed(0)} m, white {grey.hi_m.toFixed(0)} m · dashed line: {PICK_BORDER_M / 1000} km from the edge, picks outside it are refused
+      </figcaption>
+    </figure>
+
+    <div class="fields">
+      <label class="row"><span>Region</span>
+        <select aria-label="Region"><option>{tile.region.name}</option></select>
+      </label>
+
+      <form class="latlon" {onsubmit}>
+        <label><span>Latitude °</span><input data-testid="lat" bind:value={latDraft} inputmode="decimal" autocomplete="off" /></label>
+        <label><span>Longitude °E</span><input data-testid="lon" bind:value={lonDraft} inputmode="decimal" autocomplete="off" /></label>
+        <button type="submit">Set site</button>
+      </form>
+      <p class="now" data-testid="site-now">
+        Site {controls.lat.toFixed(4)}°, {controls.lon.toFixed(4)}°E · {edgeKm.toFixed(1)} km from the tile edge
+      </p>
+
+      <label class="row"><span>Landing date (UTC)</span>
+        <input data-testid="date" type="date" min="2026-01-01" max="2030-12-31" bind:value={dateDraft} onchange={ondate} />
+      </label>
+
+      <div class="row"><span id="span-l">Span</span>
+        <div class="group" role="group" aria-labelledby="span-l">
+          {#each SPANS_DAYS as s (s)}
+            <button type="button" aria-pressed={controls.spanDays === s} onclick={() => onspan(s)}>{s} d</button>
+          {/each}
+        </div>
+      </div>
+
+      <label class="row"><span>Mast height</span>
+        <input data-testid="mast" type="range" min="0" max="10" step="0.5" bind:value={controls.mastM} />
+        <output>{controls.mastM.toFixed(1)} m</output>
+      </label>
+
+      {#if refusal}
+        <p class="refusal" role="alert" data-testid="refusal">Refused. {refusal}</p>
+      {/if}
+    </div>
+  </div>
+</section>
+
+<style>
+  .panel { background: var(--surface-carbon); border-radius: var(--radius-sm); padding: var(--spacing-16); margin-bottom: var(--spacing-16); }
+  header { display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-16); margin-bottom: var(--spacing-16); }
+  h2 { margin: 0; font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
+  .pill {
+    border: 1px solid var(--color-slate); border-radius: var(--radius-full); padding: 0 var(--spacing-8);
+    font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); text-transform: uppercase; white-space: nowrap;
+  }
+  .body { display: flex; flex-wrap: wrap; gap: var(--spacing-24); align-items: flex-start; }
+  figure { margin: 0; flex: 0 1 384px; min-width: 240px; }
+  canvas { display: block; width: 100%; aspect-ratio: 1; border-radius: var(--radius-sm); cursor: crosshair; image-rendering: pixelated; }
+  figcaption { margin-top: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
+  .fields { flex: 1 1 280px; display: flex; flex-direction: column; gap: var(--spacing-16); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
+  .row { display: flex; align-items: center; gap: var(--spacing-8); }
+  .row > span:first-child { flex: 0 0 150px; }
+  .row input[type="range"] { flex: 1; accent-color: var(--color-fog); }
+  output { min-width: 5ch; color: var(--color-paper); font-variant-numeric: tabular-nums; }
+  .latlon { display: flex; flex-wrap: wrap; gap: var(--spacing-8); align-items: flex-end; }
+  .latlon label { display: flex; flex-direction: column; gap: 4px; flex: 1 1 110px; }
+  input:not([type="range"]), select {
+    font: var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-paper); background: var(--surface-iron);
+    border: 1px solid var(--color-slate); border-radius: var(--radius-sm); padding: 4px var(--spacing-8); min-width: 0; color-scheme: dark;
+  }
+  .now { margin: calc(-1 * var(--spacing-8)) 0 0; color: var(--color-fog); font-variant-numeric: tabular-nums; }
+  .refusal { margin: 0; padding: var(--spacing-8) var(--spacing-16); border: 1px solid var(--color-pewter); border-radius: var(--radius-sm); background: var(--surface-iron); color: var(--color-paper); }
+  .group { display: flex; }
+  button {
+    font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-fog); background: transparent;
+    border: 1px solid var(--color-slate); padding: var(--spacing-8) var(--spacing-16); margin-left: -1px; cursor: pointer;
+  }
+  .group button:first-child { margin-left: 0; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .group button:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .latlon button { margin-left: 0; border-radius: var(--radius-sm); }
+  button[aria-pressed="true"] { color: var(--color-paper); background: var(--surface-iron); border-color: var(--color-pewter); }
+  button:focus-visible, input:focus-visible, select:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }
+</style>

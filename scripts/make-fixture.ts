@@ -1,4 +1,4 @@
-// Writes web/public/fixture/scenario.json and web/public/scoreboard.json (ARCHITECTURE §3.5).
+// Writes web/public/fixture/{scenario.json,manifest.json,near-fake.i16} and web/public/scoreboard.json (ARCHITECTURE §3.5).
 // Sine waves only: no lunar maths. Every value is FAKE and exists so layouts and axes can be built.
 const N = 4320, STEP = 600, T0 = 1794614400; // 2026-11-14T00:00:00Z
 const r = (x: number) => Math.round(x * 1e4) / 1e4;
@@ -76,3 +76,18 @@ const scenario = {
 
 await Bun.write(new URL("../web/public/fixture/scenario.json", import.meta.url), JSON.stringify(scenario) + "\n");
 await Bun.write(new URL("../web/public/scoreboard.json", import.meta.url), JSON.stringify(scoreboard, null, 2) + "\n");
+
+// FAKE near tile and stub manifest (ARCHITECTURE §2.1, §3.5): 256² int16 at 120 m = 30.72 km square, little-endian.
+// Sine hills plus one round bowl; only there so the height image and the 7 km edge rule can be built. No real terrain.
+const W = 256, PX = 120, SCALE = 0.25;
+const tile = new DataView(new ArrayBuffer(W * W * 2));
+for (let j = 0; j < W; j++)
+  for (let i = 0; i < W; i++) {
+    const bowl = -900 * Math.exp(-(((i - 150) ** 2 + (j - 90) ** 2) / 600));
+    const h = 700 * Math.sin(i / 23) * Math.cos(j / 31) + 400 * Math.sin((i + j) / 11) + 300 * Math.sin(j / 7) * Math.sin(i / 17) + bowl;
+    tile.setInt16((j * W + i) * 2, Math.round(h / SCALE), true);
+  }
+const near = { url: "fixture/near-fake.i16", width: W, height: W, x0_m: 61740, y0_m: 153360, pixel_m: PX, scale_m: SCALE, offset_m: 0, nodata: -32768 };
+const manifest = { fake: true, note: "FAKE stub manifest for T11. Not a pipeline output.", format_version: 1, api_version: 1, regions: [{ id: "fake-region", name: "Fake region", near }] };
+await Bun.write(new URL("../web/public/fixture/near-fake.i16", import.meta.url), tile.buffer);
+await Bun.write(new URL("../web/public/fixture/manifest.json", import.meta.url), JSON.stringify(manifest, null, 2) + "\n");
