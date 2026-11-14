@@ -37,10 +37,7 @@ fn dem_err(e: DemError) -> JsError {
 
 /// MOON_ME latitude and east longitude in degrees → radians.
 fn site_deg(lat_deg: f64, lon_deg: f64) -> LatLon {
-    LatLon {
-        lat_rad: lat_deg.to_radians(),
-        lon_east_rad: lon_deg.to_radians(),
-    }
+    penumbra_core::site::latlon_from_deg(lat_deg, lon_deg)
 }
 
 /// A tile from the manifest's eight numbers plus its row-major int16 counts (docs/API.md).
@@ -255,12 +252,7 @@ impl Engine {
         count: u32,
         earth_margin_deg: f64,
     ) -> Result<Vec<f64>, JsError> {
-        let n_az = penumbra_core::horizon::N_AZ;
-        if horizon.len() != 2 * n_az {
-            return Err(JsError::new("BAD_INPUT: horizon must have 1440 values"));
-        }
-        let el_hor_rad: [f64; penumbra_core::horizon::N_AZ] =
-            std::array::from_fn(|i| horizon[i].to_radians());
+        let el_hor_rad = penumbra_core::site::el_hor_rad_from_api(horizon).map_err(js_err)?;
         let site = penumbra_core::eph::Site {
             lat_rad: lat_deg.to_radians(),
             lon_east_rad: lon_deg.to_radians(),

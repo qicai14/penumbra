@@ -103,6 +103,7 @@ export type Manifest = {
   format_version: number; api_version: number;
   ephemeris: EphSegment[];
   far: TileMeta; regions: { id: string; name: string; near: TileMeta; mid: TileMeta }[];
+  grids?: GridMeta[]; // regional point grids (T24); optional so the app runs without them
 };
 
 let manifestLoad: Promise<Manifest> | undefined;
@@ -187,6 +188,7 @@ export function loadTracerTrack(): Promise<Track> {
   return sunEarthTrack(t, t.start_unix_s, t.step_s, t.count);
 }
 
+import type { GridMeta } from "./grid";
 import { edgeDistanceM } from "./site";
 import { serialize } from "./serialize";
 import { checkPit, DEGRADED_SLOPE_DEG } from "./replay";

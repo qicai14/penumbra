@@ -7,6 +7,7 @@ pub mod geometry;
 pub mod horizon;
 pub mod pit;
 pub mod power;
+pub mod site;
 pub mod timeline;
 
 /// Version of the core → WASM API (ARCHITECTURE §3.1). The fixture and the manifest carry the same number.

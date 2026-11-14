@@ -3,7 +3,7 @@
   import { headline, presetFields, setPresetField, spanDays, type FieldKey } from "./headline";
   import type { Controls } from "./state.svelte";
 
-  let { scenario, controls }: { scenario: Scenario; controls: Controls } = $props();
+  let { scenario, controls, nearby = null }: { scenario: Scenario; controls: Controls; nearby?: string | null } = $props();
 
   const head = $derived(headline(scenario.survival, spanDays(scenario.count, scenario.step_s)));
   const fields = $derived(presetFields(scenario.preset));
@@ -30,6 +30,7 @@
         <span class="cap">First lethal shadow in</span>
         <strong data-testid="headline-lethal">{#if !head.none}✕ {/if}{head.lethal}</strong>
       </p>
+      {#if nearby}<p class="nearby" data-testid="nearest-better">{nearby}</p>{/if}
     </div>
 
     <form class="fields" onsubmit={(e) => e.preventDefault()} aria-label="Lander preset">
@@ -56,6 +57,7 @@
     border: 1px solid var(--color-slate); border-radius: var(--radius-full); padding: 0 var(--spacing-8);
     font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); text-transform: uppercase; white-space: nowrap;
   }
+  .nearby { margin: 0; color: var(--color-fog); font: var(--text-caption)/var(--leading-caption) var(--font-mono); }
   .body { display: flex; flex-wrap: wrap; gap: var(--spacing-24); align-items: flex-start; }
   .head { flex: 1 1 280px; display: flex; flex-direction: column; gap: var(--spacing-16); }
   .fig { margin: 0; display: flex; flex-direction: column; }
