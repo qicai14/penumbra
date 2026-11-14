@@ -111,3 +111,47 @@ fn corners_of_the_pick_area_get_a_horizon() {
         }
     }
 }
+
+// T-1a-4 (SCIENCE-SPEC §1a, #48): at IM-2, SP-01, Shackleton lowest and Mons Mouton highest and
+// lowest, H = 0 and 2 m, the shipped horizon is within 0.05° of the float 20 m DEM on every bin
+// whose obstacle is ≥ 60 m away. Release build advised: ten 101 km float windows.
+#[test]
+#[ignore = "needs LDEM_80S_20MPP_ADJ.TIF in PENUMBRA_DATA"]
+fn t_1a_4_shipped_horizon_is_within_0_05_deg_of_the_float_20m_dem() {
+    let src_dir = PathBuf::from(std::env::var("PENUMBRA_DATA").unwrap());
+    let mut src =
+        penumbra_pipeline::dem::GeoTiff::open(&src_dir.join("LDEM_80S_20MPP_ADJ.TIF")).unwrap();
+    let rows = penumbra_pipeline::horizon_report::tier_ablation(&shipped(), &mut src).unwrap();
+    assert_eq!(rows.len(), 10, "5 points × H = 0, 2 m");
+    let over: Vec<_> = rows.iter().filter(|r| r.max_dev_deg > 0.05).collect();
+    assert!(over.is_empty(), "above 0.05°: {over:?}");
+}
+
+// #48: the middle 80 m tile covers the 31 km mid range from every corner of the pick area (P5).
+#[test]
+fn corners_of_the_pick_area_get_a_horizon_through_the_mid_tier() {
+    use penumbra_core::geometry::{MapXy, xy_to_latlon};
+    let t = shipped();
+    for (id, near) in &t.regions {
+        let m = near.meta();
+        let (x_lo, y_hi) = (m.x0_m + PICK_BORDER_M, m.y0_m - PICK_BORDER_M);
+        let x_hi = m.x0_m + f64::from(m.width) * m.pixel_m - PICK_BORDER_M;
+        let y_lo = m.y0_m - f64::from(m.height) * m.pixel_m + PICK_BORDER_M;
+        for (x_m, y_m) in [(x_lo, y_hi), (x_hi, y_hi), (x_lo, y_lo), (x_hi, y_lo)] {
+            let site = xy_to_latlon(MapXy { x_m, y_m }).unwrap();
+            let r = t.horizon(id, site, 2.0, &HorizonOptions::default());
+            assert!(r.is_ok(), "{id} corner ({x_m}, {y_m}): {:?}", r.err());
+        }
+    }
+}
+
+// #48: each region ships an 80 m middle tile next to its 20 m near tile.
+#[test]
+fn every_region_ships_an_80m_mid_tile() {
+    let t = shipped();
+    assert_eq!(t.mids.len(), t.regions.len());
+    for (id, _) in &t.regions {
+        let m = t.mid(id).unwrap().meta();
+        assert!((m.pixel_m - 80.0).abs() < 1e-12, "{id}: {} m", m.pixel_m);
+    }
+}

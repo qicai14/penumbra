@@ -32,12 +32,16 @@ Read Nov 14 from the files themselves, before any crop. Asserted by `dem_source:
 
 | Tile | Centre (map km) | Size | Upper-left (m) | Scale | Relief |
 |---|---|---|---|---|---|
-| `near-mons-mouton` | IM-2 site (77.1, 138.0) | 1536² at 20 m | (61 740, 153 360) | 0.0625 m | 2 431 m |
-| `near-shackleton-ridge` | (−11.0, −12.0), between SP-01 and the Site 1 RoIs | 1536² at 20 m | (−26 360, 3 360) | 0.125 m | 4 361 m |
+| `near-mons-mouton` | IM-2 site (77.1, 138.0) | 1536² at 20 m | (61 740, 153 360) | 0.03709 m | 2 431 m |
+| `near-shackleton-ridge` | (−11.0, −12.0), between SP-01 and the Site 1 RoIs | 1536² at 20 m | (−26 360, 3 360) | 0.06655 m | 4 361 m |
+| `mid-mons-mouton` (#48) | same as its near tile, ±20 m | 992² at 80 m (4 × 4 means of the 20 m source) | (37 440, 177 680) | 0.1284 m | |
+| `mid-shackleton-ridge` (#48) | same as its near tile, ±20 m | 992² at 80 m | (−50 640, 27 680) | 0.0761 m | |
 | `far-240m` | the pole | 3184² at 240 m (±382.08 km) | (−382 080, 382 080) | 0.5 m | |
 
-- Tiles snap to the source pixel grid, so no resampling. The offset is the middle of the tile's height range. No tile has a no-data pixel.
-- Round trip, 1 000 seeded pixels per tile, raw `read_chunk` against the core sampler at pixel centres: worst errors 0.031 m, 0.0625 m and 0.25 m, at most half a step each.
+- Near tiles snap to the source pixel grid, middle tiles to its 4-pixel blocks, so no resampling beyond the 4 × 4 mean. The offset is the middle of the tile's height range. No tile has a no-data pixel.
+- Scale (#48): near and middle tiles take the finest scale that holds them, relief / 65 534 (lowest pixel −32 767, highest +32 767); before #48 the near tiles were 0.0625 and 0.125 m. The far tile is unchanged (same bytes, same hash `5b21e3`).
+- Payload (#48): near tiles 4 718 592 B each (unchanged size), middle tiles 1 968 128 B each, far 20 275 712 B. Terrain total 33 649 152 B (33.6 MB), up 3 936 256 B (+13 %) from 29.7 MB. A region costs 6.69 MB instead of 4.72 MB.
+- Round trip, 1 000 seeded pixels per tile, raw `read_chunk` against the core sampler at pixel centres: worst errors 0.0185 m, 0.0333 m and 0.25 m, at most half a step each (0.031 m and 0.0625 m before #48).
 - Inside the inner 836² px (7 km border) of each near tile: 18 627 (Mons Mouton) and 21 508 (Shackleton ridge) LPSR = 1 pixels.
 - Native build of all three tiles: about 1 s in release mode (file on HDD, Windows desktop).
 
@@ -51,13 +55,46 @@ Run Nov 14: `PENUMBRA_DATA=D:\DownloadHDD\penumbra-resource target/release/penum
 
 | Where | IM-2, H = 2 m | SP-01, H = 10 m |
 |---|---|---|
-| Native, release, 1 warm-up + 20 calls | median 9.78 ms, max 10.62 ms | median 22.06 ms, max 22.98 ms |
+| Native, release, 1 warm-up + 20 calls, near + mid + far (#48, Nov 15) | median 17.20 ms, max 18.36 ms | median 33.66 ms, max 36.64 ms |
+| Native, release, 1 warm-up + 20 calls, two tiers (before #48) | median 9.78 ms, max 10.62 ms | median 22.06 ms, max 22.98 ms |
 | WASM release build under Bun 1.4.4 (JavaScriptCore), `performance.now()` around 20 `engine.horizon()` calls | median 9.57 ms, max 11.03 ms | median 20.88 ms, max 23.29 ms |
 | Browser: Claude desktop app pane (Chromium 152, Windows 11, same 8-logical-CPU Zen 2 machine), Vite dev server, `performance.now()` around 20 `engine.horizon()` calls / 20, 3 runs after 1 warm-up | 9.87, 10.29, 11.18 ms per call (median 10.29) | 23.48, 23.50, 27.22 ms per call (median 23.50) |
 
-Every measured time, browser included, is below the 50 ms target (ARCHITECTURE §2.2) and far below the 2 s threshold that fires slip cut 3. No cut is needed. The SP-01 run takes longer because its horizon is low (−0.86° at best), so the early exit fires late and most azimuths march to about 190 km.
+The WASM and browser rows are the two-tier march; they are not re-measured with the middle tier yet (the web does not load it yet, #48). The middle tier adds 300 samples per azimuth, so native time rose by 1.5–1.8×. Every measured time, browser included, is below the 50 ms target (ARCHITECTURE §2.2) and far below the 2 s threshold that fires slip cut 3. No cut is needed. The SP-01 run takes longer because its horizon is low (−0.86° at best), so the early exit fires late and most azimuths march to about 190 km.
 
 ### T-1a-4: tier ablation
+
+**Re-run for #48 (Nov 15).** Shipped run: int16 20 m near tile out to 7 km, int16 80 m middle tile out to 31 km, then the 240 m far tile, all at the scales above. Same reference, points and filter as below. Test: `horizon_shipped::t_1a_4_shipped_horizon_is_within_0_05_deg_of_the_float_20m_dem` (`--ignored`, PENUMBRA_DATA, ~16 s in release).
+
+| Point | H | Max \|Δel\|, dist ≥ 60 m (before #48) | where (shipped / ref) | RMS ≥ 60 m | bins > 0.05° | Max \|Δel\| by ref distance: <60 m · 60 m–7 km · 7–15 km · 15–100 km · >100 km |
+|---|---|---|---|---|---|---|
+| IM-2 | 0 | 0.0140° (0.0749°) | az 290.0°: 0.8550° @ 9 880 m / 0.8690° @ 9 900 m | 0.0041° | 0 | 0.0143 · 0.0048 · 0.0140 · 0.0098 · – |
+| IM-2 | 2 | 0.0140° (0.0751°) | az 290.0°: 0.8434° @ 9 880 m / 0.8574° @ 9 900 m | 0.0037° | 0 | – · 0.0032 · 0.0140 · 0.0098 · – |
+| SP-01 | 0 | 0.0334° (0.0663°) | az 278.0°: −2.1567° @ 60 m / −2.1233° @ 60 m | 0.0108° | 0 | 0.1177 · 0.0334 · – · 0.0126 · – |
+| SP-01 | 2 | **0.0382°** (0.0669°) | az 218.5°: −1.6902° @ 60 m / −1.6521° @ 60 m | 0.0118° | 0 | 0.0401 · 0.0382 · – · 0.0126 · – |
+| Mons Mouton highest | 0 | 0.0094° (0.0382°) | az 6.5°: −1.1946° @ 14 840 m / −1.1852° @ 14 840 m | 0.0030° | 0 | 0.0819 · 0.0065 · 0.0094 · 0.0068 · – |
+| Mons Mouton highest | 2 | 0.0094° (0.0397°) | az 6.5°: −1.2023° @ 14 840 m / −1.1929° @ 14 840 m | 0.0028° | 0 | – · 0.0064 · 0.0094 · 0.0068 · – |
+| Mons Mouton lowest | 0 | 0.0039° (0.0083°) | az 308.0°: 9.1358° @ 220 m / 9.1397° @ 220 m | 0.0013° | 0 | – · 0.0039 · – · – · – |
+| Mons Mouton lowest | 2 | 0.0039° (0.0068°) | az 308.0°: 8.6288° @ 220 m / 8.6327° @ 220 m | 0.0012° | 0 | – · 0.0039 · – · – · – |
+| Shackleton lowest | 0 | 0.0281° (0.0570°) | az 307.5°: 1.7472° @ 38 920 m / 1.7754° @ 38 900 m | 0.0054° | 0 | – · 0.0140 · 0.0208 · 0.0281 · 0.0043 |
+| Shackleton lowest | 2 | 0.0281° (0.0570°) | az 307.5°: 1.7443° @ 38 920 m / 1.7724° @ 38 900 m | 0.0052° | 0 | – · 0.0011 · 0.0208 · 0.0281 · 0.0043 |
+
+**Result: T-1a-4 passes. The worst bin with dist ≥ 60 m is 0.0382° (SP-01, H = 2 m, an obstacle 60 m away).** Without the 60 m filter the largest difference is 0.1177° (SP-01, H = 0, az 202.5°, the first pixel at 20 m, P11/P13). Shipped against float h_s: 5321.918/5321.906, 1955.023/1955.010, 5807.831/5807.813, 4832.325/4832.324, −575.991/−575.982 m.
+
+**Options measured for #48** (max \|Δel\| with dist ≥ 60 m over the five points and both H; same reference). The worst bin of each:
+
+| Option | Worst | Fails at | Terrain payload |
+|---|---|---|---|
+| Shipped before #48 (0.0625/0.125 m, 20 m to 7 km, 240 m beyond) | 0.0751° | IM-2, SP-01, Shackleton lowest | 29.7 MB |
+| Finest scale only (20 m to 7 km, 240 m beyond) | 0.0751° | IM-2 (7–15 km), SP-01 H = 2 (0.0609° at 29 km), Shackleton lowest | 29.7 MB |
+| 20 m to 15.16 km on 2352² tiles (same pick area), finest scale | 0.0609° | SP-01 H = 2: obstacle at 29 km, 240 m tier | 42.4 MB (+12.7) |
+| 80 m to 15.16 km, finest scale | 0.0609° | same bin | 31.1 MB [est] |
+| **80 m to 31 km, finest scale (chosen)** | **0.0382°** | none | **33.6 MB (+3.9)** |
+| 80 m to 55 km or 100 km | 0.0382° | none (Shackleton lowest 0.0168°) | 40–59 MB [est] |
+
+The option runs used a composite sampler that read the 80 m tile at 20 m steps; the chosen layout was then re-run with 80 m steps (the table above). A 20 m tile to 31 km would be 3 850² px (29.6 MB per region), so the 80 m tier wins on payload and the 20 m widening fails at 15 km. The finest scale is what brings SP-01's 60 m bins from 0.0669° to 0.0382°: at 0.125 m a 60 m obstacle carries up to 0.06° of quantisation.
+
+#### Before #48 (Nov 14)
 
 Shipped run: int16 20 m tile out to 7 km, then the 240 m far tile. Reference: the float LDEM_80S_20MPP window (site ± 101 km, NaN treated as no data) out to 100 120 m, then the same 240 m far tile. 100 120 m = 7000 + 240 × 388 m, so beyond that distance both runs take identical far samples. The 0.05° rule is applied only to bins whose obstacle is at least 60 m away in both runs: at 20–40 m, int16 quantisation dominates at H = 0 (P11, P13).
 
@@ -80,7 +117,7 @@ Without the 60 m filter, the largest difference over all bins is 0.1019°, at IM
 1. **The 240 m tier from 7 to 15 km.** At IM-2 and Shackleton-lowest, the worst bins are ridge crests 7.2–9.3 km away, which the 240 m far tile smooths. The cheapest remedy test is a 1536² int16 20 m tile centred on the site with a 15 km near range, measured against the same float reference. At IM-2 it lowers the worst bin to 0.0440° (H = 0) and 0.0440° (H = 2), with 0 bins above 0.05°; the 7–15 km band drops from 0.075° to 0.0003°.
 2. **The near field at 60 m (SP-01).** The worst bins are obstacles at exactly 60 m, where int16 (0.125 m steps on the Shackleton tile) against float is still visible. A wider tile does not fix this. With the remedy, SP-01 is 0.0278° at H = 0 (0 bins above) but 0.0531° at H = 2 (4 bins above, all at 60 m). Every 20–60 m obstacle here is also flagged by P13.
 
-This ticket does not change the tile widths. The follow-up issue is for the orchestrator to open: widen the near tile, or add an 80 m tier, for the 7–15 km band, and decide how the near-field int16 step should treat obstacles at 60 m.
+T07 did not change the tile widths; #48 fixed both causes (80 m middle tier to 31 km, finest per-tile scale; table above).
 
 **Picker margin.** The highest pixel inside the T06 pickable area (836² px, 7 km border) of Mons Mouton is (85.45, 129.65) km, on its last column, and the horizon there returns `OUT_OF_COVERAGE`. Map distance is ground distance × (1 + r²/4R²), about 0.2 % more at Mons Mouton, so a 7 000 m march needs about 7 014 m of map, while only 6 990 m (between pixel centres) is covered. The error is correct (P5), but the UI picker needs a border of at least about 7.05 km. The table above uses a 360 px (7.2 km) border to pick the extreme pixels.
 

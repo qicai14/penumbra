@@ -2,7 +2,8 @@
 //! from the kernels in PENUMBRA_DATA, writes `eph-main.<hash6>.bin`, the IM-2 replay segment
 //! `eph-replay-im2.<hash6>.bin` (2025-02-20 to 2025-04-06 UTC) and `manifest.json` into
 //! `out_dir`, and prints the tracer row (IM-2, 2026-11-14T00:00:00Z).
-//! `penumbra-pipeline dem <out_dir>` crops the two near tiles and the far tile (T06) and merges
+//! `penumbra-pipeline dem <out_dir>` crops the two near tiles, their 80 m middle tiles (#48) and the
+//! far tile (T06) and merges
 //! them into the same `manifest.json`.
 //! `penumbra-pipeline horizon <data_dir>` (release build) prints the T07 reports: T-1a-4 tier
 //! ablation against the float 20 m DEM in PENUMBRA_DATA, T-1a-5 range check and U18 native timing.
@@ -23,8 +24,6 @@ use penumbra_pipeline::eph::{
 };
 use std::path::{Path, PathBuf};
 
-mod horizon_report;
-
 /// Tracer instant: 2026-11-14T00:00:00Z, Unix s UTC.
 const TRACER_UNIX_S: f64 = 1_794_614_400.0;
 
@@ -33,7 +32,7 @@ fn main() -> Result<()> {
     match args.as_slice() {
         [_, cmd, out_dir] if cmd == "eph" => eph(Path::new(out_dir)),
         [_, cmd, out_dir] if cmd == "dem" => dem(Path::new(out_dir)),
-        [_, cmd, data_dir] if cmd == "horizon" => horizon_report::run(Path::new(data_dir)),
+        [_, cmd, data_dir] if cmd == "horizon" => penumbra_pipeline::horizon_report::run(Path::new(data_dir)),
         [_, cmd, data_dir] if cmd == "v2b" => {
             let kernels =
                 PathBuf::from(std::env::var("PENUMBRA_DATA").map_err(|_| "set PENUMBRA_DATA")?);
@@ -142,13 +141,19 @@ fn eph(out_dir: &Path) -> Result<()> {
 
 /// Near tile side, pixels: 30.72 km at 20 m, so a site at the centre has 15.36 km of margin (ARCHITECTURE §2.1).
 const NEAR_PX: u32 = 1536;
+/// Middle tile side, 80 m pixels (4 × 4 means of the 20 m source), same centre as the near tile:
+/// ±39.68 km covers the 8.31 km half-width of the pickable area plus the 31 km mid range at map
+/// scale ≤ 1.0032 (#48, SCIENCE-SPEC §1a tiers).
+const MID_PX: u32 = 992;
+/// Source pixels per middle-tile pixel side: 4 × 20 m = 80 m.
+const MID_BLOCK_PX: u32 = 4;
 /// Far tile side, pixels: ±382.08 km at 240 m about the pole (ARCHITECTURE §2.1).
 const FAR_PX: u32 = 3184;
 
 fn dem(out_dir: &Path) -> Result<()> {
     use penumbra_core::geometry::{LatLon, MapXy, latlon_to_xy};
     use penumbra_pipeline::dem::{
-        FAR_SCALES_M, GeoTiff, NEAR_SCALES_M, build_tile, tile_json, to_le_bytes,
+        GeoTiff, build_tile, encode_far, encode_finest, tile_json, to_le_bytes,
     };
     let src_dir = PathBuf::from(std::env::var("PENUMBRA_DATA").map_err(|_| "set PENUMBRA_DATA")?);
     let im2 = latlon_to_xy(LatLon {
@@ -188,18 +193,20 @@ fn dem(out_dir: &Path) -> Result<()> {
     let mut near_src = GeoTiff::open(&src_dir.join("LDEM_80S_20MPP_ADJ.TIF"))?;
     let mut region_json = Vec::new();
     for (id, name, centre) in regions {
-        let tile = build_tile(&mut near_src, centre, NEAR_PX, &NEAR_SCALES_M)?;
+        let tile = build_tile(&mut near_src, centre, NEAR_PX, 1, encode_finest)?;
         let url = write(&format!("near-{id}"), &tile)?;
-        region_json.push(
-            serde_json::json!({"id": id, "name": name, "near": tile_json(&url, tile.meta())}),
-        );
+        let mid = build_tile(&mut near_src, centre, MID_PX, MID_BLOCK_PX, encode_finest)?;
+        let mid_url = write(&format!("mid-{id}"), &mid)?;
+        region_json.push(serde_json::json!({"id": id, "name": name,
+            "near": tile_json(&url, tile.meta()), "mid": tile_json(&mid_url, mid.meta())}));
     }
     let mut far_src = GeoTiff::open(&src_dir.join("LDEM_60S_240MPP_ADJ.TIF"))?;
     let far = build_tile(
         &mut far_src,
         MapXy { x_m: 0.0, y_m: 0.0 },
         FAR_PX,
-        &FAR_SCALES_M,
+        1,
+        encode_far,
     )?;
     let far_url = write("far-240m", &far)?;
 
@@ -213,8 +220,10 @@ fn dem(out_dir: &Path) -> Result<()> {
     // remove older tiles only after the new tiles and manifest are on disk
     for entry in std::fs::read_dir(out_dir)? {
         let name = entry?.file_name().to_string_lossy().into_owned();
-        let is_tile =
-            (name.starts_with("near-") || name.starts_with("far-")) && name.ends_with(".bin");
+        let is_tile = ["near-", "mid-", "far-"]
+            .iter()
+            .any(|p| name.starts_with(p))
+            && name.ends_with(".bin");
         if is_tile && !written.contains(&name) {
             std::fs::remove_file(out_dir.join(name))?;
         }

@@ -1,12 +1,12 @@
 //! T07 native reports (SCIENCE-SPEC T-1a-4, T-1a-5, U18), printed for docs/DATA-NOTES.md.
 
+use crate::dem::{FloatWindow, GeoTiff, ShippedTiles};
+use crate::eph::Result;
 use penumbra_core::dem::DemTile;
 use penumbra_core::geometry::{LatLon, MapXy, latlon_to_xy, xy_to_latlon};
 use penumbra_core::horizon::{
     Horizon, HorizonOptions, N_AZ, NEAR_OBSTACLE_M, ground_height_m, horizon,
 };
-use penumbra_pipeline::dem::{FloatWindow, GeoTiff, NEAR_SCALES_M, ShippedTiles, build_tile};
-use penumbra_pipeline::eph::Result;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
@@ -138,18 +138,17 @@ fn compare(label: &str, ship: &Horizon, reference: &Horizon) -> f64 {
     max60
 }
 
-fn timing(label: &str, near: &DemTile, far: &DemTile, site: LatLon, mast_m: f64) -> Result<()> {
+fn timing(label: &str, t: &ShippedTiles, region: &str, site: LatLon, mast_m: f64) -> Result<()> {
     let o = HorizonOptions::default();
-    horizon(near, far, site, mast_m, &o).map_err(|e| format!("{e:?}"))?;
+    t.horizon(region, site, mast_m, &o)?;
     let mut ms: Vec<f64> = (0..20)
         .map(|_| {
             let t0 = Instant::now();
-            let h = horizon(near, far, site, mast_m, &o);
+            let h = t.horizon(region, site, mast_m, &o);
             let dt = t0.elapsed().as_secs_f64() * 1000.0;
             h.map(|_| dt)
         })
-        .collect::<std::result::Result<_, _>>()
-        .map_err(|e| format!("{e:?}"))?;
+        .collect::<Result<_>>()?;
     ms.sort_by(f64::total_cmp);
     println!(
         "  {label}: median {:.2} ms, max {:.2} ms (1 warm-up + 20 calls)",
@@ -159,25 +158,23 @@ fn timing(label: &str, near: &DemTile, far: &DemTile, site: LatLon, mast_m: f64)
     Ok(())
 }
 
+/// The T07 reports for `data_dir` (shipped tiles); the T-1a-4 reference DEM comes from PENUMBRA_DATA.
 pub fn run(data_dir: &Path) -> Result<()> {
     let t = ShippedTiles::load(data_dir)?;
-    let mm = t.near("mons-mouton")?;
-    let sr = t.near("shackleton-ridge")?;
     let im2 = deg(-84.7906, 29.1957);
     let sp01 = deg(-89.45, 222.69);
-    let err = |e: penumbra_core::dem::DemError| format!("{e:?}");
 
-    println!("U18 native horizon time (release):");
-    timing("IM-2 H = 2 m", mm, &t.far, im2, 2.0)?;
-    timing("SP-01 H = 10 m", sr, &t.far, sp01, 10.0)?;
+    println!("U18 native horizon time (release, near + mid + far):");
+    timing("IM-2 H = 2 m", &t, "mons-mouton", im2, 2.0)?;
+    timing("SP-01 H = 10 m", &t, "shackleton-ridge", sp01, 10.0)?;
 
     println!("\nT-1a-5 SP-01, H = 10 m: tile edge vs max range 150 km");
-    let edge = horizon(sr, &t.far, sp01, 10.0, &HorizonOptions::default()).map_err(err)?;
+    let edge = t.horizon("shackleton-ridge", sp01, 10.0, &HorizonOptions::default())?;
     let cut = HorizonOptions {
         max_range_m: 150_000.0,
         ..HorizonOptions::default()
     };
-    let near150 = horizon(sr, &t.far, sp01, 10.0, &cut).map_err(err)?;
+    let near150 = t.horizon("shackleton-ridge", sp01, 10.0, &cut)?;
     let differ: Vec<usize> = (0..N_AZ)
         .filter(|&i| edge.el_rad[i].to_bits() != near150.el_rad[i].to_bits())
         .collect();
@@ -207,37 +204,66 @@ pub fn run(data_dir: &Path) -> Result<()> {
 
     let src_dir = PathBuf::from(std::env::var("PENUMBRA_DATA").map_err(|_| "set PENUMBRA_DATA")?);
     let mut src = GeoTiff::open(&src_dir.join("LDEM_80S_20MPP_ADJ.TIF"))?;
+    let rows = tier_ablation(&t, &mut src)?;
+    let worst = rows.iter().map(|r| r.max_dev_deg).fold(0.0, f64::max);
+    println!(
+        "\nT-1a-4 worst max |Δel| over bins with dist ≥ 60 m: {worst:.4}° ({})",
+        if worst > PASS_DEG {
+            "ABOVE 0.05°"
+        } else {
+            "within 0.05°"
+        }
+    );
+    Ok(())
+}
+
+/// One T-1a-4 result: the max |Δel| (degrees) between shipped and reference over the bins whose
+/// obstacle is ≥ 60 m away in both runs, at one point and mast height H (metres).
+#[derive(Debug, Clone, PartialEq)]
+pub struct AblationRow {
+    pub point: &'static str,
+    pub mast_m: f64,
+    pub max_dev_deg: f64,
+}
+
+/// T-1a-4 (SCIENCE-SPEC §1a): the shipped horizon against the float 20 m DEM `src`
+/// (LDEM_80S_20MPP_ADJ) at the five points, H = 0 and 2 m. Prints the detail for DATA-NOTES.
+pub fn tier_ablation(t: &ShippedTiles, src: &mut GeoTiff) -> Result<Vec<AblationRow>> {
+    let mm = t.near("mons-mouton")?;
+    let sr = t.near("shackleton-ridge")?;
+    let err = |e: penumbra_core::dem::DemError| format!("{e:?}");
     let points = [
-        ("IM-2", "mons-mouton", im2, true),
-        ("SP-01", "shackleton-ridge", sp01, true),
+        ("IM-2", "mons-mouton", deg(-84.7906, 29.1957)),
+        ("SP-01", "shackleton-ridge", deg(-89.45, 222.69)),
         (
             "Mons Mouton highest",
             "mons-mouton",
             extreme_pixel(mm, true)?,
-            false,
         ),
         (
             "Mons Mouton lowest",
             "mons-mouton",
             extreme_pixel(mm, false)?,
-            false,
         ),
         (
             "Shackleton lowest",
             "shackleton-ridge",
             extreme_pixel(sr, false)?,
-            false,
         ),
     ];
     println!(
-        "\nT-1a-4 shipped (int16 20 m to 7 km + 240 m) vs float 20 m to {REF_NEAR_RANGE_M} m + same 240 m"
+        "\nT-1a-4 shipped (int16 20 m to 7 km, 80 m to 31 km, then 240 m) vs float 20 m to {REF_NEAR_RANGE_M} m + same 240 m"
     );
-    let mut worst60: f64 = 0.0;
-    for (name, region, site, remedy) in points {
+    let ref_opts = HorizonOptions {
+        near_range_m: REF_NEAR_RANGE_M,
+        ..HorizonOptions::default()
+    };
+    let mut rows = Vec::new();
+    for (name, region, site) in points {
         let near = t.near(region)?;
         let xy = latlon_to_xy(site).map_err(|e| format!("{e:?}"))?;
         let t0 = Instant::now();
-        let win = FloatWindow::read(&mut src, xy, REF_HALF_M)?;
+        let win = FloatWindow::read(src, xy, REF_HALF_M)?;
         println!(
             "{name} ({:.4}°, {:.4}°E) map ({:.1}, {:.1}) m [window read {:.1} s]",
             site.lat_rad.to_degrees(),
@@ -251,41 +277,16 @@ pub fn run(data_dir: &Path) -> Result<()> {
             ground_height_m(near, site).map_err(err)?,
             ground_height_m(&win, site).map_err(err)?
         );
-        let ref_opts = HorizonOptions {
-            near_range_m: REF_NEAR_RANGE_M,
-            ..HorizonOptions::default()
-        };
         for mast_m in [0.0, 2.0] {
-            let ship =
-                horizon(near, &t.far, site, mast_m, &HorizonOptions::default()).map_err(err)?;
+            let ship = t.horizon(region, site, mast_m, &HorizonOptions::default())?;
             let reference = horizon(&win, &t.far, site, mast_m, &ref_opts).map_err(err)?;
-            let m60 = compare(&format!("H = {mast_m} m"), &ship, &reference);
-            worst60 = worst60.max(m60);
-            if remedy {
-                // cheapest remedy: a 1536² int16 20 m tile centred on the site, near range 15 km
-                let wide = build_tile(&mut src, xy, 1536, &NEAR_SCALES_M)?;
-                let o15 = HorizonOptions {
-                    near_range_m: 15_000.0,
-                    ..HorizonOptions::default()
-                };
-                let w15 = horizon(&wide, &t.far, site, mast_m, &o15).map_err(err)?;
-                compare(
-                    &format!(
-                        "H = {mast_m} m, remedy: int16 near tile centred on site, near range 15 km"
-                    ),
-                    &w15,
-                    &reference,
-                );
-            }
+            let max_dev_deg = compare(&format!("H = {mast_m} m"), &ship, &reference);
+            rows.push(AblationRow {
+                point: name,
+                mast_m,
+                max_dev_deg,
+            });
         }
     }
-    println!(
-        "\nT-1a-4 worst max |Δel| over bins with dist ≥ 60 m: {worst60:.4}° ({})",
-        if worst60 > PASS_DEG {
-            "ABOVE 0.05°"
-        } else {
-            "within 0.05°"
-        }
-    );
-    Ok(())
+    Ok(rows)
 }

@@ -2,6 +2,7 @@
 
 pub mod dem;
 pub mod eph;
+pub mod horizon_report;
 pub mod psr;
 pub mod table_check;
 pub mod v2;

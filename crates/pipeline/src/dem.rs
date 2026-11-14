@@ -2,8 +2,11 @@
 
 use crate::eph::Result;
 
-/// Near-tile scales, finest first: the encoder takes the first that holds the tile (P11).
-pub const NEAR_SCALES_M: [f64; 3] = [0.0625, 0.125, 0.25];
+/// Floor of the near and middle tile scale, metres per count: a level tile still gets a positive
+/// scale, and 1 mm is far below the DEM's own 0.30–0.50 m error (E23a). [D]
+pub const MIN_SCALE_M: f64 = 0.001;
+/// Coarsest near and middle tile scale, metres per count (SCIENCE-SPEC §1a tile encoding, P11).
+pub const MAX_SCALE_M: f64 = 0.25;
 /// Far-tile scale: 0.25 m spans only ±8 191 m, which the far field may exceed (ARCHITECTURE §2.1).
 pub const FAR_SCALES_M: [f64; 1] = [0.5];
 /// Count written for a source NaN (the GeoTIFF no-data value).
@@ -55,6 +58,32 @@ pub fn encode(heights_m: &[f32], scales_m: &[f64]) -> Result<Encoded> {
         scale_m,
         offset_m,
     })
+}
+
+/// Encode near or middle tile heights at the finest scale whose ±32 767 counts hold the tile:
+/// relief / 65 534, floored at `MIN_SCALE_M` (P11, #48). Errors if nothing is finite or the
+/// relief needs a scale coarser than `MAX_SCALE_M` (16 383.5 m).
+pub fn encode_finest(heights_m: &[f32]) -> Result<Encoded> {
+    let (lo, hi) = heights_m
+        .iter()
+        .filter(|v| v.is_finite())
+        .fold((f64::INFINITY, f64::NEG_INFINITY), |(lo, hi), &v| {
+            (lo.min(f64::from(v)), hi.max(f64::from(v)))
+        });
+    if lo > hi {
+        return Err("tile has no finite height".into());
+    }
+    // 1e-12 keeps the extreme counts at ±32 767 under f64 rounding
+    let scale_m = ((hi - lo) / (2.0 * f64::from(i16::MAX)) * (1.0 + 1e-12)).max(MIN_SCALE_M);
+    if scale_m > MAX_SCALE_M {
+        return Err(format!("relief {lo} .. {hi} m needs a scale above {MAX_SCALE_M} m").into());
+    }
+    encode(heights_m, &[scale_m])
+}
+
+/// The far tile's encoder: the first of `FAR_SCALES_M` that holds it.
+pub fn encode_far(heights_m: &[f32]) -> Result<Encoded> {
+    encode(heights_m, &FAR_SCALES_M)
 }
 
 /// One Float32 GeoTIFF band, read window by window (never the whole raster, N6), with the
@@ -170,22 +199,32 @@ impl GeoTiff {
     }
 }
 
-/// Crop a `size_px` square from `src`, centred on map point `centre` and snapped to its pixel grid,
-/// and encode it with the first of `scales_m` that fits. Errors if the square leaves the raster.
+/// Crop a `size_px` square of `block_px` × `block_px` source-pixel means from `src`, centred on map
+/// point `centre` and snapped to the block grid (source pixel edges at multiples of `block_px`), and
+/// encode it with `encoder`. `block_px` = 1 keeps the source pixels; a block holding a NaN is NaN
+/// (no data). Errors if the square leaves the raster.
 pub fn build_tile(
     src: &mut GeoTiff,
     centre: penumbra_core::geometry::MapXy,
     size_px: u32,
-    scales_m: &[f64],
+    block_px: u32,
+    encoder: fn(&[f32]) -> Result<Encoded>,
 ) -> Result<penumbra_core::dem::DemTile> {
     // U5/U6: a point-registered or non-sphere source would shift or bias every tile (P7).
     if !src.pixel_is_area || src.sphere_radius_m != Some(penumbra_core::geometry::MOON_RADIUS_M) {
         return Err("source DEM is not pixel-is-area on the 1737.4 km sphere".into());
     }
+    if block_px == 0 {
+        return Err("block must be at least one source pixel".into());
+    }
+    let span = size_px
+        .checked_mul(block_px)
+        .ok_or("tile span overflows u32")?;
+    let block_m = src.pixel_m * f64::from(block_px);
     let half = f64::from(size_px) / 2.0;
     let first = |offset_m: f64, limit: u32| -> Result<u32> {
-        let v = (offset_m / src.pixel_m - half).round();
-        if v < 0.0 || v + f64::from(size_px) > f64::from(limit) {
+        let v = (offset_m / block_m - half).round() * f64::from(block_px);
+        if v < 0.0 || v + f64::from(span) > f64::from(limit) {
             return Err(format!("tile at {centre:?} leaves the {limit} px source").into());
         }
         #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)] // whole, in [0, limit]
@@ -194,14 +233,32 @@ pub fn build_tile(
     };
     let col0 = first(centre.x_m - src.x0_m, src.width)?;
     let row0 = first(src.y0_m - centre.y_m, src.height)?;
-    let heights = src.read_window(col0, row0, size_px, size_px)?;
-    let e = encode(&heights, scales_m)?;
+    let raw = src.read_window(col0, row0, span, span)?;
+    let heights = if block_px == 1 {
+        raw
+    } else {
+        let (n, b, w) = (size_px as usize, block_px as usize, span as usize);
+        let cells = f64::from(block_px * block_px);
+        (0..n * n)
+            .map(|k| {
+                let (r, c) = (k / n, k % n);
+                let sum: f64 = (0..b * b)
+                    .map(|q| f64::from(raw[(r * b + q / b) * w + c * b + q % b]))
+                    .sum();
+                // NaN in, NaN out; a mean of f32 heights is within f32 range
+                #[allow(clippy::cast_possible_truncation)]
+                let mean = (sum / cells) as f32;
+                mean
+            })
+            .collect()
+    };
+    let e = encoder(&heights)?;
     let meta = penumbra_core::dem::TileMeta {
         width: size_px,
         height: size_px,
         x0_m: src.x0_m + f64::from(col0) * src.pixel_m,
         y0_m: src.y0_m - f64::from(row0) * src.pixel_m,
-        pixel_m: src.pixel_m,
+        pixel_m: block_m,
         scale_m: e.scale_m,
         offset_m: e.offset_m,
         nodata: NODATA,
@@ -228,6 +285,8 @@ pub struct ShippedTiles {
     pub far: penumbra_core::dem::DemTile,
     /// (region id, near tile), in manifest order.
     pub regions: Vec<(String, penumbra_core::dem::DemTile)>,
+    /// (region id, middle 80 m tile), in manifest order (#48).
+    pub mids: Vec<(String, penumbra_core::dem::DemTile)>,
 }
 
 impl ShippedTiles {
@@ -237,32 +296,63 @@ impl ShippedTiles {
         let m: serde_json::Value = serde_json::from_str(&text)?;
         let root = data_dir.parent().ok_or("data dir has no parent")?;
         let far = load_entry(root, &m["far"])?;
-        let regions = m["regions"]
-            .as_array()
-            .ok_or("manifest has no regions")?
-            .iter()
-            .map(|r| {
-                let id = r["id"].as_str().ok_or("region without id")?.to_string();
-                Ok((id, load_entry(root, &r["near"])?))
-            })
-            .collect::<Result<Vec<_>>>()?;
-        Ok(ShippedTiles { far, regions })
+        let list = m["regions"].as_array().ok_or("manifest has no regions")?;
+        let tiles = |key: &str| {
+            list.iter()
+                .map(|r| {
+                    let id = r["id"].as_str().ok_or("region without id")?.to_string();
+                    Ok((id, load_entry(root, &r[key])?))
+                })
+                .collect::<Result<Vec<_>>>()
+        };
+        Ok(ShippedTiles {
+            far,
+            regions: tiles("near")?,
+            mids: tiles("mid")?,
+        })
     }
 
     pub fn near(&self, id: &str) -> Result<&penumbra_core::dem::DemTile> {
-        self.regions
-            .iter()
-            .find(|(r, _)| r == id)
-            .map(|(_, t)| t)
-            .ok_or_else(|| format!("region {id} not in manifest").into())
+        find(&self.regions, id)
     }
+
+    pub fn mid(&self, id: &str) -> Result<&penumbra_core::dem::DemTile> {
+        find(&self.mids, id)
+    }
+
+    /// The shipped horizon (what the browser computes): region `id`'s near and middle tiles, then
+    /// the far tile. Site in MOON_ME lat / east lon, `mast_m` above the near tile's ground.
+    pub fn horizon(
+        &self,
+        id: &str,
+        site: penumbra_core::geometry::LatLon,
+        mast_m: f64,
+        opts: &penumbra_core::horizon::HorizonOptions,
+    ) -> Result<penumbra_core::horizon::Horizon> {
+        let (near, mid) = (self.near(id)?, self.mid(id)?);
+        penumbra_core::horizon::horizon_with_mid(near, mid, &self.far, site, mast_m, opts)
+            .map_err(|e| format!("{id}: {e:?}").into())
+    }
+}
+
+fn find<'a>(
+    tiles: &'a [(String, penumbra_core::dem::DemTile)],
+    id: &str,
+) -> Result<&'a penumbra_core::dem::DemTile> {
+    tiles
+        .iter()
+        .find(|(r, _)| r == id)
+        .map(|(_, t)| t)
+        .ok_or_else(|| format!("region {id} not in manifest").into())
 }
 
 fn load_entry(
     root: &std::path::Path,
     e: &serde_json::Value,
 ) -> Result<penumbra_core::dem::DemTile> {
-    let url = e["url"].as_str().ok_or("tile entry without url")?;
+    let url = e["url"]
+        .as_str()
+        .ok_or("tile entry missing or without url")?;
     let num = |k: &str| e[k].as_f64().ok_or_else(|| format!("{url}: {k} missing"));
     let int = |k: &str| e[k].as_i64().ok_or_else(|| format!("{url}: {k} missing"));
     let meta = penumbra_core::dem::TileMeta {
