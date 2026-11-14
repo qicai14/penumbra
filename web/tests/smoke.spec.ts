@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 
 // Runs against `vite preview` locally and the deployed URL in CI (BASE_URL).
 test("panorama loads the fixture (api_version checked against WASM) and shows the readout", async ({ page }) => {
@@ -80,7 +82,21 @@ test("every dataset row has a role and a SCIENCE-SPEC §6 citation", async ({ pa
   const rows = page.getByTestId("datasets").locator("tbody tr");
   await expect(rows).toHaveCount(6);
   await expect(page.getByTestId("datasets")).not.toContainText("pending");
-  for (const cell of await page.getByTestId("citation").all()) await expect(cell).toContainText(/SCIENCE-SPEC §6: [EW]\d/);
+  // Every cited id must be a real row of the ledger, so a typo such as E999 fails.
+  const ledger = readFileSync(fileURLToPath(new URL("../../docs/SCIENCE-SPEC.md", import.meta.url)), "utf8");
+  const known = new Set([...ledger.matchAll(/^\| ([EW]\d+[a-z]?) \|/gm)].map((m) => m[1]));
+  const cells = await page.getByTestId("citation").all();
+  expect(cells).toHaveLength(6);
+  for (const cell of cells) {
+    await expect(cell.locator("a")).toHaveAttribute("href", /SCIENCE-SPEC\.md#6-evidence-ledger$/);
+    const ids = ((await cell.textContent()) ?? "").replace(/^.*§6:\s*/, "").split(/,\s*/);
+    expect(ids.length).toBeGreaterThan(0);
+    for (const id of ids) {
+      const range = id.match(/^([EW]\d+)([a-z])–([a-z])$/); // "E75a–c" stands for E75a, E75b, E75c
+      const expanded = range ? [...Array(range[3].charCodeAt(0) - range[2].charCodeAt(0) + 1)].map((_, i) => range[1] + String.fromCharCode(range[2].charCodeAt(0) + i)) : [id];
+      for (const one of expanded) expect(known.has(one), `${one} in SCIENCE-SPEC §6`).toBe(true);
+    }
+  }
   await expect(page.getByRole("cell", { name: /^illumination: shadow IoU/ })).toBeVisible(); // V3 names its metric (P1)
 });
 
