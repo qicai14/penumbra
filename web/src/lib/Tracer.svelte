@@ -31,9 +31,9 @@
         <dd data-testid={id} data-value={v}>{v.toFixed(6)}°</dd>
       {/each}
       <dt>Horizon dip (mast {TRACER.mast_m} m)</dt>
-      <dd data-testid="dip" data-value={dip_deg}>{dip_deg.toFixed(6)}° (no terrain yet)</dd>
+      <dd data-testid="dip" data-value={dip_deg}>{dip_deg.toFixed(6)}° (Horizons check point: flat sphere, no terrain)</dd>
       <dt>Ground height</dt>
-      <dd data-testid="ground" data-value={TRACER.ground_m}>{TRACER.ground_m} m (no terrain yet)</dd>
+      <dd data-testid="ground" data-value={TRACER.ground_m}>{TRACER.ground_m} m (Horizons check point, on the sphere)</dd>
     </dl>
   {/if}
 </section>

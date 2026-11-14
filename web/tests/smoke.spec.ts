@@ -30,7 +30,7 @@ test("tracer shows the native Sun and Earth az/el, no FIXTURE badge", async ({ p
     const got = Number(await page.getByTestId(id).getAttribute("data-value"));
     expect(Math.abs(got - v), id).toBeLessThan(1e-9);
   }
-  await expect(page.getByTestId("dip")).toContainText("no terrain yet");
+  await expect(page.getByTestId("dip")).toContainText("Horizons check point");
   await expect(page.getByText("FIXTURE")).toHaveCount(0);
 });
 
@@ -72,6 +72,16 @@ test("scoreboard lists V1-V5 and shows 'not run' for checks that have not run", 
   const notRun = rows.filter((r) => r.pass === null).length;
   await expect(table.getByRole("cell", { name: "not run" })).toHaveCount(notRun);
   await expect(page.getByRole("heading", { name: "Limitations" })).toBeVisible();
+});
+
+// T13 (#14): every dataset carries its role and an evidence-ledger citation, none left pending (rubric 4 and 10).
+test("every dataset row has a role and a SCIENCE-SPEC §6 citation", async ({ page }) => {
+  await page.goto("/");
+  const rows = page.getByTestId("datasets").locator("tbody tr");
+  await expect(rows).toHaveCount(6);
+  await expect(page.getByTestId("datasets")).not.toContainText("pending");
+  for (const cell of await page.getByTestId("citation").all()) await expect(cell).toContainText(/SCIENCE-SPEC §6: [EW]\d/);
+  await expect(page.getByRole("cell", { name: /^illumination: shadow IoU/ })).toBeVisible(); // V3 names its metric (P1)
 });
 
 test("picker refuses an edge click and an out-of-table date, and recomputes on a good change", async ({ page }) => {
