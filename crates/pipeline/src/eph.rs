@@ -5,7 +5,7 @@
 //! whole UTC hours; ANISE converts to TDB itself (P4, ADR 0002).
 
 use anise::constants::frames::{EARTH_J2000, MOON_J2000, MOON_ME_DE440_ME421_FRAME, SUN_J2000};
-use anise::prelude::{Aberration, Almanac, Epoch};
+use anise::prelude::{Aberration, Almanac, Epoch, Frame};
 use std::error::Error;
 use std::path::{Path, PathBuf};
 
@@ -33,11 +33,27 @@ pub fn load_almanac(dir: &Path) -> Result<Almanac> {
 
 /// [sun_x, sun_y, sun_z, earth_x, earth_y, earth_z], km, MOON_ME, Moon-centred, apparent, at `t_unix_s` (UTC).
 pub fn moon_me_row(almanac: &Almanac, t_unix_s: f64) -> Result<[f64; 6]> {
+    moon_row(
+        almanac,
+        t_unix_s,
+        MOON_ME_DE440_ME421_FRAME,
+        Aberration::LT_S,
+    )
+}
+
+/// The same row in any Moon body-fixed `frame` with any `aberration`, so tests can show what the
+/// shipped choices change: P3 (stellar aberration off) and P8 (MOON_PA instead of MOON_ME).
+pub fn moon_row(
+    almanac: &Almanac,
+    t_unix_s: f64,
+    frame: Frame,
+    aberration: Option<Aberration>,
+) -> Result<[f64; 6]> {
     let epoch = Epoch::from_unix_seconds(t_unix_s);
-    let dcm = almanac.rotate(MOON_J2000, MOON_ME_DE440_ME421_FRAME, epoch)?;
+    let dcm = almanac.rotate(MOON_J2000, frame, epoch)?;
     let mut row = [0.0; 6];
     for (i, body) in [SUN_J2000, EARTH_J2000].into_iter().enumerate() {
-        let state = almanac.translate(body, MOON_J2000, epoch, Aberration::LT_S)?;
+        let state = almanac.translate(body, MOON_J2000, epoch, aberration)?;
         let v = dcm * state.radius_km;
         row[3 * i..3 * i + 3].copy_from_slice(&[v.x, v.y, v.z]);
     }
