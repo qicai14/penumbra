@@ -5,13 +5,12 @@
     wrap360, xToAz, BIN_DEG, BINS, type View,
   } from "./panorama";
 
-  let { scenario }: { scenario: Scenario } = $props();
+  let { scenario, idx = $bindable(0) }: { scenario: Scenario; idx?: number } = $props();
 
   const HEIGHT = 360;
   const PAD = { l: 44, r: 12, t: 12, b: 24 };
   const SPANS = [360, 90, 30] as const;
 
-  let idx = $state(0);
   let elZoom = $state(false); // false: -10..+20 deg, true: +-10 deg
   let span = $state<number>(360);
   let cursorAz = $state<number | null>(null);

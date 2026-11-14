@@ -1,10 +1,12 @@
 <script lang="ts">
   import { loadFixture, type Scenario } from "./lib/engine";
   import Panorama from "./lib/Panorama.svelte";
+  import Timelines from "./lib/Timelines.svelte";
   import Tracer from "./lib/Tracer.svelte";
 
   let scenario = $state.raw<Scenario | null>(null);
   let error = $state<string | null>(null);
+  let idx = $state(0);
 
   loadFixture().then((s) => (scenario = s), (e) => (error = String(e?.message ?? e)));
 </script>
@@ -16,7 +18,8 @@
 <main>
   <p class="tag">~/site</p>
   {#if scenario}
-    <Panorama {scenario} />
+    <Panorama {scenario} bind:idx />
+    <Timelines {scenario} bind:idx />
   {:else if error}
     <p class="msg" role="alert">{error}</p>
   {:else}

@@ -11,6 +11,10 @@ const sunEl = (i: number) => 6.5 * Math.sin((TAU * i) / 4380);
 const earthEl = (i: number) => 7.5 * Math.sin((TAU * i) / 4320 + 1);
 const illum = (i: number) => r(clamp(0.5 + 1.2 * Math.sin((TAU * i) / 720), 0, 1)); // dark ~0.3 d, lit ~0.3 d, steps between 0 and 1
 const earthMargin = (i: number) => earthEl(i) - 2;
+const MARGIN_MIN = 2; // preset.earth_margin_deg; contact = margin ≥ m_min (SCIENCE-SPEC 1d)
+const contact = (i: number) => (r(earthMargin(i)) >= MARGIN_MIN ? 1 : 0);
+// Hour totals are sums over the fake columns (SCIENCE-SPEC 1e), so the headline numbers agree with the timelines.
+const hours = (f: (i: number) => number) => r(idx.reduce((s, i) => s + f(i), 0) * STEP / 3600);
 
 const scoreboard = [
   ["V1", "JPL Horizons", "worst az/el difference, deg", 0.002, 20],
@@ -59,11 +63,12 @@ const scenario = {
     earth_az_deg: col((i) => ((i * 360) / 4320 + 120) % 360),
     earth_el_deg: col(earthEl),
     earth_margin_deg: col(earthMargin),
-    contact: idx.map((i) => (earthMargin(i) > 0 ? 1 : 0)),
+    contact: idx.map(contact),
     sun_dist_km: col((i) => 1.496e8 + 2.5e6 * Math.sin((TAU * i) / 4320)),
   },
   survival: {
-    operable_h: 212.5, lethal_h: 301.2, longest_dark_h: 41.0, longest_any_sun_h: 180.0, sunlit_h: 390.0, contact_h: 330.0,
+    operable_h: hours((i) => (illum(i) > 0 && contact(i) ? 1 : 0)), lethal_h: 301.2, longest_dark_h: 41.0, longest_any_sun_h: 180.0,
+    sunlit_h: hours(illum), contact_h: hours(contact),
     soc_wh: col((i) => 10000 * Math.max(0, 1 - i / 1807) * (0.9 + 0.1 * Math.cos((TAU * i) / 720))),
   },
   scoreboard,
