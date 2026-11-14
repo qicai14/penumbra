@@ -1,0 +1,171 @@
+<script lang="ts">
+  // T16 (#17): the IM-2 replay. One click loads the site, the touchdown time and the lander preset, then shows two answers side by side:
+  // regional terrain, and a pit of D x d around the lander (A3). Every figure is the model's; this file only words and lays them out.
+  import { computePit, computeScenario, defaultPitDepth, loadFixture, loadManifest, pitDepthToHide, type Scenario } from "./engine";
+  import { headline, presetFields, spanDays } from "./headline";
+  import Panorama from "./Panorama.svelte";
+  import { fmtUtc } from "./panorama";
+  import { checkPit, DEFAULT_PANEL_M, DEFAULT_PIT_DIAMETER_M, IM2, pitSentence } from "./replay";
+  import { checkDate } from "./site";
+
+  type Answer = { regional: Scenario; pit: Scenario; typicalDepth: number; dStar: number };
+  let answer = $state.raw<Answer | null>(null);
+  let error = $state<string | null>(null);
+  let refused = $state<string | null>(null);
+  let busy = $state(false);
+  let idx = $state(0); // the panorama cursor; 0 is touchdown
+
+  let diameter = $state(DEFAULT_PIT_DIAMETER_M);
+  let depth = $state<number | null>(null); // null = follow the 11° depth for this diameter
+  let panel = $state(DEFAULT_PANEL_M);
+  let gen = 0;
+
+  async function run() {
+    const mine = ++gen;
+    busy = true;
+    try {
+      const m = await loadManifest();
+      const ok = checkDate(IM2.date, IM2.span_days, m.ephemeris);
+      if (!ok.ok) throw new Error(ok.reason);
+      const fx = await loadFixture();
+      const regional = await computeScenario({
+        lat_deg: IM2.lat_deg, lon_deg: IM2.lon_deg, mast_m: panel, start_unix_s: IM2.touchdown_unix_s, span_days: IM2.span_days, preset: fx.preset,
+      });
+      const typicalDepth = await defaultPitDepth(diameter);
+      const bad = checkPit({ diameter_m: diameter, depth_m: depth ?? typicalDepth, panel_m: panel });
+      if (bad) throw new Error(bad);
+      const pit = await computePit(regional, { diameter_m: diameter, depth_m: depth ?? typicalDepth });
+      const dStar = await pitDepthToHide(diameter, panel, regional.track.sun_el_deg[0], regional.track.sun_radius_deg[0]);
+      if (mine !== gen) return;
+      answer = { regional, pit, typicalDepth, dStar };
+      error = null;
+    } catch (e: any) {
+      if (mine === gen) error = String(e?.message ?? e);
+    } finally {
+      if (mine === gen) busy = false;
+    }
+  }
+
+  const shownDepth = $derived(depth ?? answer?.typicalDepth ?? 0);
+  // The inputs refuse a bad value with a reason and keep the last good one on screen.
+  function edit(which: "diameter" | "depth" | "panel", e: Event) {
+    const input = e.currentTarget as HTMLInputElement;
+    const v = input.valueAsNumber;
+    const next = { diameter_m: diameter, depth_m: shownDepth, panel_m: panel };
+    next[which === "diameter" ? "diameter_m" : which === "depth" ? "depth_m" : "panel_m"] = v;
+    const bad = checkPit(next);
+    if (bad) {
+      refused = bad;
+      input.value = String(which === "diameter" ? diameter : which === "depth" ? +shownDepth.toFixed(2) : panel);
+      return;
+    }
+    refused = null;
+    if (which === "diameter") diameter = v; else if (which === "depth") depth = v; else panel = v;
+    run();
+  }
+  function reset() { depth = null; diameter = DEFAULT_PIT_DIAMETER_M; refused = null; run(); }
+
+  const fields = $derived(answer ? presetFields(answer.regional.preset) : []);
+  const span = $derived(answer ? spanDays(answer.regional.count, answer.regional.step_s) : 0);
+  const regionalHead = $derived(answer ? headline(answer.regional.survival, span) : null);
+  const pitHead = $derived(answer ? headline(answer.pit.survival, span) : null);
+  const sentence = $derived(answer && pitSentence({
+    elSunDeg: answer.regional.track.sun_el_deg[0], clearPct: answer.regional.timeline.illumination[0] * 100, diameterM: diameter,
+    panelM: panel, dStarM: answer.dStar, typicalDepthM: answer.typicalDepth,
+  }));
+  const fmt = (x: number, d = 2) => String(+x.toFixed(d));
+</script>
+
+<section class="panel" aria-labelledby="rp-h">
+  <header>
+    <h2 id="rp-h">IM-2 replay · regional terrain against a pit</h2>
+  </header>
+
+  <p class="lede">
+    The IM-2 landing site on its landing date. A reconstruction to compare with the mission reports; it does not say what happened.
+  </p>
+  <ul class="tags" data-testid="replay-assumptions">
+    <li><span class="tag">assumed · U8</span> Touchdown 2025-03-06 17:28 UTC. The time is not in a primary source.</li>
+    <li><span class="tag">assumed · U10</span> Lander values and panel height. IM-2 battery and array values are not published.</li>
+    <li><span class="tag">unconfirmed · U19</span> Reports say the lander operated for about a day.</li>
+  </ul>
+
+  {#if !answer}
+    <button type="button" class="go" data-testid="replay-load" disabled={busy} onclick={run}>{busy ? "Loading…" : "Load the IM-2 replay"}</button>
+  {/if}
+  {#if error}<p class="refusal" role="alert" data-testid="replay-error">{error}</p>{/if}
+
+  {#if answer && regionalHead && pitHead}
+    <div class="pair">
+      <article class="col" data-testid="answer-regional" aria-labelledby="ar-h">
+        <h3 id="ar-h">Regional terrain says</h3>
+        <p class="fig"><span class="cap">Sun at touchdown</span><strong data-testid="regional-clear">{fmt(answer.regional.timeline.illumination[0] * 100, 0)} % clear</strong></p>
+        <p class="fig"><span class="cap">Operable</span><strong data-testid="regional-operable">{regionalHead.operable}</strong></p>
+        <p class="fig"><span class="cap">First lethal shadow in</span><strong data-testid="regional-lethal">{#if !regionalHead.none}✕ {/if}{regionalHead.lethal}</strong></p>
+      </article>
+      <article class="col" data-testid="answer-pit" aria-labelledby="ap-h">
+        <h3 id="ap-h">A pit of {fmt(diameter)} × {fmt(shownDepth)} m says</h3>
+        <p class="fig"><span class="cap">Sun at touchdown</span><strong data-testid="pit-clear">{fmt(answer.pit.timeline.illumination[0] * 100, 0)} % clear</strong></p>
+        <p class="fig"><span class="cap">Operable</span><strong data-testid="pit-operable">{pitHead.operable}</strong></p>
+        <p class="fig"><span class="cap">First lethal shadow in</span><strong data-testid="pit-lethal">{#if !pitHead.none}✕ {/if}{pitHead.lethal}</strong></p>
+      </article>
+    </div>
+
+    <p class="sentence" data-testid="dstar-sentence">{sentence} <span class="tag">assumed · U8, U10</span></p>
+
+    <form class="fields" onsubmit={(e) => e.preventDefault()} aria-label="Pit">
+      <label class="row"><span class="name">Pit diameter</span>
+        <input type="number" min="0.1" step="1" value={diameter} data-testid="pit-diameter" onchange={(e) => edit("diameter", e)} /><span class="unit">m</span><span class="tag">cited · W6</span></label>
+      <label class="row"><span class="name">Pit depth</span>
+        <input type="number" min="0" step="0.1" value={+shownDepth.toFixed(2)} data-testid="pit-depth" onchange={(e) => edit("depth", e)} /><span class="unit">m</span>
+        <span class="tag" data-testid="pit-depth-tag">{depth === null ? "11° degraded crater · E112" : "assumed · your value"}</span></label>
+      <label class="row"><span class="name">Panel height H</span>
+        <input type="number" min="0" step="0.5" value={panel} data-testid="pit-panel" onchange={(e) => edit("panel", e)} /><span class="unit">m</span><span class="tag">assumed · U10</span></label>
+      <button type="button" class="reset" onclick={reset}>Reset to 20 m and the 11° depth</button>
+      {#if refused}<p class="refusal" role="alert" data-testid="pit-refusal">{refused}</p>{/if}
+    </form>
+
+    <details class="preset">
+      <summary>Lander values used (all assumed, U10)</summary>
+      <ul>
+        {#each fields as f (f.key)}<li>{f.label}: {fmt(f.value, 2)} {f.unit} <span class="tag">assumed</span></li>{/each}
+      </ul>
+    </details>
+
+    <p class="cap">From touchdown, {fmtUtc(answer.regional.track.t_unix_s[0])} · {span} days · {fmt(IM2.lat_deg, 4)}°, {fmt(IM2.lon_deg, 4)}°E</p>
+    <Panorama scenario={answer.regional} pit={answer.pit} bind:idx />
+  {/if}
+</section>
+
+<style>
+  .panel { background: var(--surface-carbon); border-radius: var(--radius-sm); padding: var(--spacing-16); }
+  header { margin-bottom: var(--spacing-16); }
+  h2 { margin: 0; font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
+  h3 { margin: 0 0 var(--spacing-8); font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
+  .lede { margin: 0 0 var(--spacing-8); color: var(--color-paper); }
+  .tags { margin: 0 0 var(--spacing-16); padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
+  .tag { border: 1px solid var(--color-slate); border-radius: var(--radius-full); padding: 0 var(--spacing-8); color: var(--color-fog); white-space: nowrap; font: var(--text-caption)/var(--leading-caption) var(--font-mono); }
+  .pair { display: flex; flex-wrap: wrap; gap: var(--spacing-16); margin-bottom: var(--spacing-16); }
+  .col { flex: 1 1 280px; background: var(--surface-iron); border-radius: var(--radius-sm); padding: var(--spacing-16); display: flex; flex-direction: column; gap: var(--spacing-8); }
+  .fig { margin: 0; display: flex; flex-direction: column; }
+  .cap { font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); margin: 0 0 var(--spacing-8); }
+  .fig .cap { margin: 0; }
+  strong { font: var(--font-weight-regular) var(--text-heading)/var(--leading-heading) var(--font-mono); color: var(--color-paper); font-variant-numeric: tabular-nums; }
+  .sentence { margin: 0 0 var(--spacing-16); color: var(--color-paper); max-width: 72ch; }
+  .fields { display: flex; flex-direction: column; gap: var(--spacing-8); margin-bottom: var(--spacing-16); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
+  .row { display: flex; align-items: center; gap: var(--spacing-8); flex-wrap: wrap; }
+  .name { flex: 0 0 150px; }
+  .unit { flex: 0 0 3ch; }
+  input {
+    width: 9ch; font: var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-paper); background: var(--surface-iron);
+    border: 1px solid var(--color-slate); border-radius: var(--radius-sm); padding: 4px var(--spacing-8); color-scheme: dark; font-variant-numeric: tabular-nums;
+  }
+  input:focus-visible, button:focus-visible, summary:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }
+  button { font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-paper); background: transparent; border: 1px solid var(--color-pewter); border-radius: var(--radius-sm); padding: var(--spacing-8) var(--spacing-16); cursor: pointer; }
+  button:disabled { color: var(--color-ash); cursor: default; }
+  .reset { align-self: flex-start; color: var(--color-fog); border-color: var(--color-slate); }
+  .go { font-size: var(--text-body); }
+  .preset { margin-bottom: var(--spacing-16); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-fog); }
+  .preset ul { margin: var(--spacing-8) 0 0; padding-left: var(--spacing-24); }
+  .refusal { margin: 0; padding: var(--spacing-8) var(--spacing-16); border: 1px solid var(--color-pewter); border-radius: var(--radius-sm); background: var(--surface-iron); color: var(--color-paper); }
+</style>

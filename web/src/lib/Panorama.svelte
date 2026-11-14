@@ -5,7 +5,8 @@
     wrap360, xToAz, BIN_DEG, BINS, type View,
   } from "./panorama";
 
-  let { scenario, idx = $bindable(0) }: { scenario: Scenario; idx?: number } = $props();
+  // `pit` (T16): the same site with the horizon raised to a pit rim. Both answers are drawn: the regional ridge, and the pit rim above it.
+  let { scenario, idx = $bindable(0), pit = null }: { scenario: Scenario; idx?: number; pit?: Scenario | null } = $props();
 
   const HEIGHT = 360;
   const PAD = { l: 44, r: 12, t: 12, b: 24 };
@@ -24,6 +25,8 @@
     elMin: -10, elMax: elZoom ? 10 : 20,
   });
   const reading = $derived(cursorAz === null ? null : horizonAt(scenario.horizon, cursorAz));
+  const pitReading = $derived(pit && cursorAz !== null ? horizonAt(pit.horizon, cursorAz) : null);
+  const clearPct = (s: Scenario) => Math.round(s.timeline.illumination[idx] * 100); // the model's disc fraction, as a percent
 
   function css(el: HTMLElement) {
     const s = getComputedStyle(el);
@@ -83,9 +86,22 @@
       const y = elToY(hz.el_deg[i], v);
       if (j === 0) terrain.moveTo(x, y); else terrain.lineTo(x, y);
     }
-    const ridge = new Path2D(terrain);
     const xEnd = v.x0 + v.w / 2 + (((start + BINS) * BIN_DEG - v.centre) / v.span) * v.w;
     const xBeg = v.x0 + v.w / 2 + ((start * BIN_DEG - v.centre) / v.span) * v.w;
+    const ridge = new Path2D(terrain);
+    let pitLine: Path2D | null = null;
+    if (pit) {
+      pitLine = new Path2D();
+      for (let j = 0; j <= BINS; j++) {
+        const i = (((start + j) % BINS) + BINS) % BINS;
+        const x = v.x0 + v.w / 2 + (((start + j) * BIN_DEG - v.centre) / v.span) * v.w;
+        const y = elToY(pit.horizon.el_deg[i], v);
+        if (j === 0) pitLine.moveTo(x, y); else pitLine.lineTo(x, y);
+      }
+      const band = new Path2D(pitLine);
+      band.lineTo(xEnd, v.y0 + v.h + 2); band.lineTo(xBeg, v.y0 + v.h + 2); band.closePath();
+      g.fillStyle = k.iron; g.fill(band);
+    }
     terrain.lineTo(xEnd, v.y0 + v.h + 2); terrain.lineTo(xBeg, v.y0 + v.h + 2); terrain.closePath();
     g.fillStyle = k.graphite;
     g.fill(terrain);
@@ -104,6 +120,9 @@
 
     // Ridge line.
     g.strokeStyle = k.ash; g.lineWidth = 1.5; g.stroke(ridge);
+    if (pitLine) {
+      g.strokeStyle = k.paper; g.lineWidth = 1.5; g.setLineDash([2, 3]); g.stroke(pitLine); g.setLineDash([]);
+    }
 
     // Discs at the marker time. True angular size: ellipse radii in px per degree on each axis.
     const disc = (az: number, el: number, rDeg: number, fill: string, line: string, label: string, labelColor: string) => {
@@ -175,7 +194,7 @@
 
   <p class="readout" data-testid="readout" aria-live="off">
     {#if reading}
-      Az {reading.az_deg.toFixed(1)}° · horizon {fmtEl(reading.el_deg)} · obstacle {fmtDist(reading.dist_m)}{reading.near ? " · within 3 DEM pixels (<60 m)" : ""}
+      Az {reading.az_deg.toFixed(1)}° · horizon {fmtEl(reading.el_deg)} · obstacle {fmtDist(reading.dist_m)}{reading.near ? " · within 3 DEM pixels (<60 m)" : ""}{#if pitReading} · pit rim {fmtEl(pitReading.el_deg)}{/if}
     {:else}
       Point at the panorama, or focus it and use the arrow keys, to read the horizon.
     {/if}
@@ -184,6 +203,13 @@
   <p class="now" data-testid="now" role="status">
     {fmtUtc(tr.t_unix_s[idx])} · Sun az {tr.sun_az_deg[idx].toFixed(1)}° el {fmtEl(tr.sun_el_deg[idx])} · Earth az {tr.earth_az_deg[idx].toFixed(1)}° el {fmtEl(tr.earth_el_deg[idx])}
   </p>
+
+  {#if pit}
+    <p class="pair" data-testid="pano-pair">
+      <span><i class="key ridge"></i>Regional terrain: {clearPct(scenario)} % of the Sun clear</span>
+      <span><i class="key rim"></i>Pit rim: {clearPct(pit)} % of the Sun clear</span>
+    </p>
+  {/if}
 
   <div class="controls">
     <label class="time">
@@ -216,6 +242,9 @@
   .readout, .now { margin: var(--spacing-8) 0 0; font: var(--text-body)/var(--leading-body) var(--font-mono); font-variant-numeric: tabular-nums; }
   .readout { color: var(--color-paper); min-height: 1.71em; }
   .now { color: var(--color-fog); font-size: var(--text-caption); line-height: var(--leading-caption); }
+  .pair { display: flex; flex-wrap: wrap; gap: var(--spacing-8) var(--spacing-24); margin: var(--spacing-8) 0 0; font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-paper); font-variant-numeric: tabular-nums; }
+  .key { display: inline-block; width: 24px; margin-right: var(--spacing-8); vertical-align: middle; border-top: 2px solid var(--color-ash); }
+  .key.rim { border-top: 2px dotted var(--color-paper); }
   .controls { display: flex; flex-wrap: wrap; gap: var(--spacing-16); align-items: center; margin-top: var(--spacing-16); }
   .time { display: flex; align-items: center; gap: var(--spacing-8); flex: 1 1 240px; font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .time input { flex: 1; accent-color: var(--color-fog); }

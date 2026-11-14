@@ -5,6 +5,7 @@
     "The Earth margin and σ_z are assumed.",
     "No charge or discharge efficiency.",
     "Lander values are assumed unless marked cited.",
+    "The IM-2 pit view keeps the regional far horizon: inside a pit the panel sits H below regional ground, under 2 m of observer height at kilometres of distance.",
   ];
 
   // Dataset names: docs/SUBMISSION.md rubric item 4. Roles tie to the V1-V5 judges in scoreboard.json.

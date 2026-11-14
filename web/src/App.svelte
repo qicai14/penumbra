@@ -1,6 +1,7 @@
 <script lang="ts">
   import { computeScenario, loadFixture, loadManifest, loadNearTile, xyToLatlon, type EphSegment, type Inputs, type NearMeta, type NearTile, type Preset, type Region, type Scenario } from "./lib/engine";
   import Compare from "./lib/Compare.svelte";
+  import Replay from "./lib/Replay.svelte";
   import { applyPresetEdits, decodeCompare, type Pair } from "./lib/compare";
   import Panorama from "./lib/Panorama.svelte";
   import Timelines from "./lib/Timelines.svelte";
@@ -35,7 +36,7 @@
 
   // Compare A vs B (T27). The URL query holds both pairs and the preset (`?a=<lat>,<lon>@<date>&b=...&preset=...`); a query
   // with `a` or `b` opens the compare view on load. The site view keeps a clean URL.
-  let view = $state<"site" | "compare">("site");
+  let view = $state<"site" | "compare" | "replay">("site");
   let cmp = $state<{ pairs: { a: Pair; b: Pair }; base: Preset; metas: NearMeta[]; eph: EphSegment[] } | null>(null); // deep state: Compare edits the pairs in place, so they survive a trip to the site view
   let cmpError = $state<string | null>(null);
   async function openCompare(search: string) {
@@ -49,6 +50,10 @@
       controls.mastM = init.mastM; controls.spanDays = init.spanDays;
       cmp = { pairs: { a: init.a, b: init.b }, base: fx.preset, metas, eph: m.ephemeris }; cmpError = null;
     } catch (e: any) { cmpError = String(e?.message ?? e); }
+  }
+  function openReplay() {
+    view = "replay";
+    try { history.replaceState(null, "", location.pathname); } catch { /* ignore */ }
   }
   function openSite() {
     view = "site";
@@ -76,11 +81,15 @@
   <nav aria-label="View">
     <button type="button" aria-pressed={view === "site"} onclick={openSite}>Site</button>
     <button type="button" aria-pressed={view === "compare"} onclick={() => openCompare("")}>Compare A vs B</button>
+    <button type="button" aria-pressed={view === "replay"} onclick={openReplay}>IM-2 replay</button>
   </nav>
 </header>
 
 <main>
-  {#if view === "compare"}
+  {#if view === "replay"}
+    <p class="tag">~/replay</p>
+    <Replay />
+  {:else if view === "compare"}
     <p class="tag">~/compare</p>
     {#if cmpError}<p class="msg" role="alert">{cmpError}</p>{/if}
     {#if cmp}<Compare {controls} pairs={cmp.pairs} base={cmp.base} metas={cmp.metas} eph={cmp.eph} />{:else if !cmpError}<p class="msg">Loading…</p>{/if}
@@ -119,6 +128,7 @@
   }
   nav button:first-child { margin-left: 0; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
   nav button:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  nav button:not(:first-child):not(:last-child) { border-radius: 0; }
   nav button[aria-pressed="true"] { color: var(--color-paper); background: var(--surface-iron); border-color: var(--color-pewter); }
   nav button:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }
   .wordmark { margin: 0; font: italic 800 var(--text-base)/1 var(--font-wordmark); font-stretch: 112%; text-transform: uppercase; }
