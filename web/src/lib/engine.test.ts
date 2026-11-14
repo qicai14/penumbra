@@ -215,7 +215,8 @@ test("computeScenario runs on the landing date and span, not the fixture grid (#
   try {
     const start = Date.UTC(2027, 2, 1) / 1000; // 2027-03-01: inside the table, not the fixture's 2026-11-14
     const s = await computeScenario({ lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2, start_unix_s: start, span_days: 14 });
-    expect(s.note).toBe(""); // the fixture's note (and its flag) are not part of a computed scenario
+    expect(s.note).toBe(""); // the fixture's note is not part of a computed scenario
+    expect("fake" in s).toBe(false); // nor its FAKE flag: only named fields are copied
     expect(s.start_unix_s).toBe(start);
     expect(s.count).toBe(14 * 144); // 10-minute steps
     expect(s.track.t_unix_s[0]).toBe(start);

@@ -259,7 +259,7 @@ async function computeNow(inp: Inputs): Promise<Scenario> {
   if (!(n >= 1) || !Number.isFinite(t0)) throw new Error(`BAD_INPUT: span ${inp.span_days} d from ${t0} gives no time steps`);
   const track = await sunEarthTrack(site, t0, s.step_s, n);
   const { timeline, survival } = await timelineAndSurvival(engine, raw, site, preset, t0, s.step_s, n);
-  return { ...s, note: "", start_unix_s: t0, count: n, preset, site, track, horizon, timeline, survival };
+  return { api_version: s.api_version, step_s: s.step_s, scoreboard: s.scoreboard, note: "", start_unix_s: t0, count: n, preset, site, track, horizon, timeline, survival };
 }
 
 // The Engine holds one near tile at a time (ensureNear swaps it), so two computes must never interleave.
