@@ -95,7 +95,7 @@
     {#if cmp}<Compare {controls} pairs={cmp.pairs} base={cmp.base} metas={cmp.metas} eph={cmp.eph} />{:else if !cmpError}<p class="msg">Loading…</p>{/if}
   {:else}
   <p class="tag">~/site</p>
-  {#if tile}<SitePicker {controls} {tile} {onregion} />{/if}
+  {#if tile}<SitePicker {controls} {tile} {onregion} t={scenario?.track.t_unix_s[idx] ?? parseDate(controls.date)} />{/if}
   {#if tileError}<p class="msg" role="alert">{tileError}</p>{/if}
   {#if error}<p class="msg" role="alert">{error}</p>{/if}
   {#if scenario && computedFor}
