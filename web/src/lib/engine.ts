@@ -96,3 +96,43 @@ export function validate(result: Horizon | Track | Timeline | Survival): void {
   const t = (result as Partial<Track>).t_unix_s;
   if (t) for (let i = 1; i < t.length; i++) if (!(t[i] > t[i - 1])) fail(`t_unix_s is not increasing at ${i}`);
 }
+
+/** Per-function switch (ARCHITECTURE §3.5): "wasm" = computed in the browser by the Engine, "fixture" = still stubbed. */
+export const source = { sun_earth_track: "wasm" as "wasm" | "fixture" };
+
+export type Manifest = {
+  format_version: number; api_version: number;
+  ephemeris: { id: string; url: string; t0_unix_s: number; step_s: number; rows: number }[];
+};
+
+export async function loadManifest(): Promise<Manifest> {
+  const base = import.meta.env?.BASE_URL ?? "/";
+  const res = await fetch(`${base}data/manifest.json`, { cache: "no-cache" });
+  if (!res.ok) throw new Error(`NO_DATA: manifest.json returned ${res.status}`);
+  const m: Manifest = await res.json();
+  checkApiVersion(m.api_version, await engineApiVersion());
+  return m;
+}
+
+// IM-2 tracer call (T02): site, mast, 2026-11-14T00:00Z, hourly, 24 rows.
+export const TRACER = { lat_deg: -84.7906, lon_deg: 29.1957, ground_m: 0, mast_m: 2, start_unix_s: 1794614400, step_s: 3600, count: 24 };
+
+/** Sun and Earth az/el for the IM-2 tracer, from the WASM Engine and the shipped hourly table. */
+export async function loadTracerTrack(): Promise<Track> {
+  const wasm = await import("./wasm/penumbra_wasm.js");
+  await wasm.default();
+  const m = await loadManifest();
+  const seg = m.ephemeris[0];
+  const res = await fetch(`${import.meta.env?.BASE_URL ?? "/"}${seg.url}`);
+  if (!res.ok) throw new Error(`NO_DATA: ${seg.url} returned ${res.status}`);
+  const data = new Float64Array(await res.arrayBuffer());
+  if (data.length !== 6 * seg.rows) throw new Error(`BAD_INPUT: ${seg.url} has ${data.length} values, expected ${6 * seg.rows}`);
+  const engine = new wasm.Engine();
+  engine.load_ephemeris(seg.t0_unix_s, seg.step_s, data);
+  const t = TRACER;
+  const flat = engine.sun_earth_track(t.lat_deg, t.lon_deg, t.ground_m, t.mast_m, t.start_unix_s, t.step_s, t.count);
+  const names = ["t_unix_s", "sun_az_deg", "sun_el_deg", "sun_radius_deg", "sun_dist_km", "earth_az_deg", "earth_el_deg", "earth_radius_deg", "earth_dist_km"];
+  const track = Object.fromEntries(names.map((k, i) => [k, flat.slice(i * t.count, (i + 1) * t.count)])) as Track;
+  validate(track);
+  return track;
+}
