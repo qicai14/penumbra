@@ -218,3 +218,163 @@ pub fn tile_json(url: &str, m: &penumbra_core::dem::TileMeta) -> serde_json::Val
         "pixel_m": m.pixel_m, "scale_m": m.scale_m, "offset_m": m.offset_m, "nodata": m.nodata,
     })
 }
+
+/// The tiles the browser ships, read back through `manifest.json` (ARCHITECTURE §3.5).
+#[derive(Debug)]
+pub struct ShippedTiles {
+    pub far: penumbra_core::dem::DemTile,
+    /// (region id, near tile), in manifest order.
+    pub regions: Vec<(String, penumbra_core::dem::DemTile)>,
+}
+
+impl ShippedTiles {
+    /// Load every tile listed in `data_dir/manifest.json`; urls are relative to `data_dir/..`.
+    pub fn load(data_dir: &std::path::Path) -> Result<ShippedTiles> {
+        let text = std::fs::read_to_string(data_dir.join("manifest.json"))?;
+        let m: serde_json::Value = serde_json::from_str(&text)?;
+        let root = data_dir.parent().ok_or("data dir has no parent")?;
+        let far = load_entry(root, &m["far"])?;
+        let regions = m["regions"]
+            .as_array()
+            .ok_or("manifest has no regions")?
+            .iter()
+            .map(|r| {
+                let id = r["id"].as_str().ok_or("region without id")?.to_string();
+                Ok((id, load_entry(root, &r["near"])?))
+            })
+            .collect::<Result<Vec<_>>>()?;
+        Ok(ShippedTiles { far, regions })
+    }
+
+    pub fn near(&self, id: &str) -> Result<&penumbra_core::dem::DemTile> {
+        self.regions
+            .iter()
+            .find(|(r, _)| r == id)
+            .map(|(_, t)| t)
+            .ok_or_else(|| format!("region {id} not in manifest").into())
+    }
+}
+
+fn load_entry(
+    root: &std::path::Path,
+    e: &serde_json::Value,
+) -> Result<penumbra_core::dem::DemTile> {
+    let url = e["url"].as_str().ok_or("tile entry without url")?;
+    let num = |k: &str| e[k].as_f64().ok_or_else(|| format!("{url}: {k} missing"));
+    let int = |k: &str| e[k].as_i64().ok_or_else(|| format!("{url}: {k} missing"));
+    let meta = penumbra_core::dem::TileMeta {
+        width: u32::try_from(int("width")?)?,
+        height: u32::try_from(int("height")?)?,
+        x0_m: num("x0_m")?,
+        y0_m: num("y0_m")?,
+        pixel_m: num("pixel_m")?,
+        scale_m: num("scale_m")?,
+        offset_m: num("offset_m")?,
+        nodata: i16::try_from(int("nodata")?)?,
+    };
+    let bytes = std::fs::read(root.join(url))?;
+    let (words, rest) = bytes.as_chunks::<2>();
+    if !rest.is_empty() {
+        return Err(format!("{url}: odd byte count").into());
+    }
+    let counts = words.iter().map(|w| i16::from_le_bytes(*w)).collect();
+    penumbra_core::dem::DemTile::new(meta, counts).map_err(|e| format!("{url}: {e:?}").into())
+}
+
+/// A float window of the source DEM, sampled like a tile but without int16 quantisation: the
+/// T-1a-4 reference. Same bilinear rule and pixel-is-area convention as `DemTile`; NaN → `NoData`.
+#[derive(Debug)]
+pub struct FloatWindow {
+    width: u32,
+    height: u32,
+    /// Upper-left corner of pixel (0, 0), map metres.
+    x0_m: f64,
+    y0_m: f64,
+    pixel_m: f64,
+    heights_m: Vec<f32>,
+    max_m: f64,
+}
+
+impl FloatWindow {
+    /// Read the source pixels whose centres lie within `half_m` (map metres) of `centre` in x and y.
+    pub fn read(
+        src: &mut GeoTiff,
+        centre: penumbra_core::geometry::MapXy,
+        half_m: f64,
+    ) -> Result<FloatWindow> {
+        let px = src.pixel_m;
+        let lo_c = ((centre.x_m - half_m - src.x0_m) / px).floor();
+        let lo_r = ((src.y0_m - centre.y_m - half_m) / px).floor();
+        let n = (2.0 * half_m / px).ceil() + 2.0;
+        let fits = |lo: f64, limit: u32| lo >= 0.0 && lo + n <= f64::from(limit);
+        if !fits(lo_c, src.width) || !fits(lo_r, src.height) {
+            return Err(format!("window ±{half_m} m at {centre:?} leaves the source").into());
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        // whole numbers inside the raster, checked above
+        let (col0, row0, size) = (lo_c as u32, lo_r as u32, n as u32);
+        let heights_m = src.read_window(col0, row0, size, size)?;
+        let max_m = heights_m
+            .iter()
+            .filter(|v| v.is_finite())
+            .fold(f64::NEG_INFINITY, |m, &v| m.max(f64::from(v)));
+        if !max_m.is_finite() {
+            return Err("window has no finite height".into());
+        }
+        Ok(FloatWindow {
+            width: size,
+            height: size,
+            x0_m: src.x0_m + f64::from(col0) * px,
+            y0_m: src.y0_m - f64::from(row0) * px,
+            pixel_m: px,
+            heights_m,
+            max_m,
+        })
+    }
+}
+
+impl penumbra_core::dem::Terrain for FloatWindow {
+    fn pixel_m(&self) -> f64 {
+        self.pixel_m
+    }
+    fn max_height_m(&self) -> f64 {
+        self.max_m
+    }
+    fn height_m(
+        &self,
+        xy: penumbra_core::geometry::MapXy,
+    ) -> std::result::Result<f64, penumbra_core::dem::DemError> {
+        use penumbra_core::dem::DemError;
+        if !xy.x_m.is_finite() || !xy.y_m.is_finite() {
+            return Err(DemError::BadInput("map x/y must be finite"));
+        }
+        let fc = (xy.x_m - self.x0_m) / self.pixel_m - 0.5;
+        let fr = (self.y0_m - xy.y_m) / self.pixel_m - 0.5;
+        let (ic, ir) = (fc.floor(), fr.floor());
+        if ic < 0.0
+            || ir < 0.0
+            || ic >= f64::from(self.width - 1)
+            || ir >= f64::from(self.height - 1)
+        {
+            return Err(DemError::OutOfCoverage);
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        // range checked above: 0 ≤ ic < width − 1 and 0 ≤ ir < height − 1, whole numbers
+        let (i, j) = (ic as usize, ir as usize);
+        let w = self.width as usize;
+        let at = |k: usize| {
+            let v = self.heights_m[k];
+            if v.is_finite() {
+                Ok(f64::from(v))
+            } else {
+                Err(DemError::NoData)
+            }
+        };
+        let k = j * w + i;
+        let (v00, v01, v10, v11) = (at(k)?, at(k + 1)?, at(k + w)?, at(k + w + 1)?);
+        let (a, b) = (fc - ic, fr - ir);
+        let top = v00 + a * (v01 - v00);
+        let bottom = v10 + a * (v11 - v10);
+        Ok(top + b * (bottom - top))
+    }
+}

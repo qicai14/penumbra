@@ -13,15 +13,58 @@ pub fn api_version() -> u32 {
     penumbra_core::API_VERSION
 }
 
-/// The page's one engine: loaded ephemeris segments (near and far tiles land in later tickets).
+use penumbra_core::dem::{DemError, DemTile, TileMeta};
+use penumbra_core::geometry::LatLon;
+
+/// The page's one engine: loaded ephemeris segments, the current region's near tile and the far tile.
 #[wasm_bindgen]
 #[derive(Default)]
 pub struct Engine {
     eph: penumbra_core::eph::Ephemeris,
+    near: Option<DemTile>,
+    far: Option<DemTile>,
 }
 
 fn js_err(e: penumbra_core::eph::EphError) -> JsError {
     JsError::new(&format!("{}: {e:?}", e.code()))
+}
+
+fn dem_err(e: DemError) -> JsError {
+    JsError::new(&format!("{}: {e:?}", e.code()))
+}
+
+/// MOON_ME latitude and east longitude in degrees → radians.
+fn site_deg(lat_deg: f64, lon_deg: f64) -> LatLon {
+    LatLon {
+        lat_rad: lat_deg.to_radians(),
+        lon_east_rad: lon_deg.to_radians(),
+    }
+}
+
+/// A tile from the manifest's eight numbers plus its row-major int16 counts (docs/API.md).
+#[allow(clippy::too_many_arguments)] // mirrors the frozen load_near / load_far arguments
+fn tile(
+    data: Box<[i16]>,
+    width: u32,
+    height: u32,
+    x0_m: f64,
+    y0_m: f64,
+    pixel_m: f64,
+    scale_m: f64,
+    offset_m: f64,
+    nodata: i16,
+) -> Result<DemTile, JsError> {
+    let meta = TileMeta {
+        width,
+        height,
+        x0_m,
+        y0_m,
+        pixel_m,
+        scale_m,
+        offset_m,
+        nodata,
+    };
+    DemTile::new(meta, data.into_vec()).map_err(dem_err)
 }
 
 #[wasm_bindgen]
@@ -65,5 +108,77 @@ impl Engine {
         };
         penumbra_core::eph::sun_earth_track(&self.eph, &site, start_unix_s, step_s, count)
             .map_err(js_err)
+    }
+
+    /// Replace the near (20 m) tile: one region at a time. Map metres, south polar stereographic;
+    /// `(x0_m, y0_m)` is the upper-left corner of pixel (0, 0); height = offset_m + scale_m × count.
+    #[allow(clippy::too_many_arguments)] // frozen API signature (docs/API.md)
+    pub fn load_near(
+        &mut self,
+        data: Box<[i16]>,
+        width: u32,
+        height: u32,
+        x0_m: f64,
+        y0_m: f64,
+        pixel_m: f64,
+        scale_m: f64,
+        offset_m: f64,
+        nodata: i16,
+    ) -> Result<(), JsError> {
+        self.near = Some(tile(
+            data, width, height, x0_m, y0_m, pixel_m, scale_m, offset_m, nodata,
+        )?);
+        Ok(())
+    }
+
+    /// Replace the far (240 m) tile; its h_max for the early exit is found here (docs/API.md).
+    #[allow(clippy::too_many_arguments)] // frozen API signature (docs/API.md)
+    pub fn load_far(
+        &mut self,
+        data: Box<[i16]>,
+        width: u32,
+        height: u32,
+        x0_m: f64,
+        y0_m: f64,
+        pixel_m: f64,
+        scale_m: f64,
+        offset_m: f64,
+        nodata: i16,
+    ) -> Result<(), JsError> {
+        self.far = Some(tile(
+            data, width, height, x0_m, y0_m, pixel_m, scale_m, offset_m, nodata,
+        )?);
+        Ok(())
+    }
+
+    /// Ground height at the site (MOON_ME degrees, east longitude), metres above the 1 737 400 m sphere.
+    pub fn ground_height(&self, lat_deg: f64, lon_deg: f64) -> Result<f64, JsError> {
+        let near = self
+            .near
+            .as_ref()
+            .ok_or_else(|| JsError::new("NOT_LOADED: near tile"))?;
+        penumbra_core::horizon::ground_height_m(near, site_deg(lat_deg, lon_deg)).map_err(dem_err)
+    }
+
+    /// 1 440 values: `el_deg[720]` (topocentric ENU) then `dist_m[720]`; bin i is azimuth i × 0.5°
+    /// clockwise from north (docs/API.md). `mast_m` is H above the near tile's ground.
+    pub fn horizon(&self, lat_deg: f64, lon_deg: f64, mast_m: f64) -> Result<Vec<f64>, JsError> {
+        let near = self
+            .near
+            .as_ref()
+            .ok_or_else(|| JsError::new("NOT_LOADED: near tile"))?;
+        let far = self
+            .far
+            .as_ref()
+            .ok_or_else(|| JsError::new("NOT_LOADED: far tile"))?;
+        penumbra_core::horizon::horizon(
+            near,
+            far,
+            site_deg(lat_deg, lon_deg),
+            mast_m,
+            &penumbra_core::horizon::HorizonOptions::default(),
+        )
+        .map(|h| h.to_api())
+        .map_err(dem_err)
     }
 }

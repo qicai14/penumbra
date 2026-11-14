@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { computeScenario, loadNearTile, type Inputs, type NearTile, type Scenario } from "./lib/engine";
+  import { computeScenario, loadNearTile, xyToLatlon, type Inputs, type NearTile, type Region, type Scenario } from "./lib/engine";
   import Panorama from "./lib/Panorama.svelte";
   import Timelines from "./lib/Timelines.svelte";
   import Survival from "./lib/Survival.svelte";
@@ -11,7 +11,7 @@
   import { Controls } from "./lib/state.svelte";
 
   const controls = new Controls();
-  let tile = $state.raw<NearTile | null>(null);
+  let tile = $state.raw<(NearTile & { regions: Region[] }) | null>(null);
   let scenario = $state.raw<Scenario | null>(null);
   let computedFor = $state.raw<Inputs | null>(null);
   let error = $state<string | null>(null);
@@ -20,6 +20,15 @@
 
   let tileError = $state<string | null>(null); // kept apart so a later compute success cannot hide it
   loadNearTile().then((t) => (tile = t), (e) => (tileError = String(e?.message ?? e)));
+  // A new region puts the site at the middle of its tile, which is always inside the 7.05 km border.
+  function onregion(id: string) {
+    loadNearTile(id).then((t) => {
+      tile = t; tileError = null;
+      const { x0_m, y0_m, width, height, pixel_m } = t.meta;
+      const [lat, lon] = xyToLatlon(x0_m + (width * pixel_m) / 2, y0_m - (height * pixel_m) / 2);
+      controls.lat = +lat.toFixed(4); controls.lon = +lon.toFixed(4);
+    }, (e) => (tileError = String(e?.message ?? e)));
+  }
 
   // Any change to site, date, span or mast recomputes; a stale answer never overwrites a newer one.
   $effect(() => {
@@ -41,7 +50,7 @@
 
 <main>
   <p class="tag">~/site</p>
-  {#if tile}<SitePicker {controls} {tile} />{/if}
+  {#if tile}<SitePicker {controls} {tile} {onregion} />{/if}
   {#if tileError}<p class="msg" role="alert">{tileError}</p>{/if}
   {#if error}<p class="msg" role="alert">{error}</p>{/if}
   {#if scenario && computedFor}

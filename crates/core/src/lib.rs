@@ -3,6 +3,7 @@
 pub mod dem;
 pub mod eph;
 pub mod geometry;
+pub mod horizon;
 
 /// Version of the core → WASM API (ARCHITECTURE §3.1). The fixture and the manifest carry the same number.
 pub const API_VERSION: u32 = 1;

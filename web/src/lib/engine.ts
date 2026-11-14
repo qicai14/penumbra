@@ -97,12 +97,19 @@ export function validate(result: Horizon | Track | Timeline | Survival): void {
   if (t) for (let i = 1; i < t.length; i++) if (!(t[i] > t[i - 1])) fail(`t_unix_s is not increasing at ${i}`);
 }
 
+type TileMeta = { url: string; width: number; height: number; x0_m: number; y0_m: number; pixel_m: number; scale_m: number; offset_m: number; nodata: number };
 export type Manifest = {
   format_version: number; api_version: number;
   ephemeris: { id: string; url: string; t0_unix_s: number; step_s: number; rows: number }[];
+  far: TileMeta; regions: { id: string; name: string; near: TileMeta }[];
 };
 
-export async function loadManifest(): Promise<Manifest> {
+let manifestLoad: Promise<Manifest> | undefined;
+/** The manifest, fetched once per page (a failed load is retried). */
+export function loadManifest(): Promise<Manifest> {
+  return (manifestLoad ??= fetchManifest().catch((e) => { manifestLoad = undefined; throw e; }));
+}
+async function fetchManifest(): Promise<Manifest> {
   const base = import.meta.env?.BASE_URL ?? "/";
   const res = await fetch(`${base}data/manifest.json`, { cache: "no-cache" });
   if (!res.ok) throw new Error(`NO_DATA: manifest.json returned ${res.status}`);
@@ -113,6 +120,24 @@ export async function loadManifest(): Promise<Manifest> {
 
 // IM-2 tracer call (T02): site, mast, 2026-11-14T00:00Z, hourly, 24 rows.
 export const TRACER = { lat_deg: -84.7906, lon_deg: 29.1957, ground_m: 0, mast_m: 2, start_unix_s: 1794614400, step_s: 3600, count: 24 };
+
+/** An int16 tile exactly as shipped; each tile is fetched once. */
+const tiles = new Map<string, Promise<Int16Array>>();
+function fetchTile(t: TileMeta): Promise<Int16Array> {
+  let p = tiles.get(t.url);
+  if (!p) {
+    p = (async () => {
+      const res = await fetch(`${import.meta.env?.BASE_URL ?? "/"}${t.url}`);
+      if (!res.ok) throw new Error(`NO_DATA: ${t.url} returned ${res.status}`);
+      const data = new Int16Array(await res.arrayBuffer());
+      if (data.length !== t.width * t.height) throw new Error(`BAD_INPUT: ${t.url} has ${data.length} values, expected ${t.width * t.height}`);
+      return data;
+    })();
+    tiles.set(t.url, p);
+    p.catch(() => tiles.delete(t.url));
+  }
+  return p;
+}
 
 type WasmEngine = InstanceType<typeof import("./wasm/penumbra_wasm.js").Engine>;
 let engineLoad: Promise<WasmEngine> | undefined;
@@ -131,6 +156,8 @@ export function loadEngine(): Promise<WasmEngine> {
     if (data.length !== 6 * seg.rows) throw new Error(`BAD_INPUT: ${seg.url} has ${data.length} values, expected ${6 * seg.rows}`);
     const engine = new wasm.Engine();
     engine.load_ephemeris(seg.t0_unix_s, seg.step_s, data);
+    const far = await fetchTile(m.far);
+    engine.load_far(far, m.far.width, m.far.height, m.far.x0_m, m.far.y0_m, m.far.pixel_m, m.far.scale_m, m.far.offset_m, m.far.nodata);
     return engine;
   })().catch((e) => { engineLoad = undefined; throw e; }));
 }
@@ -151,8 +178,10 @@ export function loadTracerTrack(): Promise<Track> {
   return sunEarthTrack(t, t.start_unix_s, t.step_s, t.count);
 }
 
+import { edgeDistanceM } from "./site";
+import { latlonToXy } from "./fixture-projection";
 // ---- Site picker and recompute (T11) ----
-// Fixture stand-ins until T01 #2 (projection) and the science tickets (model) merge.
+// The projection is still a fixture stand-in until T01 #2 merges; the model calls above are the WASM Engine.
 export { latlonToXy, xyToLatlon } from "./fixture-projection";
 
 export type NearMeta = {
@@ -162,35 +191,46 @@ export type NearMeta = {
 export type NearTile = { fake: boolean; region: { id: string; name: string }; meta: NearMeta; data: Int16Array };
 export type Inputs = { lat_deg: number; lon_deg: number; mast_m: number; start_unix_s: number; span_days: number; preset?: Preset };
 
-/** The near tile of the first region in the manifest; the int16 counts exactly as shipped. */
-export async function loadNearTile(root = import.meta.env?.BASE_URL ?? "/"): Promise<NearTile> {
-  const res = await fetch(`${root}fixture/manifest.json`, { cache: "no-cache" });
-  if (!res.ok) throw new Error(`NO_DATA: manifest returned ${res.status}`);
-  const m = await res.json();
-  checkApiVersion(m.api_version, await engineApiVersion());
-  const region = m.regions[0], { url, ...meta } = region.near;
-  const tile = await fetch(`${root}${url}`);
-  if (!tile.ok) throw new Error(`NO_DATA: ${url} returned ${tile.status}`);
-  const data = new Int16Array(await tile.arrayBuffer());
-  if (data.length !== meta.width * meta.height) throw new Error(`BAD_INPUT: ${url} has ${data.length} values, expected ${meta.width * meta.height}`);
-  return { fake: m.fake === true, region: { id: region.id, name: region.name }, meta, data };
+export type Region = { id: string; name: string };
+/** The near tile of one region (the first when no id is given); the int16 counts exactly as shipped. */
+export async function loadNearTile(regionId?: string): Promise<NearTile & { regions: Region[] }> {
+  const m = await loadManifest();
+  const region = regionId === undefined ? m.regions[0] : m.regions.find((r) => r.id === regionId);
+  if (!region) throw new Error(`BAD_INPUT: unknown region ${regionId}`);
+  const { url, ...meta } = region.near;
+  return { fake: false, region: { id: region.id, name: region.name }, regions: m.regions.map(({ id, name }) => ({ id, name })), meta, data: await fetchTile(region.near) };
 }
 
-/** The panorama's horizon terrain is still the fixture; T07 (#8) sets this false. Kept apart from `scenario.fake`,
+let nearId: string | undefined; // region now in the Engine
+/** Loads the near tile of the region whose tile holds the site; OUT_OF_COVERAGE when none does. */
+async function ensureNear(engine: WasmEngine, lat: number, lon: number): Promise<void> {
+  const m = await loadManifest();
+  const [x, y] = latlonToXy(lat, lon);
+  const r = m.regions.find(({ near }) => edgeDistanceM(x, y, near) >= 0);
+  if (!r) throw new Error("OUT_OF_COVERAGE: that site is outside every shipped near tile");
+  const t = r.near, data = await fetchTile(t);
+  if (nearId !== r.id) { engine.load_near(data, t.width, t.height, t.x0_m, t.y0_m, t.pixel_m, t.scale_m, t.offset_m, t.nodata); nearId = r.id; }
+}
+
+/** The panorama's horizon terrain is the real DEM since T07 (#8); the switch stays. Kept apart from `scenario.fake`,
  *  which T08/T09 turn off for the timelines and survival while the terrain may still be fake. */
-export const TERRAIN_FAKE = true;
+export const TERRAIN_FAKE = false;
 
 let fixtureBase: Promise<Scenario> | undefined;
 /**
  * Sun and Earth tracks (the panorama's) come from the WASM Engine for the chosen site, on the fixture timeline's own
- * time grid so the shared cursor stays aligned with the timelines. Horizon, timelines and survival are still fixture
- * (T07/T08/T09), so `fake` stays true; the panorama badge reads TERRAIN_FAKE instead.
+ * time grid so the shared cursor stays aligned with the timelines. Horizon is the real DEM (T07); timelines and survival are still fixture
+ * (T08/T09), so `fake` stays true; the panorama badge reads TERRAIN_FAKE instead.
  */
 export async function computeScenario(inp: Inputs): Promise<Scenario> {
   const s = await (fixtureBase ??= loadFixture());
-  // shortcut: ground_m stays the fixture's 0 until a DEM height lookup lands; a few km of ground height moves Earth's
-  // topocentric position by about 0.0003° per km (Moon–Earth 384,000 km) and the Sun far less, below the panorama's 0.1°.
-  const site = { ...s.site, lat_deg: inp.lat_deg, lon_deg: inp.lon_deg, mast_m: inp.mast_m };
+  const engine = await loadEngine();
+  await ensureNear(engine, inp.lat_deg, inp.lon_deg);
+  const ground_m = engine.ground_height(inp.lat_deg, inp.lon_deg);
+  const site = { ...s.site, lat_deg: inp.lat_deg, lon_deg: inp.lon_deg, ground_m, mast_m: inp.mast_m };
+  const raw = engine.horizon(inp.lat_deg, inp.lon_deg, inp.mast_m);
+  const horizon: Horizon = { el_deg: raw.slice(0, 720), dist_m: raw.slice(720, 1440) };
+  validate(horizon);
   const track = await sunEarthTrack(site, s.timeline.t_unix_s[0], s.step_s, s.count);
-  return { ...s, preset: inp.preset ?? s.preset, site, track };
+  return { ...s, preset: inp.preset ?? s.preset, site, track, horizon };
 }

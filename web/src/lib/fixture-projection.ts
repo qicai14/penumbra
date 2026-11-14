@@ -1,6 +1,6 @@
 // FIXTURE STAND-IN for the WASM latlon_to_xy / xy_to_latlon (T01 #2). Delete this file when #2 merges and
 // point engine.ts at the WASM functions. Polar stereographic, sphere R = 1 737 400 m, ARCHITECTURE §2.1.
-// Longitude 0 is along +y, 90 deg E along +x. Used only to place a picker click on the fixture tile.
+// Longitude 0 is along +y, 90 deg E along +x. Used to place a picker click on a tile and to pick the near-tile region for a site (engine.ts).
 const R = 1737400;
 const D = Math.PI / 180;
 

@@ -8,8 +8,8 @@ test("panorama loads the fixture (api_version checked against WASM) and shows th
   // The badge follows the data's own `fake` flag.
   const res = await request.get("fixture/scenario.json");
   const { fake } = await res.json();
-  // The panorama badge follows TERRAIN_FAKE (horizon fixture until T07 #8); the fixture-dates note follows `fake`.
-  await expect(page.getByTestId("fake-badge")).toHaveText("FAKE TERRAIN");
+  // The horizon is the real DEM (T07 #8), so the panorama badge is off; the fixture-dates note follows `fake`.
+  await expect(page.getByTestId("fake-badge")).toHaveCount(0);
   await expect(page.getByTestId("track-dates")).toHaveCount(fake ? 1 : 0);
 });
 
@@ -93,6 +93,15 @@ test("picker refuses an edge click and an out-of-table date, and recomputes on a
 
   await page.getByTestId("mast").fill("6");
   await expect(page.getByTestId("computed-for")).toContainText("mast 6.0 m");
+});
+
+test("switching region moves the site and refreshes the lat/lon boxes", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("lat")).toHaveValue("-84.7906");
+  await page.getByLabel("Region").selectOption("shackleton-ridge");
+  await expect(page.getByTestId("lat")).not.toHaveValue("-84.7906");
+  await expect(page.getByTestId("computed-for")).toContainText(Number(await page.getByTestId("lat").inputValue()).toFixed(4));
+  await expect(page.getByTestId("refusal")).toHaveCount(0);
 });
 
 test("survival headline, charge trace and preset form", async ({ page }) => {

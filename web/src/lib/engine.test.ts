@@ -74,7 +74,7 @@ test("panorama track equals Engine.sun_earth_track on the fixture grid (T03 #4)"
   globalThis.fetch = servePublic;
   try {
     const { loadEngine } = await import("./engine");
-    const inp = { lat_deg: -85.2, lon_deg: 10.5, mast_m: 3, start_unix_s: 0, span_days: 30 };
+    const inp = { lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 3, start_unix_s: 0, span_days: 30 };
     const s = await computeScenario(inp);
     expect(s.site.mast_m).toBe(3);
     const engine = await loadEngine();
@@ -85,6 +85,40 @@ test("panorama track equals Engine.sun_earth_track on the fixture grid (T03 #4)"
     expect(s.track.t_unix_s[1234]).toBe(s.timeline.t_unix_s[1234]); // one shared time grid
     expect(s.track.sun_az_deg[0]).not.toBe(parseScenario(raw, api_version()).track.sun_az_deg[0]); // not the fixture
     expect(await loadEngine()).toBe(engine); // cached
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("computeScenario returns the real IM-2 horizon and ground height; outside the tiles is OUT_OF_COVERAGE (T07 #8)", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = servePublic;
+  try {
+    const s = await computeScenario({ lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2, start_unix_s: 0, span_days: 30 });
+    expect(s.site.ground_m).toBeCloseTo(5321.92, 1);
+    const el = Array.from(s.horizon.el_deg);
+    expect(Math.max(...el)).toBeCloseTo(4.04, 1);
+    expect(el.indexOf(Math.max(...el)) * 0.5).toBe(117.5);
+    expect(Math.min(...el)).toBeCloseTo(-1.475, 1);
+    await expect(computeScenario({ lat_deg: -84.7906, lon_deg: 10, mast_m: 2, start_unix_s: 0, span_days: 30 })).rejects.toThrow("OUT_OF_COVERAGE");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("fixture projection puts IM-2 at about (77.11, 137.99) km (DATA-NOTES), guarding drift until T01", async () => {
+  const { latlonToXy } = await import("./fixture-projection");
+  const [x, y] = latlonToXy(-84.7906, 29.1957);
+  expect(x / 1000).toBeCloseTo(77.11, 1);
+  expect(y / 1000).toBeCloseTo(137.99, 1);
+});
+
+test("an unknown region id is refused", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = servePublic;
+  try {
+    const { loadNearTile } = await import("./engine");
+    await expect(loadNearTile("nowhere")).rejects.toThrow("BAD_INPUT");
   } finally {
     globalThis.fetch = realFetch;
   }

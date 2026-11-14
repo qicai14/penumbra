@@ -3,7 +3,26 @@
 //! A tile is row-major int16 counts on the south polar stereographic map grid, row 0 = largest y.
 //! Height above the 1737.4 km reference sphere [U6] is `offset_m + scale_m × count`.
 
-use crate::geometry::MapXy;
+use crate::geometry::{GeometryError, MapXy};
+
+/// A height field on the south polar stereographic map that the horizon marcher can sample
+/// (ARCHITECTURE §2.2). Heights are metres above the 1737.4 km reference sphere.
+pub trait Terrain {
+    /// Map distance between neighbouring samples, metres: the march step in this tier.
+    fn pixel_m(&self) -> f64;
+    /// Highest height anywhere in the field, metres (no-data pixels skipped): the early-exit bound.
+    fn max_height_m(&self) -> f64;
+    /// Height at map point `xy`, metres; `OutOfCoverage` or `NoData` instead of a default (P5).
+    fn height_m(&self, xy: MapXy) -> Result<f64, DemError>;
+}
+
+impl From<GeometryError> for DemError {
+    fn from(e: GeometryError) -> Self {
+        match e {
+            GeometryError::BadInput(why) => DemError::BadInput(why),
+        }
+    }
+}
 
 /// Why a height could not be given. Maps to the API's error codes; never replaced by 0 m (P5).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -49,6 +68,8 @@ pub struct TileMeta {
 pub struct DemTile {
     meta: TileMeta,
     counts: Vec<i16>,
+    /// Largest non-nodata count, found once at load (docs/API.md: `load_far` finds h_max).
+    max_count: i16,
 }
 
 impl DemTile {
@@ -71,7 +92,24 @@ impl DemTile {
                 "tile geometry must be finite with positive pixel and scale",
             ));
         }
-        Ok(DemTile { meta, counts })
+        let max_count = counts
+            .iter()
+            .copied()
+            .filter(|&c| c != meta.nodata)
+            .max()
+            .ok_or(DemError::BadInput(
+                "tile holds no height: every pixel is nodata",
+            ))?;
+        Ok(DemTile {
+            meta,
+            counts,
+            max_count,
+        })
+    }
+
+    /// Highest height in the tile, metres above the reference sphere (nodata skipped).
+    pub fn max_height_m(&self) -> f64 {
+        self.meta.offset_m + self.meta.scale_m * f64::from(self.max_count)
     }
 
     pub fn meta(&self) -> &TileMeta {
@@ -113,5 +151,17 @@ impl DemTile {
         let top = v00 + a * (v01 - v00);
         let bottom = v10 + a * (v11 - v10);
         Ok(m.offset_m + m.scale_m * (top + b * (bottom - top)))
+    }
+}
+
+impl Terrain for DemTile {
+    fn pixel_m(&self) -> f64 {
+        self.meta.pixel_m
+    }
+    fn max_height_m(&self) -> f64 {
+        DemTile::max_height_m(self)
+    }
+    fn height_m(&self, xy: MapXy) -> Result<f64, DemError> {
+        DemTile::height_m(self, xy)
     }
 }
