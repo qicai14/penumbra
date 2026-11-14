@@ -54,7 +54,8 @@ impl Engine {
                                    panel_height_m: f64) -> Result<Vec<f64>, JsError>; // same layout as horizon; throws BAD_INPUT
 #[wasm_bindgen] pub fn pit_depth_to_hide(pit_diameter_m: f64, panel_height_m: f64,
                                          sun_el_deg: f64, sun_radius_deg: f64) -> Result<f64, JsError>; // d_c* in m; throws BAD_INPUT
-#[wasm_bindgen] pub fn window_bands(timeline: &[f64], horizon: &[f64], sigma_z_m: f64) -> Vec<f64>;
+#[wasm_bindgen] pub fn window_bands(timeline: &[f64], horizon: &[f64], sigma_z_m: f64)
+                    -> Result<Vec<f64>, JsError>; // 3 × k; throws BAD_INPUT
 ```
 
 **Array layouts.** `n` is `count`. Column c of a series result is `result.subarray(c·n, (c+1)·n)`.
