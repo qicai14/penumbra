@@ -112,7 +112,7 @@ Tests:
 
 ### 1b. Visible fraction of the Sun's disk
 
-Sun angular radius ρ = asin(R_sun / d_sun) with R_sun = 696 000 km (E117). At 1 AU this gives a diameter of 0.533°, which matches the corpus values 0.53° (E56a, E105) and 0.533° (E61). ρ varies from 0.261° to 0.272° over the year [D]: the Earth–Sun range 147.1–152.1 million km, widened by the Moon's ±384 400 km because the table is Moon-centred (0.2615°–0.2718°); recompute it at each step, as Mazarico does.
+Sun angular radius ρ = asin(R_sun / d_sun) with R_sun = 696 000 km (E117). At 1 AU this gives a diameter of 0.533°, which matches the corpus values 0.53° (E56a, E105) and 0.533° (E61). ρ varies from 0.261° to 0.272° over the year [D]: the Earth–Sun range 147.1–152.1 million km [U17], widened by the Moon's ±384 400 km because the table is Moon-centred (0.2615°–0.2718°); recompute it at each step, as Mazarico does.
 
 Work in the tangent plane centred on the Sun: ξ = (az − az_sun)·cos(el_sun), η = el − el_sun. For a strip at ξ the disk spans η ∈ [−w, +w] with w = sqrt(ρ² − ξ²). The horizon there is g(ξ) = el_hor(az_sun + ξ / cos el_sun) − el_sun.
 
@@ -399,7 +399,7 @@ Each is [U]. None blocks the build; each has a default.
 | U14 | ANISE 0.10.6: that `LT_S` exists in that version and how body-fixed transforms pick the epoch | Translate in J2000, rotate separately | **Closed Nov 12:** `Aberration::LT_S` exists (`astro/aberration.rs:73`). `Almanac::transform` translates with the aberration, then rotates at the same observation epoch, so translate-then-rotate matches it. |
 | U15 | Whether Barker's PSR map treats the Sun as a disc or a point, and its observer height | Avoid PSR edge pixels in V5 | Barker 2023, PSR section (not stated in the text). |
 | U16 | Depth-to-diameter ratio of small fresh craters | 11° degraded slope (E112) | Micro Cold Traps paper (the values are garbled in the corpus text; read the PDF). |
-| U17 | Physical constants used in [D] estimates: c, Earth's orbital speed, Earth–Moon distance | Standard values | Any constants table; they affect estimates only, not code. |
+| U17 | Physical constants used in [D] estimates: c, Earth's orbital speed, Earth–Moon distance, Earth–Sun perihelion and aphelion distance (§1b ρ band) | Standard values | Any constants table; they affect estimates only, not code. |
 | U18 | Per-pixel compute time (15 ms) and everything derived from it | Estimate | Measure the first native horizon on Nov 14. |
 | U19 | How long IM-2 operated | "under a day", marked unconfirmed | Intuitive Machines mission summary. |
 | U20 | Span of the SP-01 day/night numbers in Mazarico's Table 3 (E131 is stated for Fig. 13 only; Table 3 averages come from the 1970–2044 run) | One precession cycle from 2020, marked assumed | Mazarico 2011, Section 3.3 and Fig. 13 text, read by eye. |
