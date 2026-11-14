@@ -190,10 +190,10 @@ export function loadTracerTrack(): Promise<Track> {
 import { edgeDistanceM } from "./site";
 import { serialize } from "./serialize";
 import { checkPit, DEGRADED_SLOPE_DEG } from "./replay";
-import { latlonToXy } from "./fixture-projection";
+import { latlonToXy } from "./projection";
 // ---- Site picker and recompute (T11) ----
 // The projection is still a fixture stand-in until T01 #2 merges; the model calls above are the WASM Engine.
-export { latlonToXy, xyToLatlon } from "./fixture-projection";
+export { latlonToXy, xyToLatlon } from "./projection";
 
 export type NearMeta = {
   width: number; height: number; x0_m: number; y0_m: number; pixel_m: number;

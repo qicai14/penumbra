@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { NearMeta } from "./engine";
 import { checkDate, checkPick, dateRange, edgeDistanceM, parseDate } from "./site";
-import { latlonToXy, xyToLatlon } from "./fixture-projection";
+import { latlonToXy, xyToLatlon } from "./projection";
 
 // 30.72 km square, upper-left (61740, 153360), as in the manifest example.
 const near: NearMeta = { width: 256, height: 256, x0_m: 61740, y0_m: 153360, pixel_m: 120, scale_m: 0.25, offset_m: 0, nodata: -32768 };
@@ -63,7 +63,7 @@ test("with two segments a date and its span must fit inside one; the gap is refu
   expect(dateRange(eph)).toEqual({ min: "2025-03-01", max: "2030-12-31" });
 });
 
-test("stand-in projection round-trips and matches the pinned IM-2 point", () => {
+test("projection round-trips and matches the pinned IM-2 point", () => {
   const [x, y] = latlonToXy(-84.7906, 29.1957);
   expect(x / 1000).toBeCloseTo(77.1, 0);
   expect(y / 1000).toBeCloseTo(138.0, 0);

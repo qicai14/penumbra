@@ -359,7 +359,7 @@ PLAN-DRAFT §1 already proposes the function names and units for the Hour 0 free
 | `sun_earth_track` returns 8 columns with no time | Time is column 0 of every series result | One x array for every chart, and no way to pair a series with the wrong times. |
 | `horizon` returns a "closer than 3 pixels" flag | Dropped; the reader tests `dist_m < 60` | It is derivable, and a flag is one more array to keep in step. |
 
-It also adds three small functions the plan needs but doesn't name: `ground_height`, `xy_to_latlon` and `latlon_to_xy`. Without them `web/` would have to do projection maths to turn a click into a site.
+It also adds `ground_height`, which the plan needs but doesn't name. It first added `xy_to_latlon` and `latlon_to_xy` too; #58 dropped them, and `web/src/lib/projection.ts` projects in TS, cross-checked against `core::geometry` to 1 mm.
 
 ### 3.1 Conventions (frozen with the API)
 
@@ -378,8 +378,6 @@ Rust signatures in `crates/wasm`. wasm-bindgen generates the `.d.ts` from them.
 
 ```rust
 #[wasm_bindgen] pub fn api_version() -> u32;                                   // 1
-#[wasm_bindgen] pub fn latlon_to_xy(lat_deg: f64, lon_deg: f64) -> Vec<f64>;   // [x_m, y_m]
-#[wasm_bindgen] pub fn xy_to_latlon(x_m: f64, y_m: f64) -> Vec<f64>;           // [lat_deg, lon_deg]
 
 #[wasm_bindgen] pub struct Engine { /* ephemeris segments, near tile, far tile */ }
 

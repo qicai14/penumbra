@@ -1,7 +1,7 @@
 // Pure helpers for the Compare A vs B view (T27): the URL query for two site-date pairs and the preset edits, and the
 // B - A text. Text and validation only; every operable-time figure comes from the model's `survival` result.
 import type { EphSegment, NearMeta, Preset } from "./engine";
-import { latlonToXy } from "./fixture-projection";
+import { latlonToXy } from "./projection";
 import { presetFields, setPresetField, type FieldKey } from "./headline";
 import { checkDate, checkPick, DEFAULT_MAST_M, DEFAULT_SPAN_DAYS, MAST_MAX_M, parseDate, SPANS_DAYS } from "./site";
 import { fmtDays } from "./timelines";
