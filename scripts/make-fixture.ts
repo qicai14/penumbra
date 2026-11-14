@@ -75,7 +75,10 @@ const scenario = {
 };
 
 await Bun.write(new URL("../web/public/fixture/scenario.json", import.meta.url), JSON.stringify(scenario) + "\n");
-await Bun.write(new URL("../web/public/scoreboard.json", import.meta.url), JSON.stringify(scoreboard, null, 2) + "\n");
+// Keep rows a science or validator ticket has measured (they carry a commit); only unmeasured rows get the "not run" defaults.
+const SB = Bun.file(new URL("../web/public/scoreboard.json", import.meta.url));
+const measured = new Map(((await SB.exists()) ? await SB.json() : []).filter((e: any) => e.commit).map((e: any) => [e.id, e]));
+await Bun.write(SB, JSON.stringify(scoreboard.map((e) => measured.get(e.id) ?? e), null, 2) + "\n");
 
 // FAKE near tile and stub manifest (ARCHITECTURE §2.1, §3.5): 256² int16 at 120 m = 30.72 km square, little-endian.
 // Sine hills plus one round bowl; only there so the height image and the 7 km edge rule can be built. No real terrain.

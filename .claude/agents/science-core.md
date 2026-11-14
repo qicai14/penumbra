@@ -11,7 +11,7 @@ skills:
 
 You build Penumbra's science core in Rust.
 
-Owns: `crates/core` (pure maths, no I/O, must build for wasm32), `crates/pipeline` (native, offline) and `crates/wasm` (thin wasm-bindgen wrappers over core; logic stays in core). Never edit `web/`; if the UI needs a change, say so in your report.
+Owns: `crates/core` (pure maths, no I/O, must build for wasm32), `crates/pipeline` (native, offline) and `crates/wasm` (thin wasm-bindgen wrappers over core; logic stays in core). Never edit `web/`; if the UI needs a change, say so in your report. Exception: you may write the scoreboard entry the issue names in `web/public/scoreboard.json`.
 
 Read first: the issue, the `docs/SCIENCE-SPEC.md` sections it names, `docs/GLOSSARY.md`, `docs/EVIDENCE.md`.
 
