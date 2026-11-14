@@ -4,7 +4,7 @@
 
 use penumbra_core::dem::{DemError, DemTile, TileMeta};
 use penumbra_core::geometry::{LatLon, MapXy, latlon_to_xy};
-use penumbra_pipeline::dem::NEAR_SCALES_M;
+use penumbra_pipeline::dem::MAX_SCALE_M;
 use penumbra_pipeline::eph::hash6;
 use serde_json::Value;
 use std::path::PathBuf;
@@ -174,16 +174,13 @@ fn near_tiles_have_no_nodata() {
     }
 }
 
-// P11: near scale is in {0.0625, 0.125, 0.25} m and the next finer scale would clip the tile.
+// P11, #48: the near scale is the finest that holds the tile: its lowest and highest pixels sit on
+// −32 767 and +32 767, and the scale is 0.25 m or finer (SCIENCE-SPEC §1a tile encoding).
 #[test]
 fn near_scale_is_the_finest_that_fits_the_tile() {
     for id in ["mons-mouton", "shackleton-ridge"] {
         let t = near(id);
         let m = t.meta();
-        assert!(
-            NEAR_SCALES_M.iter().any(|s| (s - m.scale_m).abs() < 1e-12),
-            "{id}"
-        );
         let (lo, hi) = t
             .counts()
             .iter()
@@ -191,12 +188,8 @@ fn near_scale_is_the_finest_that_fits_the_tile() {
             .fold((i16::MAX, i16::MIN), |(a, b), &c| (a.min(c), b.max(c)));
         let range_m = f64::from(i32::from(hi) - i32::from(lo)) * m.scale_m;
         println!("{id}: relief {range_m:.1} m at {} m", m.scale_m);
-        if m.scale_m > NEAR_SCALES_M[0] {
-            assert!(
-                range_m / (m.scale_m / 2.0) > 2.0 * f64::from(i16::MAX),
-                "{id}"
-            );
-        }
+        assert_eq!((lo, hi), (-i16::MAX, i16::MAX), "{id}");
+        assert!(m.scale_m <= MAX_SCALE_M, "{id}: {} m", m.scale_m);
         assert!((m.pixel_m - 20.0).abs() < 1e-12 && m.width == 1536 && m.height == 1536);
     }
 }

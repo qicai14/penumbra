@@ -108,7 +108,7 @@ What reruns on each kind of change (the adapter keeps the last horizon, keyed by
 
 ## 2. Data structures and algorithms
 
-Sizes used throughout: R = 1 737 400 m; 720 azimuths at 0.5° (SCIENCE-SPEC §1a); near field 20 m to 7 km, far field 240 m beyond; far tile ±382 km; hourly ephemeris 2026–2030; timelines at 10 min. 360 azimuths halves every horizon number below, but the spec fixes 720 and the Sun's disc (0.53°) is about one 0.5° bin wide, so 360 would undersample it.
+Sizes used throughout: R = 1 737 400 m; 720 azimuths at 0.5° (SCIENCE-SPEC §1a); near field 20 m to 7 km, middle 80 m to 31 km, far field 240 m beyond (#48); far tile ±382 km; hourly ephemeris 2026–2030; timelines at 10 min. 360 azimuths halves every horizon number below, but the spec fixes 720 and the Sun's disc (0.53°) is about one 0.5° bin wide, so 360 would undersample it.
 
 ### 2.1 DEM tiles
 
@@ -184,9 +184,10 @@ No trig and no square root inside the inner loop: about 45 flops, 1 division, 4 
 | Tier | Steps | Count |
 |---|---|---|
 | Near, 20 m tile | s = 20 m × j, j = 1…350 (the site's own pixel is skipped) | 350 |
-| Far, 240 m tile | s = 7 000 m + 240 m × j, until the early exit or the tile edge | 804 to 200 km; at most 1 562 to the edge at 382 km |
+| Mid, 80 m tile | s = 7 000 m + 80 m × j, j = 1…300 | 300 |
+| Far, 240 m tile | s = 31 000 m + 240 m × j, until the early exit or the tile edge | 704 to 200 km; at most 1 462 to the edge at 382 km |
 
-The step table is at most 1 912 entries × 3 f64 = 46 kB. The switch at exactly 7 km is deliberate: every site is at least 7 km inside its near tile, so the near march can never leave coverage. T-1a-4 decides whether 7 km is enough.
+The step table is at most 2 112 entries × 3 f64 = 51 kB. The switch at exactly 7 km is deliberate: every site is at least 7 km inside its near tile, so the near march can never leave coverage. The mid tile (±39.68 km) leaves about 350 m of margin past 31 km at a pick-area corner (test `corners_of_the_pick_area_get_a_horizon_through_the_mid_tier`). T-1a-4 showed two tiers were not enough; the mid tier brings it under 0.05° (DATA-NOTES, #48). The cost table below is still the two-tier count; add 300 − 100 = 200 samples per azimuth for the mid tier.
 
 **Curvature term.** It is the `r_t·versθ` part of `num`. The drop below the tangent plane is s²/2R: 0.74 m at 1.6 km, 720 m at 50 km, 6.5 km at 150 km, 11.5 km at 200 km. That last number is why the march can stop: beyond roughly 200 km nothing on the Moon's south polar terrain stands high enough to matter (F2: a 7 km peak at 200 km sits at −1.30°).
 
@@ -368,7 +369,7 @@ It also adds `ground_height`, which the plan needs but doesn't name. It first ad
 - **Heights**: `ground_m` is metres above the 1 737 400 m sphere; `mast_m` is the mast height H above the ground.
 - Every number crossing the boundary is f64. There is no f32 anywhere in the API (N7).
 - **Errors** are thrown as a JS `Error` whose message starts with a code and a colon: `NOT_LOADED`, `OUT_OF_COVERAGE`, `NO_DATA`, `OUT_OF_TABLE`, `BAD_INPUT`. A function never returns a default in place of an error (P5, P16).
-- `api_version()` returns 3 (see API.md for the history). The fixture and the manifest carry the same number; the adapter refuses a mismatch.
+- `api_version()` returns 4 (see API.md for the history). The fixture and the manifest carry the same number; the adapter refuses a mismatch.
 
 ### 3.2 The API to freeze at Hour 0
 
@@ -377,9 +378,9 @@ Canonical copy since T00: [docs/API.md](API.md). Change it there first, under it
 Rust signatures in `crates/wasm`. wasm-bindgen generates the `.d.ts` from them.
 
 ```rust
-#[wasm_bindgen] pub fn api_version() -> u32;                                   // 3
+#[wasm_bindgen] pub fn api_version() -> u32;                                   // 4
 
-#[wasm_bindgen] pub struct Engine { /* ephemeris segments, near tile, far tile */ }
+#[wasm_bindgen] pub struct Engine { /* ephemeris segments, near tile, mid tile, far tile */ }
 
 #[wasm_bindgen]
 impl Engine {
@@ -390,6 +391,8 @@ impl Engine {
     pub fn load_ephemeris(&mut self, t0_unix_s: f64, step_s: f64, data: Box<[f64]>) -> Result<(), JsError>;
     pub fn load_near(&mut self, data: Box<[i16]>, width: u32, height: u32, x0_m: f64, y0_m: f64,
                      pixel_m: f64, scale_m: f64, offset_m: f64, nodata: i16) -> Result<(), JsError>;
+    pub fn load_mid(&mut self, data: Box<[i16]>, width: u32, height: u32, x0_m: f64, y0_m: f64,
+                    pixel_m: f64, scale_m: f64, offset_m: f64, nodata: i16) -> Result<(), JsError>;
     pub fn load_far(&mut self, data: Box<[i16]>, width: u32, height: u32, x0_m: f64, y0_m: f64,
                     pixel_m: f64, scale_m: f64, offset_m: f64, nodata: i16) -> Result<(), JsError>;
 
@@ -420,7 +423,7 @@ impl Engine {
 | Function | Length | Layout |
 |---|---|---|
 | `load_ephemeris` `data` | 6 × rows | row-major, as in the file: Sun x, y, z, Earth x, y, z in km, MOON_ME. Call once per segment. |
-| `load_near`, `load_far` `data` | width × height | row-major int16, row 0 = largest y. `load_near` replaces the current near tile (one region at a time). `load_far` also finds h_max for the early exit, so the manifest doesn't carry it. |
+| `load_near`, `load_mid`, `load_far` `data` | width × height | row-major int16, row 0 = largest y. `load_near` and `load_mid` replace the current region's near (20 m) and middle (80 m) tile (one region at a time; `horizon` needs both, #48). `load_far` also finds h_max for the early exit, so the manifest doesn't carry it. |
 | `sun_earth_track` | 9 × n | `t_unix_s`, `sun_az_deg`, `sun_el_deg`, `sun_radius_deg`, `sun_dist_km`, `earth_az_deg`, `earth_el_deg`, `earth_radius_deg`, `earth_dist_km` |
 | `horizon` | 1 440 | `el_deg[720]` then `dist_m[720]`; index i is azimuth i × 0.5° |
 | `timeline` | 10 × n | `t_unix_s`, `sun_az_deg`, `sun_el_deg`, `illumination` (0–1), `visibility` (0 or 1), `earth_az_deg`, `earth_el_deg`, `earth_margin_deg`, `contact` (0 or 1), `sun_dist_km` |
@@ -500,7 +503,7 @@ The type keys are the column names of §3.2 and the keys of the fixture, letter 
 ```json
 {
   "format_version": 1,
-  "api_version": 3,
+  "api_version": 4,
   "ephemeris": [
     { "id": "main", "url": "data/eph-main.1a2b3c.bin", "t0_unix_s": 1767225600, "step_s": 3600, "rows": 43825 }
   ],
@@ -509,7 +512,9 @@ The type keys are the column names of §3.2 and the keys of the fixture, letter 
   "regions": [
     { "id": "mons-mouton", "name": "Mons Mouton",
       "near": { "url": "data/near-mons-mouton.7a8b9c.bin", "width": 1536, "height": 1536,
-                "x0_m": 61740, "y0_m": 153360, "pixel_m": 20, "scale_m": 0.25, "offset_m": 0, "nodata": -32768 } }
+                "x0_m": 61740, "y0_m": 153360, "pixel_m": 20, "scale_m": 0.25, "offset_m": 0, "nodata": -32768 },
+      "mid": { "url": "data/mid-mons-mouton.1c2d3e.bin", "width": 992, "height": 992,
+               "x0_m": 37440, "y0_m": 177680, "pixel_m": 80, "scale_m": 0.13, "offset_m": 0, "nodata": -32768 } }
   ]
 }
 ```
@@ -520,7 +525,7 @@ The type keys are the column names of §3.2 and the keys of the fixture, letter 
 {
   "fake": true,
   "note": "FAKE DATA for layout only. Not a model result.",
-  "api_version": 3,
+  "api_version": 4,
   "site": { "lat_deg": -84.7906, "lon_deg": 29.1957, "ground_m": 0, "mast_m": 2 },
   "start_unix_s": 1794614400,
   "step_s": 600,

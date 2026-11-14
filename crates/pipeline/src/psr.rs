@@ -1,7 +1,7 @@
 //! V5 case 3 (SCIENCE-SPEC §3, U15, E132, E139): sites well inside the LOLA PSR mask must see no
 //! sunlight at any hourly step of 18.6 years. Native and offline: the vectors are never shipped.
 
-use crate::dem::{FAR_SCALES_M, GeoTiff, NEAR_SCALES_M, build_tile};
+use crate::dem::{GeoTiff, MID_BLOCK_PX, MID_PX, build_tile, encode_far, encode_finest};
 use crate::eph::{Result, build_table, load_almanac};
 use penumbra_core::eph::{Ephemeris, R_SUN_KM, Site};
 use penumbra_core::geometry::{MapXy, xy_to_latlon};
@@ -134,7 +134,8 @@ pub fn run(dir: &Path) -> Result<PsrReport> {
         &mut far_src,
         MapXy { x_m: 0.0, y_m: 0.0 },
         FAR_PX,
-        &FAR_SCALES_M,
+        1,
+        encode_far,
     )?;
     let almanac = load_almanac(dir)?;
     let mut eph = Ephemeris::default();
@@ -147,9 +148,11 @@ pub fn run(dir: &Path) -> Result<PsrReport> {
 
     let mut sites = Vec::new();
     for (col, row, xy) in chosen {
-        let near = build_tile(&mut near_src, xy, NEAR_PX, &NEAR_SCALES_M)?;
+        let near = build_tile(&mut near_src, xy, NEAR_PX, 1, encode_finest)?;
+        let mid = build_tile(&mut near_src, xy, MID_PX, MID_BLOCK_PX, encode_finest)?;
         let ll = xy_to_latlon(xy).map_err(|e| err(&e))?;
-        let hor = horizon(&near, &far, ll, 0.0, &HorizonOptions::default()).map_err(|e| err(&e))?;
+        let hor =
+            horizon(&near, &mid, &far, ll, 0.0, &HorizonOptions::default()).map_err(|e| err(&e))?;
         let ground_m = ground_height_m(&near, ll).map_err(|e| err(&e))?;
         let site = Site {
             lat_rad: ll.lat_rad,

@@ -16,12 +16,14 @@ pub fn api_version() -> u32 {
 use penumbra_core::dem::{DemError, DemTile, TileMeta};
 use penumbra_core::geometry::LatLon;
 
-/// The page's one engine: loaded ephemeris segments, the current region's near tile and the far tile.
+/// The page's one engine: loaded ephemeris segments, the current region's near and middle tiles
+/// and the far tile.
 #[wasm_bindgen]
 #[derive(Default)]
 pub struct Engine {
     eph: penumbra_core::eph::Ephemeris,
     near: Option<DemTile>,
+    mid: Option<DemTile>,
     far: Option<DemTile>,
 }
 
@@ -131,6 +133,27 @@ impl Engine {
         Ok(())
     }
 
+    /// Replace the middle (80 m) tile of the current region, marched from 7 to 31 km (#48). Same
+    /// arguments and units as `load_near`.
+    #[allow(clippy::too_many_arguments)] // mirrors load_near (docs/API.md)
+    pub fn load_mid(
+        &mut self,
+        data: Box<[i16]>,
+        width: u32,
+        height: u32,
+        x0_m: f64,
+        y0_m: f64,
+        pixel_m: f64,
+        scale_m: f64,
+        offset_m: f64,
+        nodata: i16,
+    ) -> Result<(), JsError> {
+        self.mid = Some(tile(
+            data, width, height, x0_m, y0_m, pixel_m, scale_m, offset_m, nodata,
+        )?);
+        Ok(())
+    }
+
     /// Replace the far (240 m) tile; its h_max for the early exit is found here (docs/API.md).
     #[allow(clippy::too_many_arguments)] // frozen API signature (docs/API.md)
     pub fn load_far(
@@ -161,18 +184,24 @@ impl Engine {
     }
 
     /// 1 440 values: `el_deg[720]` (topocentric ENU) then `dist_m[720]`; bin i is azimuth i × 0.5°
-    /// clockwise from north (docs/API.md). `mast_m` is H above the near tile's ground.
+    /// clockwise from north (docs/API.md). `mast_m` is H above the near tile's ground. Marches the
+    /// near, middle and far tiles; each must be loaded.
     pub fn horizon(&self, lat_deg: f64, lon_deg: f64, mast_m: f64) -> Result<Vec<f64>, JsError> {
         let near = self
             .near
             .as_ref()
             .ok_or_else(|| JsError::new("NOT_LOADED: near tile"))?;
+        let mid = self
+            .mid
+            .as_ref()
+            .ok_or_else(|| JsError::new("NOT_LOADED: mid tile"))?;
         let far = self
             .far
             .as_ref()
             .ok_or_else(|| JsError::new("NOT_LOADED: far tile"))?;
         penumbra_core::horizon::horizon(
             near,
+            mid,
             far,
             site_deg(lat_deg, lon_deg),
             mast_m,

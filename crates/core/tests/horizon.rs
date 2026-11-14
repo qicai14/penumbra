@@ -1,13 +1,15 @@
 //! T07 terrain horizon (SCIENCE-SPEC §1a, ARCHITECTURE §2.2) on synthetic tiles.
 //! T-1a-1, T-1a-3 (P10), P13, N11, V5 case 6 (P5). Expected values from the spec closed forms
 //! and the T07 design (TS reference marcher as a differential oracle).
+//! Scenes without a middle tile pass the far tile as the middle tier: MID_RANGE_M = 7 000 + 240 × 100,
+//! so the march samples the same 240 m grid it would with no middle tier (#48).
 
 use penumbra_core::dem::{DemError, DemTile, TileMeta};
 use penumbra_core::geometry::{
     EnuFrame, LatLon, MOON_RADIUS_M, MapXy, elevation_closed_form_rad, flat_sphere_dip_rad,
     latlon_to_unit, latlon_to_xy, unit_to_xy, xy_to_latlon, xy_to_unit,
 };
-use penumbra_core::horizon::{Horizon, HorizonOptions, N_AZ, horizon};
+use penumbra_core::horizon::{Horizon, HorizonOptions, MID_RANGE_M, N_AZ, horizon};
 
 const R: f64 = MOON_RADIUS_M;
 const SCALE_M: f64 = 0.25;
@@ -93,6 +95,7 @@ fn flat_sphere_gives_the_mast_dip_at_every_azimuth() {
         let h = horizon(
             &flat(760, 20.0, c),
             &flat(200, 240.0, c),
+            &flat(200, 240.0, c),
             s,
             2.0,
             &opts(true, 20_000.0),
@@ -118,6 +121,7 @@ fn own_pixel_is_skipped() {
     let h = horizon(
         &flat(760, 20.0, c),
         &flat(200, 240.0, c),
+        &flat(200, 240.0, c),
         s,
         0.0,
         &opts(true, 20_000.0),
@@ -140,6 +144,7 @@ fn pole_spike_horizon(spike: bool) -> Horizon {
     let near = tile(760, 20.0, -7590.0, 7590.0, counts);
     horizon(
         &near,
+        &flat(200, 240.0, xy_of(s)),
         &flat(200, 240.0, xy_of(s)),
         s,
         2.0,
@@ -214,7 +219,7 @@ fn cone_off_the_map_axes_matches_the_closed_form() {
     let want_rad = 0.005_588_386_517;
     let cf = elevation_closed_form_rad(R + 2.0, R + 1000.0, CONE_S_M).unwrap();
     assert!((cf - want_rad).abs() < 1e-12, "closed form {cf}");
-    let h = horizon(&near, &far, s, 2.0, &opts(true, 60_000.0)).unwrap();
+    let h = horizon(&near, &far, &far, s, 2.0, &opts(true, 60_000.0)).unwrap();
     assert!(
         (h.el_rad[135] - want_rad).abs().to_degrees() < 0.002,
         "{}°",
@@ -244,8 +249,8 @@ fn cone_apex_is_at_bin_135_in_the_enu_frame() {
 #[test]
 fn early_exit_changes_nothing_when_armed() {
     let (near, far, s, _) = cone_scene();
-    let on = horizon(&near, &far, s, 2.0, &opts(true, 60_000.0)).unwrap();
-    let off = horizon(&near, &far, s, 2.0, &opts(false, 60_000.0)).unwrap();
+    let on = horizon(&near, &far, &far, s, 2.0, &opts(true, 60_000.0)).unwrap();
+    let off = horizon(&near, &far, &far, s, 2.0, &opts(false, 60_000.0)).unwrap();
     assert_eq!(bits(&on), bits(&off));
 }
 
@@ -271,8 +276,8 @@ fn early_exit_stays_off_when_the_far_tile_is_below_the_observer() {
     }
     let near = tile(760, 20.0, x0, y0, counts);
     let far = flat(400, 240.0, c);
-    let on = horizon(&near, &far, s, 100.0, &opts(true, 40_000.0)).unwrap();
-    let off = horizon(&near, &far, s, 100.0, &opts(false, 40_000.0)).unwrap();
+    let on = horizon(&near, &far, &far, s, 100.0, &opts(true, 40_000.0)).unwrap();
+    let off = horizon(&near, &far, &far, s, 100.0, &opts(false, 40_000.0)).unwrap();
     assert_eq!(bits(&on), bits(&off));
     assert!((on.el_rad[180].to_degrees() + 0.614_732_5).abs() < 1e-6);
     assert!((on.dist_m[180] - 18_760.0).abs() < 1e-9);
@@ -308,7 +313,7 @@ fn edge_case(
         counts[row * 834 + col] = i16::MIN;
     }
     let far = tile(834, 240.0, -100_080.0, 100_080.0, counts);
-    horizon(&near, &far, s, 2.0, o)
+    horizon(&near, &far, &far, s, 2.0, o)
 }
 
 // V5 case 6 / P5: the far tile must cover the march; a site 5 km inside its edge is an error.
@@ -372,7 +377,14 @@ fn bad_options_are_refused() {
     ] {
         let s = site(-85.0, 30.0);
         let c = xy_of(s);
-        let r = horizon(&flat(760, 20.0, c), &flat(200, 240.0, c), s, mast, &o);
+        let r = horizon(
+            &flat(760, 20.0, c),
+            &flat(200, 240.0, c),
+            &flat(200, 240.0, c),
+            s,
+            mast,
+            &o,
+        );
         assert!(matches!(r, Err(DemError::BadInput(_))), "{mast} {o:?}");
     }
 }
@@ -384,4 +396,123 @@ fn api_layout_is_degrees_then_metres() {
     assert_eq!(v.len(), 1440);
     assert!((v[180] - 11.309_234_9).abs() < 1e-6);
     assert!((v[720 + 180] - 40.0).abs() < 1e-9);
+}
+
+/// Square tile of constant height `h_m` (a multiple of 0.25 m), middle pixel corner on `centre`.
+fn level(n: u32, pixel_m: f64, centre: MapXy, h_m: f64) -> DemTile {
+    let half = f64::from(n) / 2.0 * pixel_m;
+    #[allow(clippy::cast_possible_truncation)] // test heights are whole multiples of 0.25 m
+    let count = (h_m / SCALE_M) as i16;
+    let len = usize::try_from(n * n).unwrap();
+    tile(
+        n,
+        pixel_m,
+        centre.x_m - half,
+        centre.y_m + half,
+        vec![count; len],
+    )
+}
+
+// #48 middle tier (§1a tiers): the shipped mid range is 31 000 m = 7 000 + 240 × 100, so the far
+// samples beyond it fall where the two-tier march put them.
+#[test]
+fn mid_range_ends_on_the_two_tier_far_grid() {
+    assert!((MID_RANGE_M - 31_000.0).abs() < 1e-9);
+    assert!(((MID_RANGE_M - 7_000.0) / 240.0).fract().abs() < 1e-12);
+}
+
+// A level 100 m middle tile around a flat near tile, H = 0: the first middle sample, one 80 m
+// pixel past the 7 000 m near range, sets the horizon at every azimuth (el falls with s at
+// constant h). Expected value: the §1a closed form at 7 080 m.
+#[test]
+fn the_first_mid_sample_is_one_mid_pixel_past_the_near_range() {
+    let s = site(-85.0, 30.0);
+    let c = xy_of(s);
+    let want = elevation_closed_form_rad(R, R + 100.0, 7_080.0).unwrap();
+    let h = horizon(
+        &flat(760, 20.0, c),
+        &level(800, 80.0, c, 100.0),
+        &flat(500, 240.0, c),
+        s,
+        0.0,
+        &opts(true, 50_000.0),
+    )
+    .unwrap();
+    for i in 0..N_AZ {
+        assert!(
+            (h.el_rad[i] - want).abs() < 1e-9,
+            "bin {i}: {}",
+            h.el_rad[i]
+        );
+        assert!(
+            (h.dist_m[i] - 7_080.0).abs() < 1e-9,
+            "bin {i}: {}",
+            h.dist_m[i]
+        );
+    }
+}
+
+// Flat near and middle tiles, a level 1 000 m far tile, H = 0: the first far sample is one 240 m
+// pixel past the 31 000 m mid range (31 240 m), not past the near range.
+#[test]
+fn the_far_march_starts_at_the_mid_range() {
+    let s = site(-85.0, 30.0);
+    let c = xy_of(s);
+    let want = elevation_closed_form_rad(R, R + 1_000.0, 31_240.0).unwrap();
+    let h = horizon(
+        &flat(760, 20.0, c),
+        &flat(800, 80.0, c),
+        &level(500, 240.0, c, 1_000.0),
+        s,
+        0.0,
+        &opts(true, 50_000.0),
+    )
+    .unwrap();
+    for i in 0..N_AZ {
+        assert!(
+            (h.el_rad[i] - want).abs() < 1e-9,
+            "bin {i}: {}",
+            h.el_rad[i]
+        );
+        assert!(
+            (h.dist_m[i] - 31_240.0).abs() < 1e-9,
+            "bin {i}: {}",
+            h.dist_m[i]
+        );
+    }
+}
+
+// P5: a middle tile that ends inside the mid range (±16 km here) is an error, never 0 m.
+#[test]
+fn mid_tile_ending_inside_the_mid_range_is_out_of_coverage() {
+    let s = site(-85.0, 30.0);
+    let c = xy_of(s);
+    let r = horizon(
+        &flat(760, 20.0, c),
+        &flat(400, 80.0, c),
+        &flat(500, 240.0, c),
+        s,
+        0.0,
+        &opts(true, 50_000.0),
+    );
+    assert_eq!(r, Err(DemError::OutOfCoverage));
+}
+
+#[test]
+fn mid_range_shorter_than_one_mid_pixel_past_the_near_range_is_refused() {
+    let s = site(-85.0, 30.0);
+    let c = xy_of(s);
+    let o = HorizonOptions {
+        mid_range_m: 7_050.0,
+        ..opts(true, 50_000.0)
+    };
+    let r = horizon(
+        &flat(760, 20.0, c),
+        &flat(800, 80.0, c),
+        &flat(500, 240.0, c),
+        s,
+        0.0,
+        &o,
+    );
+    assert!(matches!(r, Err(DemError::BadInput(_))), "{r:?}");
 }

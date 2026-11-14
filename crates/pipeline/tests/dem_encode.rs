@@ -2,31 +2,36 @@
 
 use penumbra_core::dem::{DemTile, TileMeta};
 use penumbra_core::geometry::MapXy;
-use penumbra_pipeline::dem::{FAR_SCALES_M, NEAR_SCALES_M, NODATA, encode};
+use penumbra_pipeline::dem::{FAR_SCALES_M, MIN_SCALE_M, NODATA, encode, encode_finest};
 
 /// Heights spanning exactly `range_m`, from −range/2 + 100 to +range/2 + 100.
 fn span(range_m: f32) -> Vec<f32> {
     vec![100.0 - range_m / 2.0, 100.0, 100.0 + range_m / 2.0]
 }
 
-// P11: finest of 0.0625 / 0.125 / 0.25 m whose ±32 767 counts hold the range (65 534 steps):
-// 4 000 m / 0.0625 = 64 000 fits; 5 000 m needs 0.125 (80 000 > 65 534); 10 000 m needs 0.25.
+// P11, #48: the near scale is the finest that holds the tile, so the lowest and highest heights
+// land on −32 767 and +32 767 (65 534 steps), and the far scale stays 0.5 m.
 #[test]
 fn near_scale_is_the_finest_that_fits() {
-    for (range_m, want) in [(4000.0, 0.0625), (5000.0, 0.125), (10_000.0, 0.25)] {
-        let e = encode(&span(range_m), &NEAR_SCALES_M).unwrap();
-        assert!(
-            (e.scale_m - want).abs() < 1e-12,
-            "{range_m} m → {}",
-            e.scale_m
-        );
+    for range_m in [4000.0, 5000.0, 10_000.0] {
+        let e = encode_finest(&span(range_m)).unwrap();
+        assert_eq!(e.counts, vec![-32_767, 0, 32_767], "{range_m} m");
     }
 }
 
-// 17 000 m / 0.25 = 68 000 counts > 65 534: the encoder fails instead of clipping.
+// SCIENCE-SPEC §1a: 0.25 m or finer, so 17 000 m (68 000 counts at 0.25 m) fails instead of
+// taking a coarser scale.
 #[test]
 fn near_encoder_fails_when_the_coarsest_scale_clips() {
-    assert!(encode(&span(17_000.0), &NEAR_SCALES_M).is_err());
+    assert!(encode_finest(&span(17_000.0)).is_err());
+}
+
+// A level tile keeps a positive scale (the 1 mm floor) and decodes to its height exactly.
+#[test]
+fn level_tile_takes_the_floor_scale() {
+    let e = encode_finest(&[812.5; 4]).unwrap();
+    assert!((e.scale_m - MIN_SCALE_M).abs() < 1e-15);
+    assert!(e.counts.iter().all(|&c| c == 0) && (e.offset_m - 812.5).abs() < 1e-12);
 }
 
 // Far tile is 0.5 m: 32 000 m fits (64 000 steps), 33 000 m clips (66 000).
@@ -39,21 +44,21 @@ fn far_encoder_uses_half_metre_and_fails_when_it_clips() {
 
 #[test]
 fn nan_source_pixels_become_the_nodata_count() {
-    let e = encode(&[1.0, f32::NAN, 3.0], &NEAR_SCALES_M).unwrap();
+    let e = encode_finest(&[1.0, f32::NAN, 3.0]).unwrap();
     assert_eq!(e.counts[1], NODATA);
     assert!(e.counts[0] != NODATA && e.counts[2] != NODATA);
 }
 
 #[test]
 fn encoder_fails_when_no_pixel_has_a_height() {
-    assert!(encode(&[f32::NAN, f32::NAN], &NEAR_SCALES_M).is_err());
+    assert!(encode_finest(&[f32::NAN, f32::NAN]).is_err());
 }
 
 // Decoded through the core sampler at pixel centres, every height is within half a scale step.
 #[test]
 fn round_trip_through_the_sampler_is_within_half_a_step() {
     let (w, h) = (40u32, 30u32);
-    // A deterministic bumpy surface over 7.9 km of relief → 0.125 m.
+    // A deterministic bumpy surface over 7.9 km of relief → 7 900 / 65 534 ≈ 0.1205 m.
     let src: Vec<f32> = (0..w * h)
         .map(|k| {
             let (c, r) = (f64::from(k % w), f64::from(k / w));
@@ -62,8 +67,8 @@ fn round_trip_through_the_sampler_is_within_half_a_step() {
             v
         })
         .collect();
-    let e = encode(&src, &NEAR_SCALES_M).unwrap();
-    assert!((e.scale_m - 0.125).abs() < 1e-12, "{}", e.scale_m);
+    let e = encode_finest(&src).unwrap();
+    assert!(e.scale_m > 0.12 && e.scale_m < 0.121, "{}", e.scale_m);
     let meta = TileMeta {
         width: w,
         height: h,

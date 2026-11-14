@@ -90,6 +90,7 @@ fn case1_pole_has_no_nan_and_flat_sphere_horizon_is_minus_0_0869_deg_at_2_m() {
     let h = horizon(
         &flat_around(760, 20.0, c),
         &flat_around(200, 240.0, c),
+        &flat_around(200, 240.0, c),
         pole,
         2.0,
         &opts,
@@ -258,7 +259,7 @@ fn edge_case(x_m: f64, y_m: f64) -> Result<(), DemError> {
         max_range_m: 50_000.0,
         ..HorizonOptions::default()
     };
-    horizon(&near, &far, s, 2.0, &opts).map(|_| ())
+    horizon(&near, &far, &far, s, 2.0, &opts).map(|_| ())
 }
 
 // Case 6 (P5): a site 5 km inside the far tile's edge returns a coverage error, never a horizon from

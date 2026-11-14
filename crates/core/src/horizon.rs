@@ -1,5 +1,5 @@
-//! Terrain horizon: a 720-azimuth great-circle ray march over a near and a far DEM tier
-//! (SCIENCE-SPEC §1a, ARCHITECTURE §2.2). MOON_ME, sphere R = 1 737 400 m, radians inside.
+//! Terrain horizon: a 720-azimuth great-circle ray march over a near, an optional middle and a far
+//! DEM tier (SCIENCE-SPEC §1a, ARCHITECTURE §2.2). MOON_ME, sphere R = 1 737 400 m, radians inside.
 
 use crate::dem::{DemError, DemTile, Terrain};
 use crate::geometry::{
@@ -11,6 +11,9 @@ use crate::geometry::{
 pub const N_AZ: usize = 720;
 /// The near (20 m) tier is marched out to this ground distance, metres (§1a tiers).
 pub const NEAR_RANGE_M: f64 = 7_000.0;
+/// The middle (80 m) tier is marched out to this ground distance, metres (§1a tiers, T-1a-4, #48).
+/// 31 000 = 7 000 + 240 × 100, so the far samples beyond fall where the two-tier march puts them.
+pub const MID_RANGE_M: f64 = 31_000.0;
 /// The far tile must reach site + 200 km (§1a range, E66); a tile edge closer than this is an error.
 pub const REQUIRED_RANGE_M: f64 = 200_000.0;
 /// An obstacle closer than 3 near pixels (60 m) is flagged as a possible DEM spike (P13).
@@ -22,8 +25,10 @@ pub struct HorizonOptions {
     /// Stop an azimuth when the far tile's highest point can no longer beat the current maximum
     /// (only armed when that point is above the observer, N11). Never changes the result.
     pub early_exit: bool,
-    /// Ground distance, metres, after which the march switches from the near to the far tile.
+    /// Ground distance, metres, after which the march switches from the near to the middle tile.
     pub near_range_m: f64,
+    /// Ground distance, metres, after which the march switches from the middle to the far tile.
+    pub mid_range_m: f64,
     /// Ground distance, metres, beyond which no sample is taken; `INFINITY` marches to the tile edge.
     pub max_range_m: f64,
 }
@@ -33,6 +38,7 @@ impl Default for HorizonOptions {
         HorizonOptions {
             early_exit: true,
             near_range_m: NEAR_RANGE_M,
+            mid_range_m: MID_RANGE_M,
             max_range_m: f64::INFINITY,
         }
     }
@@ -180,11 +186,13 @@ pub fn point_sun_mask(
 }
 
 /// Horizon at `site` (MOON_ME lat, east lon) for an observer `mast_m` metres above the near tile's
-/// ground. Each azimuth follows the great circle (P10), skips the observer's own pixel (P13), samples
-/// every near pixel to `near_range_m` and every far pixel beyond. Near-tile gaps or nodata, and a far
-/// tile ending inside `REQUIRED_RANGE_M`, are errors, never 0 m (P5).
-pub fn horizon<N: Terrain, F: Terrain>(
+/// ground, over the three tiers (#48). Each azimuth follows the great circle (P10), skips the
+/// observer's own pixel (P13), samples every near pixel to `near_range_m`, every `mid` pixel to
+/// `mid_range_m` and every far pixel beyond. Near- or middle-tile gaps or nodata, and a far tile
+/// ending inside `REQUIRED_RANGE_M`, are errors, never 0 m (P5).
+pub fn horizon<N: Terrain, M: Terrain, F: Terrain>(
     near: &N,
+    mid: &M,
     far: &F,
     site: LatLon,
     mast_m: f64,
@@ -218,6 +226,19 @@ pub fn horizon<N: Terrain, F: Terrain>(
         .map(|j| Step::at(p_n * f64::from(j)))
         .take_while(|st| st.s_m <= near_end_m.min(opts.max_range_m))
         .collect();
+    // Middle steps continue from the near range; the far march starts where they end.
+    let p_m = mid.pixel_m();
+    let n_mid = ((opts.mid_range_m - near_end_m) / p_m + 1e-9).floor();
+    if !n_mid.is_finite() || n_mid < 1.0 {
+        return Err(DemError::BadInput(
+            "mid range must be finite and at least one mid pixel past the near range",
+        ));
+    }
+    let far_start_m = near_end_m + n_mid * p_m;
+    let mid_steps: Vec<Step> = (1..)
+        .map(|k| Step::at(near_end_m + p_m * f64::from(k)))
+        .take_while(|st| st.s_m <= far_start_m.min(opts.max_range_m))
+        .collect();
     // Far steps are shared by all azimuths and grown on demand: the tile edge sets the length.
     let mut far_steps: Vec<Step> = Vec::new();
     // Half way round the Moon every great circle has left any tile: a hard stop for the loop.
@@ -239,11 +260,17 @@ pub fn horizon<N: Terrain, F: Terrain>(
                 (best_num, best_den, best_s) = (num, den, st.s_m);
             }
         }
+        for st in &mid_steps {
+            let (num, den) = sample(mid, up, d, r_o, st)?;
+            if num * best_den > best_num * den {
+                (best_num, best_den, best_s) = (num, den, st.s_m);
+            }
+        }
         for j in 0.. {
             if far_steps.len() <= j {
                 let k =
                     u32::try_from(j + 1).map_err(|_| DemError::BadInput("far march too long"))?;
-                far_steps.push(Step::at(near_end_m + p_f * f64::from(k)));
+                far_steps.push(Step::at(far_start_m + p_f * f64::from(k)));
             }
             let st = far_steps[j];
             if st.s_m > opts.max_range_m || st.s_m > half_circle_m {

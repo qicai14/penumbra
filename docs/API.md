@@ -4,7 +4,7 @@ The `core` → WASM boundary, frozen at Hour 0 (T00, issue #1). This file is can
 
 **Change rule.** From the merge of the T00 PR, this file changes only in a PR approved by both Qi Cai and Charls, and every change bumps `api_version` in `crates/core` (`API_VERSION`), the fixture (`web/public/fixture/scenario.json`) and the manifest together. The adapter's `validate()` refuses a mismatch.
 
-**Manifest.** `manifest.json` (written by `pipeline` from T06) carries `"api_version": 3` next to `format_version`.
+**Manifest.** `manifest.json` (written by `pipeline` from T06) carries `"api_version": 4` next to `format_version`. Each region carries a `near` (20 m) and, from #48, a `mid` (80 m) tile entry with the same eight numbers.
 
 ## Conventions (frozen with the API)
 
@@ -13,16 +13,16 @@ The `core` → WASM boundary, frozen at Hour 0 (T00, issue #1). This file is can
 - **Heights**: `ground_m` is metres above the 1 737 400 m sphere; `mast_m` is the mast height H above the ground.
 - Every number crossing the boundary is f64. There is no f32 anywhere in the API (N7).
 - **Errors** are thrown as a JS `Error` whose message starts with a code and a colon: `NOT_LOADED`, `OUT_OF_COVERAGE`, `NO_DATA`, `OUT_OF_TABLE`, `BAD_INPUT`. A function never returns a default in place of an error (P5, P16).
-- `api_version()` returns 3 (2 from T15, when the pit functions began to throw BAD_INPUT; 3 from #58, which dropped `latlon_to_xy` and `xy_to_latlon`: the web projects in TS, held to `core::geometry` within 1 mm by `web/src/lib/projection.test.ts`). The fixture and the manifest carry the same number; the adapter refuses a mismatch.
+- `api_version()` returns 4 (2 from T15, when the pit functions began to throw BAD_INPUT; 3 from #58, which dropped `latlon_to_xy` and `xy_to_latlon`: the web projects in TS, held to `core::geometry` within 1 mm by `web/src/lib/projection.test.ts`; 4 from #48, which added `load_mid` and made `horizon` march the 80 m middle tier). The fixture and the manifest carry the same number; the adapter refuses a mismatch.
 
 ## Functions and array layouts
 
 Rust signatures in `crates/wasm`. wasm-bindgen generates the `.d.ts` from them.
 
 ```rust
-#[wasm_bindgen] pub fn api_version() -> u32;                                   // 3
+#[wasm_bindgen] pub fn api_version() -> u32;                                   // 4
 
-#[wasm_bindgen] pub struct Engine { /* ephemeris segments, near tile, far tile */ }
+#[wasm_bindgen] pub struct Engine { /* ephemeris segments, near tile, mid tile, far tile */ }
 
 #[wasm_bindgen]
 impl Engine {
@@ -33,6 +33,8 @@ impl Engine {
     pub fn load_ephemeris(&mut self, t0_unix_s: f64, step_s: f64, data: Box<[f64]>) -> Result<(), JsError>;
     pub fn load_near(&mut self, data: Box<[i16]>, width: u32, height: u32, x0_m: f64, y0_m: f64,
                      pixel_m: f64, scale_m: f64, offset_m: f64, nodata: i16) -> Result<(), JsError>;
+    pub fn load_mid(&mut self, data: Box<[i16]>, width: u32, height: u32, x0_m: f64, y0_m: f64,
+                    pixel_m: f64, scale_m: f64, offset_m: f64, nodata: i16) -> Result<(), JsError>;
     pub fn load_far(&mut self, data: Box<[i16]>, width: u32, height: u32, x0_m: f64, y0_m: f64,
                     pixel_m: f64, scale_m: f64, offset_m: f64, nodata: i16) -> Result<(), JsError>;
 
@@ -66,7 +68,7 @@ impl Engine {
 | Function | Length | Layout |
 |---|---|---|
 | `load_ephemeris` `data` | 6 × rows | row-major, as in the file: Sun x, y, z, Earth x, y, z in km, MOON_ME. Call once per segment. |
-| `load_near`, `load_far` `data` | width × height | row-major int16, row 0 = largest y. `load_near` replaces the current near tile (one region at a time). `load_far` also finds h_max for the early exit, so the manifest doesn't carry it. |
+| `load_near`, `load_mid`, `load_far` `data` | width × height | row-major int16, row 0 = largest y. `load_near` and `load_mid` replace the current region's near (20 m) and middle (80 m) tile (one region at a time; `horizon` needs both, #48). `load_far` also finds h_max for the early exit, so the manifest doesn't carry it. |
 | `sun_earth_track` | 9 × n | `t_unix_s`, `sun_az_deg`, `sun_el_deg`, `sun_radius_deg`, `sun_dist_km`, `earth_az_deg`, `earth_el_deg`, `earth_radius_deg`, `earth_dist_km` |
 | `horizon` | 1 440 | `el_deg[720]` then `dist_m[720]`; index i is azimuth i × 0.5° |
 | `timeline` | 10 × n | `t_unix_s`, `sun_az_deg`, `sun_el_deg`, `illumination` (0–1), `visibility` (0 or 1), `earth_az_deg`, `earth_el_deg`, `earth_margin_deg`, `contact` (0 or 1), `sun_dist_km` |

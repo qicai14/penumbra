@@ -4,8 +4,9 @@
 //! Ours, per pixel: the share (points, 0–100) of hourly UTC steps from 2010-01-01T00:00:00Z with any
 //! part of the disc above our terrain horizon (P1, W1; Earth "any fraction", P14), observer at the
 //! ground (H = 0, P2), terrain = the shipped 20 m near tiles averaged 3 × 3 onto the AVGVISIB 60 m
-//! lattice, far tier = the shipped 240 m tile. Sun and Earth come from one ANISE table (UTC grid,
-//! ANISE converts to TDB, P4); angles are topocentric ENU, map coordinates south polar stereographic.
+//! lattice to 7 km, then the shipped 80 m middle tiles to 31 km and the shipped 240 m far tile (#48).
+//! Sun and Earth come from one ANISE table (UTC grid, ANISE converts to TDB, P4); angles are
+//! topocentric ENU, map coordinates south polar stereographic.
 
 use crate::dem::{FloatWindow, GeoTiff, ShippedTiles};
 use crate::eph::{Result, build_table, load_almanac};
@@ -534,6 +535,7 @@ struct Out {
 
 fn eval(
     near: &FloatWindow,
+    mid: &DemTile,
     far: &DemTile,
     eph: &Ephemeris,
     xy: MapXy,
@@ -542,7 +544,8 @@ fn eval(
 ) -> Result<Out> {
     let err = |e: &dyn std::fmt::Debug| format!("{e:?}");
     let ll = xy_to_latlon(xy).map_err(|e| err(&e))?;
-    let hor = horizon(near, far, ll, mast_m, &HorizonOptions::default()).map_err(|e| err(&e))?;
+    let hor =
+        horizon(near, mid, far, ll, mast_m, &HorizonOptions::default()).map_err(|e| err(&e))?;
     let site = Site {
         lat_rad: ll.lat_rad,
         lon_east_rad: ll.lon_east_rad,
@@ -587,6 +590,10 @@ pub fn run(data_dir: &Path, resource_dir: &Path) -> Result<serde_json::Value> {
     let near: Vec<FloatWindow> = REGIONS
         .iter()
         .map(|id| average_3x3(tiles.near(id)?))
+        .collect::<Result<_>>()?;
+    let mid: Vec<&DemTile> = REGIONS
+        .iter()
+        .map(|id| tiles.mid(id))
         .collect::<Result<_>>()?;
     let sun_ref = RefRaster::open(&resource_dir.join("AVGVISIB_85S_060M_201608.TIF"))?;
     let earth_ref = RefRaster::open(&resource_dir.join("AVGVISIB_85S_060M_201608_EARTH.TIF"))?;
@@ -709,6 +716,7 @@ pub fn run(data_dir: &Path, resource_dir: &Path) -> Result<serde_json::Value> {
     let h0 = par_map(&task_list, |(p, s)| {
         eval(
             &near[p.region],
+            mid[p.region],
             &tiles.far,
             &eph,
             p.xy,
@@ -720,7 +728,16 @@ pub fn run(data_dir: &Path, resource_dir: &Path) -> Result<serde_json::Value> {
     let ours: BTreeMap<Key, Out> = tasks.keys().copied().zip(h0).collect();
     let sub_px: Vec<Pixel> = sub.iter().map(|k| pixels[k]).collect();
     let h2 = par_map(&sub_px, |p| {
-        eval(&near[p.region], &tiles.far, &eph, p.xy, P2_MAST_M, None).map_err(|e| e.to_string())
+        eval(
+            &near[p.region],
+            mid[p.region],
+            &tiles.far,
+            &eph,
+            p.xy,
+            P2_MAST_M,
+            None,
+        )
+        .map_err(|e| e.to_string())
     })?;
 
     // Sun: per bin and pooled.
@@ -879,7 +896,7 @@ pub fn run(data_dir: &Path, resource_dir: &Path) -> Result<serde_json::Value> {
         "start_unix_s": START_UNIX_S,
         "steps": STEPS,
         "step_s": STEP_S,
-        "dem": "shipped 20 m near tiles averaged 3x3 to the AVGVISIB 60 m lattice (7 km near tier), shipped 240 m far tile beyond",
+        "dem": "shipped 20 m near tiles averaged 3x3 to the AVGVISIB 60 m lattice (7 km near tier), shipped 80 m middle tiles to 31 km, shipped 240 m far tile beyond",
         "regions": REGIONS,
         "seed": format!("{SEED:#x}"),
         "candidates": pixels.len(),

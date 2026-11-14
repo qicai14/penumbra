@@ -4,10 +4,9 @@
 
 use crate::dem::ShippedTiles;
 use crate::eph::{Result, build_table, load_almanac};
-use penumbra_core::dem::DemTile;
 use penumbra_core::eph::{Ephemeris, Site};
 use penumbra_core::geometry::{MapXy, xy_to_latlon};
-use penumbra_core::horizon::{HorizonOptions, ground_height_m, horizon};
+use penumbra_core::horizon::{HorizonOptions, ground_height_m};
 use penumbra_core::power::longest_run;
 use penumbra_core::timeline::{DEFAULT_EARTH_MARGIN_DEG, timeline};
 use std::path::Path;
@@ -178,10 +177,12 @@ pub fn roi_mean(pixels: &[PixelRuns]) -> Result<RoiMean> {
     })
 }
 
+/// Every Barker RoI and SP-01 lie on the Shackleton ridge near tile.
+const REGION: &str = "shackleton-ridge";
+
 /// Hourly disc fraction f at a pixel centre `xy` (map metres), observer `mast_m` above ground.
 fn pixel_f(
-    near: &DemTile,
-    far: &DemTile,
+    tiles: &ShippedTiles,
     eph: &Ephemeris,
     xy: MapXy,
     mast_m: f64,
@@ -190,11 +191,11 @@ fn pixel_f(
 ) -> Result<Vec<f64>> {
     let err = |e: &dyn std::fmt::Debug| format!("{e:?}");
     let ll = xy_to_latlon(xy).map_err(|e| err(&e))?;
-    let hor = horizon(near, far, ll, mast_m, &HorizonOptions::default()).map_err(|e| err(&e))?;
+    let hor = tiles.horizon(REGION, ll, mast_m, &HorizonOptions::default())?;
     let site = Site {
         lat_rad: ll.lat_rad,
         lon_east_rad: ll.lon_east_rad,
-        ground_m: ground_height_m(near, ll).map_err(|e| err(&e))?,
+        ground_m: ground_height_m(tiles.near(REGION)?, ll).map_err(|e| err(&e))?,
         mast_m,
     };
     let tl = timeline(
@@ -223,7 +224,6 @@ const H_PER_D: f64 = 24.0;
 pub fn run(data_dir: &Path, kernels_dir: &Path) -> Result<serde_json::Value> {
     let started = std::time::Instant::now();
     let tiles = ShippedTiles::load(data_dir)?;
-    let near = tiles.near("shackleton-ridge")?;
     let almanac = load_almanac(kernels_dir)?;
     // One table from 2020 covers both windows; 2024-01-01 is a whole number of hours after it.
     let mut eph = Ephemeris::default();
@@ -242,8 +242,7 @@ pub fn run(data_dir: &Path, kernels_dir: &Path) -> Result<serde_json::Value> {
             .into_iter()
             .map(|xy| {
                 let f = pixel_f(
-                    near,
-                    &tiles.far,
+                    &tiles,
                     &eph,
                     xy,
                     BARKER_MAST_M,
@@ -280,15 +279,7 @@ pub fn run(data_dir: &Path, kernels_dir: &Path) -> Result<serde_json::Value> {
     let sp = pixels_in_disc(c, SP01_RADIUS_M)
         .into_iter()
         .map(|xy| {
-            let f = pixel_f(
-                near,
-                &tiles.far,
-                &eph,
-                xy,
-                SP01_MAST_M,
-                SP01_T0_UNIX_S,
-                SP01_STEPS,
-            )?;
+            let f = pixel_f(&tiles, &eph, xy, SP01_MAST_M, SP01_T0_UNIX_S, SP01_STEPS)?;
             Ok(pixel_runs(&f, step_h))
         })
         .collect::<Result<Vec<_>>>()?;
