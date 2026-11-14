@@ -179,6 +179,7 @@ export function loadTracerTrack(): Promise<Track> {
 }
 
 import { edgeDistanceM } from "./site";
+import { serialize } from "./serialize";
 import { latlonToXy } from "./fixture-projection";
 // ---- Site picker and recompute (T11) ----
 // The projection is still a fixture stand-in until T01 #2 merges; the model calls above are the WASM Engine.
@@ -252,10 +253,5 @@ async function computeNow(inp: Inputs): Promise<Scenario> {
 }
 
 // The Engine holds one near tile at a time (ensureNear swaps it), so two computes must never interleave.
-let computeChain: Promise<unknown> = Promise.resolve();
 /** computeNow, one at a time: a second call waits for the first (the compare view runs A then B, and the site view may be mid-compute). */
-export function computeScenario(inp: Inputs): Promise<Scenario> {
-  const run = computeChain.then(() => computeNow(inp));
-  computeChain = run.catch(() => {});
-  return run;
-}
+export const computeScenario = serialize(computeNow);

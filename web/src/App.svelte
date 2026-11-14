@@ -1,7 +1,7 @@
 <script lang="ts">
   import { computeScenario, loadFixture, loadManifest, loadNearTile, xyToLatlon, type Inputs, type NearMeta, type NearTile, type Preset, type Region, type Scenario } from "./lib/engine";
   import Compare from "./lib/Compare.svelte";
-  import { applyPresetEdits, decodeCompare, type CompareState } from "./lib/compare";
+  import { applyPresetEdits, decodeCompare, type Pair } from "./lib/compare";
   import Panorama from "./lib/Panorama.svelte";
   import Timelines from "./lib/Timelines.svelte";
   import Survival from "./lib/Survival.svelte";
@@ -36,17 +36,18 @@
   // Compare A vs B (T27). The URL query holds both pairs and the preset (`?a=<lat>,<lon>@<date>&b=...&preset=...`); a query
   // with `a` or `b` opens the compare view on load. The site view keeps a clean URL.
   let view = $state<"site" | "compare">("site");
-  let cmp = $state.raw<{ init: CompareState; base: Preset; metas: NearMeta[] } | null>(null);
+  let cmp = $state<{ pairs: { a: Pair; b: Pair }; base: Preset; metas: NearMeta[] } | null>(null); // deep state: Compare edits the pairs in place, so they survive a trip to the site view
   let cmpError = $state<string | null>(null);
   async function openCompare(search: string) {
     view = "compare";
-    if (cmp && !search) return; // coming back keeps the pairs
+    if (cmp && !search) return; // coming back keeps the pairs (and the URL is rewritten when Compare mounts)
     try {
       const [m, fx] = await Promise.all([loadManifest(), loadFixture()]);
       const metas = m.regions.map((r) => r.near);
-      const init = decodeCompare(search, { fallback: { lat: controls.lat, lon: controls.lon, date: controls.date }, spanDays: controls.spanDays, metas });
+      const init = decodeCompare(search, { fallback: { lat: controls.lat, lon: controls.lon, date: controls.date }, spanDays: controls.spanDays, mastM: controls.mastM, metas });
       if (init.presetEdits.length) controls.preset = applyPresetEdits(fx.preset, init.presetEdits);
-      cmp = { init, base: fx.preset, metas }; cmpError = null;
+      controls.mastM = init.mastM; controls.spanDays = init.spanDays;
+      cmp = { pairs: { a: init.a, b: init.b }, base: fx.preset, metas }; cmpError = null;
     } catch (e: any) { cmpError = String(e?.message ?? e); }
   }
   function openSite() {
@@ -82,7 +83,7 @@
   {#if view === "compare"}
     <p class="tag">~/compare</p>
     {#if cmpError}<p class="msg" role="alert">{cmpError}</p>{/if}
-    {#if cmp}<Compare {controls} initial={cmp.init} base={cmp.base} metas={cmp.metas} />{:else if !cmpError}<p class="msg">Loading…</p>{/if}
+    {#if cmp}<Compare {controls} pairs={cmp.pairs} base={cmp.base} metas={cmp.metas} />{:else if !cmpError}<p class="msg">Loading…</p>{/if}
   {:else}
   <p class="tag">~/site</p>
   {#if tile}<SitePicker {controls} {tile} {onregion} />{/if}

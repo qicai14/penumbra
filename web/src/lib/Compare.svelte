@@ -2,22 +2,20 @@
   // T27 (#28): two site-date pairs side by side with one shared lander preset. Each column is its own scenario, so its
   // clocks follow its own landing time (Qi Cai, 2026-11-14). Every figure is the model's; the page only subtracts and words it.
   import { computeScenario, latlonToXy, type NearMeta, type Preset, type Scenario } from "./engine";
-  import { compareSentence, diffDays, encodeCompare, presetEdits, type CompareState, type Pair } from "./compare";
+  import { compareSentence, diffDays, encodeCompare, presetEdits, type Pair } from "./compare";
   import Countdown from "./Countdown.svelte";
   import { headline, presetFields, setPresetField, spanDays, type FieldKey } from "./headline";
   import { checkDate, checkPick } from "./site";
   import type { Controls } from "./state.svelte";
 
-  let { controls, initial, base, metas }: { controls: Controls; initial: CompareState; base: Preset; metas: NearMeta[] } = $props();
+  let { controls, pairs, base, metas }: { controls: Controls; pairs: Record<"a" | "b", Pair>; base: Preset; metas: NearMeta[] } = $props();
 
   type Side = "a" | "b";
   const SIDES: Side[] = ["a", "b"];
-  // svelte-ignore state_referenced_locally -- the pairs start from the decoded URL, then follow the pickers
-  let pairs = $state<Record<Side, Pair>>({ a: { ...initial.a }, b: { ...initial.b } });
-  // svelte-ignore state_referenced_locally
+  // svelte-ignore state_referenced_locally -- drafts start from the pairs, then follow typing
   let drafts = $state<Record<Side, { lat: string; lon: string; date: string }>>({
-    a: { lat: String(initial.a.lat), lon: String(initial.a.lon), date: initial.a.date },
-    b: { lat: String(initial.b.lat), lon: String(initial.b.lon), date: initial.b.date },
+    a: { lat: String(pairs.a.lat), lon: String(pairs.a.lon), date: pairs.a.date },
+    b: { lat: String(pairs.b.lat), lon: String(pairs.b.lon), date: pairs.b.date },
   });
   let refusals = $state<Record<Side, string | null>>({ a: null, b: null });
   let presetRefusal = $state<string | null>(null);
@@ -27,23 +25,30 @@
 
   // The pairs and preset live in the address bar, so a copy of the URL is the shared comparison.
   $effect(() => {
-    const q = encodeCompare({ a: pairs.a, b: pairs.b, presetEdits: controls.preset ? presetEdits(base, controls.preset) : [] });
+    const q = encodeCompare({
+      a: pairs.a, b: pairs.b, mastM: controls.mastM, spanDays: controls.spanDays,
+      presetEdits: controls.preset ? presetEdits(base, controls.preset) : [],
+    });
     try { history.replaceState(null, "", `?${q}`); } catch { /* sandboxed frame: sharing by URL is unavailable, the view still works */ }
   });
 
   // A then B, one at a time (the Engine holds one near tile). A stale answer never overwrites a newer one.
-  let results = $state.raw<Record<Side, Scenario | string | null>>({ a: null, b: null });
+  // Each result keeps the pair it was computed for, so headers and the sentence never pair new labels with old figures.
+  type Result = { pair: Pair; sc: Scenario | null; err: string | null };
+  let results = $state.raw<Record<Side, Result | null>>({ a: null, b: null });
   let gen = 0;
   $effect(() => {
+    const used = SIDES.map((s) => ({ ...pairs[s] }));
     const reqs = SIDES.map((s) => ({
       lat_deg: pairs[s].lat, lon_deg: pairs[s].lon, mast_m: controls.mastM,
       start_unix_s: Date.parse(`${pairs[s].date}T00:00:00Z`) / 1000, span_days: controls.spanDays, preset: controls.preset ?? undefined,
     }));
     const mine = ++gen;
     (async () => {
-      const out: (Scenario | string)[] = [];
-      for (const r of reqs) {
-        try { out.push(await computeScenario(r)); } catch (e: any) { out.push(String(e?.message ?? e)); }
+      const out: Result[] = [];
+      for (const [i, r] of reqs.entries()) {
+        try { out.push({ pair: used[i], sc: await computeScenario(r), err: null }); }
+        catch (e: any) { out.push({ pair: used[i], sc: null, err: String(e?.message ?? e) }); }
         if (mine !== gen) return;
       }
       results = { a: out[0], b: out[1] };
@@ -75,10 +80,10 @@
     else { presetRefusal = `${label}: ${next}.`; input.value = String(fields.find((f) => f.key === key)!.value); }
   }
 
-  const sa = $derived(typeof results.a === "object" && results.a ? results.a : null);
-  const sb = $derived(typeof results.b === "object" && results.b ? results.b : null);
-  const sentence = $derived(sa && sb
-    ? compareSentence({ pair: pairs.a, operableH: sa.survival.operable_h }, { pair: pairs.b, operableH: sb.survival.operable_h })
+  const sa = $derived(results.a?.sc ?? null);
+  const sb = $derived(results.b?.sc ?? null);
+  const sentence = $derived(sa && sb && results.a && results.b
+    ? compareSentence({ pair: results.a.pair, operableH: sa.survival.operable_h }, { pair: results.b.pair, operableH: sb.survival.operable_h })
     : null);
 </script>
 
@@ -119,14 +124,14 @@
   {#each SIDES as s (s)}
     {@const sc = results[s]}
     <section class="panel col" aria-labelledby="{s}-h" data-testid="col-{s}">
-      <h2 id="{s}-h">{s.toUpperCase()} · {pairs[s].lat.toFixed(4)}°, {pairs[s].lon.toFixed(4)}°E · landing {pairs[s].date}</h2>
-      {#if typeof sc === "string"}
-        <p class="refusal" role="alert" data-testid="{s}-error">{sc}</p>
-      {:else if sc}
-        {@const head = headline(sc.survival, spanDays(sc.count, sc.step_s))}
+      <h2 id="{s}-h">{s.toUpperCase()}{#if sc} · {sc.pair.lat.toFixed(4)}°, {sc.pair.lon.toFixed(4)}°E · landing {sc.pair.date}{/if}</h2>
+      {#if sc?.err}
+        <p class="refusal" role="alert" data-testid="{s}-error">{sc.err}</p>
+      {:else if sc?.sc}
+        {@const head = headline(sc.sc.survival, spanDays(sc.sc.count, sc.sc.step_s))}
         <p class="fig"><span class="cap">Operable</span><strong data-testid="{s}-operable">{head.operable}</strong></p>
         <p class="fig"><span class="cap">First lethal shadow in</span><strong data-testid="{s}-lethal">{#if !head.none}✕ {/if}{head.lethal}</strong></p>
-        <Countdown scenario={sc} idx={0} prefix="{s}-" title="At landing" sticky={false} />
+        <Countdown scenario={sc.sc} idx={0} prefix="{s}-" title="At landing" sticky={false} />
       {:else}
         <p class="note">Loading…</p>
       {/if}

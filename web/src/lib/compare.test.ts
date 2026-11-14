@@ -10,18 +10,18 @@ const preset: Preset = {
   capacity_wh: 10000, start_wh: 10000, min_wh: 0, panel_area_m2: 1.5, efficiency: 0.3, panel: "tracking",
   load_w: 220, earth_margin_deg: 2, mast_m: 2, cited: { load_w: true },
 };
-const dec = (s: string) => decodeCompare(s, { fallback: A, spanDays: 30, metas: [] });
+const dec = (s: string) => decodeCompare(s, { fallback: A, spanDays: 30, mastM: 2, metas: [] });
 
 test("two pairs and the preset edits round-trip through the URL query", () => {
   const b: Pair = { lat: -85.1, lon: 31, date: "2026-11-17" };
   const edits: [any, number][] = [["efficiency", 25], ["load_w", 300]];
-  const q = encodeCompare({ a: A, b, presetEdits: edits });
+  const q = encodeCompare({ a: A, b, presetEdits: edits, mastM: 2, spanDays: 30 });
   expect(q).toBe("a=-84.7906,29.1957@2026-11-14&b=-85.1,31@2026-11-17&preset=efficiency:25,load_w:300");
-  expect(dec(q)).toEqual({ active: true, a: A, b, presetEdits: edits });
+  expect(dec(q)).toEqual({ active: true, a: A, b, presetEdits: edits, mastM: 2, spanDays: 30 });
 });
 
 test("no preset edits leaves out the preset parameter", () => {
-  expect(encodeCompare({ a: A, b: A, presetEdits: [] })).not.toContain("preset");
+  expect(encodeCompare({ a: A, b: A, presetEdits: [], mastM: 2, spanDays: 30 })).not.toContain("preset");
 });
 
 test("a query without a or b is not the compare view; with either it is", () => {
@@ -50,7 +50,7 @@ test("with tile metadata a site outside every tile or too close to its edge is r
   const [lat, lon] = xyToLatlon(61740 + 15360, 153360 - 15360); // tile centre
   const [elat, elon] = xyToLatlon(61740 + 1000, 153360 - 15360); // 1 km from the edge
   const centre: Pair = { lat: +lat.toFixed(4), lon: +lon.toFixed(4), date: "2026-12-01" };
-  const o = { fallback: centre, spanDays: 30, metas: [near] };
+  const o = { fallback: centre, spanDays: 30, mastM: 2, metas: [near] };
   expect(decodeCompare(`a=${lat},${lon}@2026-12-01`, o).a).toEqual({ lat, lon, date: "2026-12-01" });
   expect(decodeCompare("a=-80,30@2026-12-01", o).a).toEqual(centre);
   expect(decodeCompare(`a=${elat},${elon}@2026-12-01`, o).a).toEqual(centre);
@@ -113,6 +113,32 @@ test("sentence: B is the same site and date as A", () => {
 
 test("sentence: differences under a day read in hours", () => {
   expect(compareSentence(res(A, 240), res({ ...A, lat: -85 }, 246.5))).toContain("6.5 h more");
+});
+
+test("mast and span are written only when they differ from the defaults, and read back", () => {
+  const base = { a: A, b: A, presetEdits: [] as [any, number][] };
+  expect(encodeCompare({ ...base, mastM: 2, spanDays: 30 })).not.toMatch(/mast|span/);
+  const q = encodeCompare({ ...base, mastM: 6.5, spanDays: 14 });
+  expect(q).toContain("mast=6.5");
+  expect(q).toContain("span=14");
+  const r = dec(q);
+  expect(r.mastM).toBe(6.5);
+  expect(r.spanDays).toBe(14);
+});
+
+test("a span that is not one of the site view's choices, or a mast outside 0..10 m, falls back to the default", () => {
+  expect(dec("a=-85,30@2026-12-01&span=45").spanDays).toBe(30);
+  expect(dec("a=-85,30@2026-12-01&span=abc").spanDays).toBe(30);
+  expect(dec("a=-85,30@2026-12-01&mast=11").mastM).toBe(2);
+  expect(dec("a=-85,30@2026-12-01&mast=-1").mastM).toBe(2);
+  expect(dec("a=-85,30@2026-12-01&mast=x").mastM).toBe(2);
+  expect(dec("a=-85,30@2026-12-01&mast=0").mastM).toBe(0);
+});
+
+test("dates are checked against the decoded span", () => {
+  // 2030-12-10 + 30 d runs past the table; + 14 d does not.
+  expect(dec("a=-85,30@2030-12-10").a).toEqual(A);
+  expect(dec("a=-85,30@2030-12-10&span=14").a).toEqual({ lat: -85, lon: 30, date: "2030-12-10" });
 });
 
 test("B - A row for operable days is signed", () => {

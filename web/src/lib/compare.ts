@@ -3,12 +3,12 @@
 import type { NearMeta, Preset } from "./engine";
 import { latlonToXy } from "./fixture-projection";
 import { presetFields, setPresetField, type FieldKey } from "./headline";
-import { checkDate, checkPick, parseDate } from "./site";
+import { checkDate, checkPick, DEFAULT_MAST_M, DEFAULT_SPAN_DAYS, MAST_MAX_M, parseDate, SPANS_DAYS } from "./site";
 import { fmtDays } from "./timelines";
 
 export type Pair = { lat: number; lon: number; date: string }; // date: landing day, UTC "YYYY-MM-DD"
 export type PresetEdit = [FieldKey, number]; // value in the preset form's units (efficiency in percent)
-export type CompareState = { a: Pair; b: Pair; presetEdits: PresetEdit[] };
+export type CompareState = { a: Pair; b: Pair; presetEdits: PresetEdit[]; mastM: number; spanDays: number };
 
 const KEYS: FieldKey[] = ["capacity_wh", "start_wh", "min_wh", "panel_area_m2", "efficiency", "load_w", "earth_margin_deg"];
 
@@ -16,11 +16,13 @@ const KEYS: FieldKey[] = ["capacity_wh", "start_wh", "min_wh", "panel_area_m2", 
 export function encodeCompare(c: CompareState): string {
   const pair = (p: Pair) => `${p.lat},${p.lon}@${p.date}`;
   const q = [`a=${pair(c.a)}`, `b=${pair(c.b)}`];
+  if (c.mastM !== DEFAULT_MAST_M) q.push(`mast=${c.mastM}`);
+  if (c.spanDays !== DEFAULT_SPAN_DAYS) q.push(`span=${c.spanDays}`);
   if (c.presetEdits.length) q.push(`preset=${c.presetEdits.map(([k, v]) => `${k}:${v}`).join(",")}`);
   return q.join("&");
 }
 
-type DecodeOpts = { fallback: Pair; spanDays: number; metas: NearMeta[] };
+type DecodeOpts = { fallback: Pair; spanDays: number; mastM?: number; metas: NearMeta[] };
 
 /** One pair from "lat,lon@date", or null when malformed or refused (coordinate range, P16 date, P5 tile edge when tiles are given). */
 function parsePair(s: string | null, o: DecodeOpts): Pair | null {
@@ -39,15 +41,22 @@ function parsePair(s: string | null, o: DecodeOpts): Pair | null {
 /** Reads the query. `active` is true when `a` or `b` is present. A bad A becomes the fallback pair; a bad B becomes A; bad preset entries are dropped. */
 export function decodeCompare(search: string, o: DecodeOpts): CompareState & { active: boolean } {
   const q = new URLSearchParams(search);
-  const a = parsePair(q.get("a"), o) ?? o.fallback;
-  const b = parsePair(q.get("b"), o) ?? a;
+  // Same rules as the site view: a span from its buttons, a mast from its 0..10 m slider; anything else is the default.
+  const span = Number(q.get("span"));
+  const spanDays = (SPANS_DAYS as readonly number[]).includes(span) ? span : o.spanDays;
+  const mastRaw = q.get("mast");
+  const mast = mastRaw?.trim() ? Number(mastRaw) : NaN;
+  const mastM = Number.isFinite(mast) && mast >= 0 && mast <= MAST_MAX_M ? mast : (o.mastM ?? DEFAULT_MAST_M);
+  const po = { ...o, spanDays };
+  const a = parsePair(q.get("a"), po) ?? o.fallback;
+  const b = parsePair(q.get("b"), po) ?? a;
   const presetEdits: PresetEdit[] = [];
   for (const part of (q.get("preset") ?? "").split(",")) {
     const [k, v] = part.split(":");
     const n = v?.trim() ? Number(v) : NaN;
     if (KEYS.includes(k as FieldKey) && Number.isFinite(n)) presetEdits.push([k as FieldKey, n]);
   }
-  return { active: q.has("a") || q.has("b"), a, b, presetEdits };
+  return { active: q.has("a") || q.has("b"), a, b, presetEdits, mastM, spanDays };
 }
 
 /** The base preset with each edit applied through the planner's own checks; a refused edit is skipped. */

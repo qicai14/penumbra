@@ -185,6 +185,19 @@ test("compare view shows A and B with their own countdowns, the B - A row and se
   expect(errors).toEqual([]);
 });
 
+test("pair edits survive a trip to the site view, and mast and span ride in the URL", async ({ page }) => {
+  await page.goto("/?a=-84.7906,29.1957@2026-11-14&b=-84.7906,29.1957@2026-11-20&mast=6&span=14");
+  await expect(page.getByTestId("col-b")).toContainText("landing 2026-11-20");
+  await page.getByTestId("b-date").fill("2026-12-05");
+  await expect(page.getByTestId("col-b")).toContainText("landing 2026-12-05");
+  await page.getByRole("button", { name: "Site", exact: true }).click();
+  await expect(page.getByTestId("computed-for")).toContainText("mast 6.0 m");
+  await expect(page.getByTestId("computed-for")).toContainText("· 14 d");
+  await page.getByRole("button", { name: "Compare A vs B" }).click();
+  await expect(page.getByTestId("col-b")).toContainText("landing 2026-12-05");
+  await expect(page).toHaveURL(/b=-84\.7906,29\.1957@2026-12-05&mast=6&span=14/);
+});
+
 test("the Compare button opens the compare view from the site view, and a bad URL falls back", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "Compare A vs B" }).click();
