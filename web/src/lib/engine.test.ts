@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import init, { api_version, survival } from "./wasm/penumbra_wasm.js";
-import { checkApiVersion, computeScenario, parseScenario, validate } from "./engine";
+import { checkApiVersion, computeScenario, parseScenario, TIMELINE_COLUMNS, TRACK_COLUMNS, validate } from "./engine";
 
 const raw = JSON.parse(readFileSync(new URL("../../public/fixture/scenario.json", import.meta.url), "utf8"));
 await init({ module_or_path: readFileSync(new URL("./wasm/penumbra_wasm_bg.wasm", import.meta.url)) });
@@ -80,7 +80,7 @@ test("panorama track equals Engine.sun_earth_track on the fixture grid (T03 #4)"
     const engine = await loadEngine();
     const n = s.count, t0 = s.timeline.t_unix_s[0];
     const flat = engine.sun_earth_track(inp.lat_deg, inp.lon_deg, s.site.ground_m, inp.mast_m, t0, s.step_s, n);
-    const names = ["t_unix_s", "sun_az_deg", "sun_el_deg", "sun_radius_deg", "sun_dist_km", "earth_az_deg", "earth_el_deg", "earth_radius_deg", "earth_dist_km"] as const;
+    const names = TRACK_COLUMNS;
     for (const i of [0, 1234, n - 1]) for (const [c, k] of names.entries()) expect(s.track[k][i]).toBe(flat[c * n + i]);
     expect(s.track.t_unix_s[1234]).toBe(s.timeline.t_unix_s[1234]); // one shared time grid
     expect(s.track.sun_az_deg[0]).not.toBe(parseScenario(raw, api_version()).track.sun_az_deg[0]); // not the fixture
@@ -134,7 +134,7 @@ test("computeScenario timelines are Engine.timeline on the real IM-2 horizon, no
     const n = s.count, t0 = s.timeline.t_unix_s[0];
     const hz = Float64Array.from([...s.horizon.el_deg, ...s.horizon.dist_m]);
     const flat = engine.timeline(hz, s.site.lat_deg, s.site.lon_deg, s.site.ground_m, s.site.mast_m, t0, s.step_s, n, s.preset.earth_margin_deg);
-    const names = ["t_unix_s", "sun_az_deg", "sun_el_deg", "illumination", "visibility", "earth_az_deg", "earth_el_deg", "earth_margin_deg", "contact", "sun_dist_km"] as const;
+    const names = TIMELINE_COLUMNS;
     for (const i of [0, 1234, n - 1]) for (const [c, k] of names.entries()) expect(s.timeline[k][i]).toBe(flat[c * n + i]);
     for (let i = 0; i < n; i++) expect(s.timeline.visibility[i]).toBeGreaterThanOrEqual(s.timeline.illumination[i]); // P1
     expect(s.timeline.illumination).not.toEqual(parseScenario(raw, api_version()).timeline.illumination);
@@ -179,7 +179,7 @@ test("computeScenario survival maps the WASM header: tracking vs fixed, lethal_h
     const base = parseScenario(raw, api_version());
     const inp = { lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2, start_unix_s: 1794614400, span_days: 30 };
     const s = await computeScenario({ ...inp, preset: base.preset });
-    const flat = Float64Array.from(["t_unix_s", "sun_az_deg", "sun_el_deg", "illumination", "visibility", "earth_az_deg", "earth_el_deg", "earth_margin_deg", "contact", "sun_dist_km"]
+    const flat = Float64Array.from(TIMELINE_COLUMNS
       .flatMap((k) => Array.from(s.timeline[k as keyof typeof s.timeline])));
     const p = base.preset, t0 = s.timeline.t_unix_s[0];
     const want = survival(flat, Float64Array.of(p.capacity_wh, p.start_wh, p.min_wh, p.panel_area_m2, p.efficiency, 0, 0, 0, 0, p.load_w, 0, 0), t0);

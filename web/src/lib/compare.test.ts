@@ -10,7 +10,8 @@ const preset: Preset = {
   capacity_wh: 10000, start_wh: 10000, min_wh: 0, panel_area_m2: 1.5, efficiency: 0.3, panel: "tracking",
   load_w: 220, earth_margin_deg: 2, mast_m: 2, cited: { load_w: true },
 };
-const dec = (s: string) => decodeCompare(s, { fallback: A, spanDays: 30, mastM: 2, metas: [] });
+const EPH = [{ id: "main", url: "", t0_unix_s: 1767225600, step_s: 3600, rows: 43825 }];
+const dec = (s: string) => decodeCompare(s, { fallback: A, spanDays: 30, mastM: 2, metas: [], eph: EPH });
 
 test("two pairs and the preset edits round-trip through the URL query", () => {
   const b: Pair = { lat: -85.1, lon: 31, date: "2026-11-17" };
@@ -50,7 +51,7 @@ test("with tile metadata a site outside every tile or too close to its edge is r
   const [lat, lon] = xyToLatlon(61740 + 15360, 153360 - 15360); // tile centre
   const [elat, elon] = xyToLatlon(61740 + 1000, 153360 - 15360); // 1 km from the edge
   const centre: Pair = { lat: +lat.toFixed(4), lon: +lon.toFixed(4), date: "2026-12-01" };
-  const o = { fallback: centre, spanDays: 30, mastM: 2, metas: [near] };
+  const o = { fallback: centre, spanDays: 30, mastM: 2, metas: [near], eph: EPH };
   expect(decodeCompare(`a=${lat},${lon}@2026-12-01`, o).a).toEqual({ lat, lon, date: "2026-12-01" });
   expect(decodeCompare("a=-80,30@2026-12-01", o).a).toEqual(centre);
   expect(decodeCompare(`a=${elat},${elon}@2026-12-01`, o).a).toEqual(centre);

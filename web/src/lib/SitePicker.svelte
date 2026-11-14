@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { latlonToXy, xyToLatlon, type NearTile, type Region } from "./engine";
-  import { checkDate, checkPick, edgeDistanceM, PICK_BORDER_M, SPANS_DAYS } from "./site";
+  import { latlonToXy, xyToLatlon, type EphSegment, type NearTile, type Region } from "./engine";
+  import { checkDate, checkPick, dateRange, edgeDistanceM, PICK_BORDER_M, SPANS_DAYS } from "./site";
   import type { Controls } from "./state.svelte";
 
-  let { controls, tile, onregion }: { controls: Controls; tile: NearTile & { regions: Region[] }; onregion: (id: string) => void } = $props();
+  let { controls, tile, onregion }: { controls: Controls; tile: NearTile & { regions: Region[]; eph: EphSegment[] }; onregion: (id: string) => void } = $props();
 
   let canvas: HTMLCanvasElement;
   // svelte-ignore state_referenced_locally -- drafts start from the current value, then follow typing
@@ -18,6 +18,7 @@
   // A region change moves the site from outside this component: re-sync the boxes and clear the old refusal.
   $effect(() => { latDraft = String(controls.lat); lonDraft = String(controls.lon); refusal = null; rejected = null; });
 
+  const dates = $derived(dateRange(tile.eph));
   const m = $derived(tile.meta);
   const heightM = (v: number) => m.offset_m + m.scale_m * v;
 
@@ -101,7 +102,7 @@
     setSite(lat, lon);
   }
   function tryDate(date: string, span: number): boolean {
-    const v = checkDate(date, span);
+    const v = checkDate(date, span, tile.eph);
     refusal = v.ok ? null : v.reason;
     return v.ok;
   }
@@ -144,7 +145,7 @@
       </p>
 
       <label class="row"><span>Landing date (UTC)</span>
-        <input data-testid="date" type="date" min="2026-01-01" max="2030-12-31" bind:value={dateDraft} onchange={ondate} />
+        <input data-testid="date" type="date" min={dates.min} max={dates.max} bind:value={dateDraft} onchange={ondate} />
       </label>
 
       <div class="row"><span id="span-l">Span</span>

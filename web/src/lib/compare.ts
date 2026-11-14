@@ -1,6 +1,6 @@
 // Pure helpers for the Compare A vs B view (T27): the URL query for two site-date pairs and the preset edits, and the
 // B - A text. Text and validation only; every operable-time figure comes from the model's `survival` result.
-import type { NearMeta, Preset } from "./engine";
+import type { EphSegment, NearMeta, Preset } from "./engine";
 import { latlonToXy } from "./fixture-projection";
 import { presetFields, setPresetField, type FieldKey } from "./headline";
 import { checkDate, checkPick, DEFAULT_MAST_M, DEFAULT_SPAN_DAYS, MAST_MAX_M, parseDate, SPANS_DAYS } from "./site";
@@ -22,7 +22,7 @@ export function encodeCompare(c: CompareState): string {
   return q.join("&");
 }
 
-type DecodeOpts = { fallback: Pair; spanDays: number; mastM?: number; metas: NearMeta[] };
+type DecodeOpts = { fallback: Pair; spanDays: number; mastM?: number; metas: NearMeta[]; eph: EphSegment[] };
 
 /** One pair from "lat,lon@date", or null when malformed or refused (coordinate range, P16 date, P5 tile edge when tiles are given). */
 function parsePair(s: string | null, o: DecodeOpts): Pair | null {
@@ -30,7 +30,7 @@ function parsePair(s: string | null, o: DecodeOpts): Pair | null {
   if (!m) return null;
   const lat = Number(m[1]), lon = Number(m[2]), date = m[3];
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 360) return null;
-  if (!checkDate(date, o.spanDays).ok) return null;
+  if (!checkDate(date, o.spanDays, o.eph).ok) return null;
   if (o.metas.length) {
     const [x, y] = latlonToXy(lat, lon);
     if (!o.metas.some((t) => checkPick(x, y, t).ok)) return null;

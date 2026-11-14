@@ -36,10 +36,11 @@
       {#each fields as f (f.key)}
         <label class="row">
           <span class="name">{f.label}</span>
-          <input type="number" min="0" step={f.step} max={f.key === "earth_margin_deg" ? 90 : undefined} value={f.value} data-testid="preset-{f.key}" onchange={(e) => edit(f.key, f.label, e)} />
+          <input type="number" min="0" step={f.step} max={f.key === "earth_margin_deg" ? 90 : undefined} value={f.value} data-testid="preset-{f.key}" aria-describedby={f.note ? "note-{f.key}" : undefined} onchange={(e) => edit(f.key, f.label, e)} />
           <span class="unit">{f.unit}</span>
           <span class="tag" data-testid="tag-{f.key}">{f.tag}</span>
         </label>
+        {#if f.note}<p class="note" id="note-{f.key}" data-testid="note-{f.key}">{f.note}</p>{/if}
       {/each}
       <p class="row"><span class="name">Panel</span><span class="static">Sun-tracking</span></p>
       {#if refused}<p class="refusal" role="alert">{refused}</p>{/if}
@@ -65,6 +66,7 @@
   .name { flex: 0 0 150px; }
   .unit { flex: 0 0 3ch; }
   .tag { margin-left: auto; border: 1px solid var(--color-slate); border-radius: var(--radius-full); padding: 0 var(--spacing-8); color: var(--color-fog); }
+  .note { margin: calc(-1 * var(--spacing-8) / 2) 0 0; font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .static { color: var(--color-paper); }
   input {
     width: 9ch; font: var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-paper); background: var(--surface-iron);
