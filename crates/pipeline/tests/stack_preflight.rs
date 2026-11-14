@@ -73,3 +73,52 @@ fn tiff_reads_dem_headers() {
         }
     }
 }
+
+#[test]
+#[ignore = "needs local GeoTIFFs in PENUMBRA_DATA"]
+#[expect(clippy::float_cmp, reason = "the mask holds exact 0.0 and 1.0")]
+fn tiff_decodes_one_psr_tile() {
+    use tiff::decoder::{Decoder, DecodingResult};
+    fn tile(name: &str, index: Option<u32>) -> (u32, Vec<f32>, (u32, u32)) {
+        let mut d = Decoder::new(std::io::BufReader::new(File::open(data(name)).unwrap())).unwrap();
+        assert_eq!(d.dimensions().unwrap(), (30400, 30400));
+        assert_eq!(d.chunk_dimensions(), (512, 512));
+        assert_eq!(d.tile_count().unwrap(), 60 * 60);
+        // Tile holding the centre pixel (15 200, 15 200) unless told otherwise.
+        let index = index.unwrap_or(29 * 60 + 29);
+        let t = std::time::Instant::now();
+        // read_chunk reads only this tile's bytes, never the 3.7 GB raster.
+        let DecodingResult::F32(px) = d.read_chunk(index).unwrap() else {
+            panic!("expected Float32 samples")
+        };
+        println!("{name} tile {index}: {} ms", t.elapsed().as_millis());
+        (index, px, d.chunk_data_dimensions(index))
+    }
+
+    let (_, px, dims) = tile("LPSR_80S_20MPP_ADJ.TIF", None);
+    assert_eq!((px.len(), dims), (512 * 512, (512, 512)));
+    assert!(px.iter().all(|v| v.is_finite()), "centre tile has no-data");
+    // A wrong floating-point predictor (3) undo would scramble bytes into non-mask floats.
+    assert!(
+        px.iter().all(|&v| v == 0.0 || v == 1.0),
+        "PSR tile is not a 0/1 mask"
+    );
+    println!(
+        "  {} of {} in PSR",
+        px.iter().filter(|&&v| v == 1.0).count(),
+        px.len()
+    );
+
+    // Edge tile: 30 400 − 59 × 512 = 192 px of data each way.
+    let (_, px, dims) = tile("LPSR_80S_20MPP_ADJ.TIF", Some(3599));
+    assert_eq!(dims, (192, 192));
+    println!("  last tile buffer {} samples for {dims:?} data", px.len());
+
+    // Same codec on the heights file T06 needs: values must be plausible metres.
+    let (_, px, _) = tile("LDEM_80S_20MPP_ADJ.TIF", None);
+    let (lo, hi) = px
+        .iter()
+        .fold((f32::MAX, f32::MIN), |(a, b), &v| (a.min(v), b.max(v)));
+    println!("  LDEM centre tile heights {lo} .. {hi} m");
+    assert!(px.iter().all(|v| v.is_finite()) && lo > -10_000.0 && hi < 10_000.0);
+}
