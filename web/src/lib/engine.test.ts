@@ -123,3 +123,22 @@ test("an unknown region id is refused", async () => {
     globalThis.fetch = realFetch;
   }
 });
+
+test("computeScenario timelines are Engine.timeline on the real IM-2 horizon, not the fixture (T08 #9)", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = servePublic;
+  try {
+    const { loadEngine } = await import("./engine");
+    const s = await computeScenario({ lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2, start_unix_s: 0, span_days: 30 });
+    const engine = await loadEngine();
+    const n = s.count, t0 = s.timeline.t_unix_s[0];
+    const hz = Float64Array.from([...s.horizon.el_deg, ...s.horizon.dist_m]);
+    const flat = engine.timeline(hz, s.site.lat_deg, s.site.lon_deg, s.site.ground_m, s.site.mast_m, t0, s.step_s, n, s.preset.earth_margin_deg);
+    const names = ["t_unix_s", "sun_az_deg", "sun_el_deg", "illumination", "visibility", "earth_az_deg", "earth_el_deg", "earth_margin_deg", "contact", "sun_dist_km"] as const;
+    for (const i of [0, 1234, n - 1]) for (const [c, k] of names.entries()) expect(s.timeline[k][i]).toBe(flat[c * n + i]);
+    for (let i = 0; i < n; i++) expect(s.timeline.visibility[i]).toBeGreaterThanOrEqual(s.timeline.illumination[i]); // P1
+    expect(s.timeline.illumination).not.toEqual(parseScenario(raw, api_version()).timeline.illumination);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});

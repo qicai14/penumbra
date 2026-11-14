@@ -1,6 +1,6 @@
 // The only module that imports lib/wasm/ or reads the fixture (ARCHITECTURE §3.5).
 // Typed arrays use platform byte order; every browser target is little-endian, so Int16Array over a file is safe.
-// Stub: every function is still on the fixture except sun_earth_track (WASM, T02). Flip each when its science ticket merges.
+// Stub: survival is still on the fixture; sun_earth_track (T02), horizon (T07) and timeline (T08) are WASM. Flip each when its science ticket merges.
 export type Site = { lat_deg: number; lon_deg: number; ground_m: number; mast_m: number };
 export type Horizon = { el_deg: Float64Array; dist_m: Float64Array }; // 720 each
 export type Track = {
@@ -219,8 +219,8 @@ export const TERRAIN_FAKE = false;
 let fixtureBase: Promise<Scenario> | undefined;
 /**
  * Sun and Earth tracks (the panorama's) come from the WASM Engine for the chosen site, on the fixture timeline's own
- * time grid so the shared cursor stays aligned with the timelines. Horizon is the real DEM (T07); timelines and survival are still fixture
- * (T08/T09), so `fake` stays true; the panorama badge reads TERRAIN_FAKE instead.
+ * time grid so the shared cursor stays aligned with the timelines. Horizon is the real DEM (T07) and the timelines are Engine.timeline (T08); survival is still fixture
+ * (T09), so `fake` stays true; the panorama badge reads TERRAIN_FAKE instead.
  */
 export async function computeScenario(inp: Inputs): Promise<Scenario> {
   const s = await (fixtureBase ??= loadFixture());
@@ -231,6 +231,12 @@ export async function computeScenario(inp: Inputs): Promise<Scenario> {
   const raw = engine.horizon(inp.lat_deg, inp.lon_deg, inp.mast_m);
   const horizon: Horizon = { el_deg: raw.slice(0, 720), dist_m: raw.slice(720, 1440) };
   validate(horizon);
-  const track = await sunEarthTrack(site, s.timeline.t_unix_s[0], s.step_s, s.count);
-  return { ...s, preset: inp.preset ?? s.preset, site, track, horizon };
+  const preset = inp.preset ?? s.preset, t0 = s.timeline.t_unix_s[0], n = s.count;
+  const track = await sunEarthTrack(site, t0, s.step_s, n);
+  // Timelines from the WASM Engine (T08 #9), on the same grid and against the same horizon.
+  const flat = engine.timeline(raw, site.lat_deg, site.lon_deg, ground_m, inp.mast_m, t0, s.step_s, n, preset.earth_margin_deg);
+  const names = ["t_unix_s", "sun_az_deg", "sun_el_deg", "illumination", "visibility", "earth_az_deg", "earth_el_deg", "earth_margin_deg", "contact", "sun_dist_km"];
+  const timeline = Object.fromEntries(names.map((k, i) => [k, flat.slice(i * n, (i + 1) * n)])) as Timeline;
+  validate(timeline);
+  return { ...s, preset, site, track, horizon, timeline };
 }

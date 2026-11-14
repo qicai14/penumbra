@@ -112,7 +112,7 @@ Tests:
 
 ### 1b. Visible fraction of the Sun's disk
 
-Sun angular radius ρ = asin(R_sun / d_sun) with R_sun = 696 000 km (E117). At 1 AU this gives a diameter of 0.533°, which matches the corpus values 0.53° (E56a, E105) and 0.533° (E61). ρ varies from 0.262° to 0.271° over the year [D]; recompute it at each step, as Mazarico does.
+Sun angular radius ρ = asin(R_sun / d_sun) with R_sun = 696 000 km (E117). At 1 AU this gives a diameter of 0.533°, which matches the corpus values 0.53° (E56a, E105) and 0.533° (E61). ρ varies from 0.261° to 0.272° over the year [D]: the Earth–Sun range 147.1–152.1 million km, widened by the Moon's ±384 400 km because the table is Moon-centred (0.2615°–0.2718°); recompute it at each step, as Mazarico does.
 
 Work in the tangent plane centred on the Sun: ξ = (az − az_sun)·cos(el_sun), η = el − el_sun. For a strip at ξ the disk spans η ∈ [−w, +w] with w = sqrt(ρ² − ξ²). The horizon there is g(ξ) = el_hor(az_sun + ξ / cos el_sun) − el_sun.
 
