@@ -1,7 +1,8 @@
 // Pure helpers for the survival headline and the preset form (T14). Text and field state only; every number shown
 // comes from the model's `survival` result or the preset itself (SCIENCE-SPEC 1e). Nothing here computes physics.
 import type { Preset, Survival } from "./engine";
-import { citedTag } from "./timelines";
+import { citedTag, fmtDays } from "./timelines";
+export { fmtDays }; // lives in timelines.ts so the two modules import one way only
 
 export type FieldKey = "capacity_wh" | "start_wh" | "min_wh" | "panel_area_m2" | "efficiency" | "load_w" | "earth_margin_deg";
 export type PresetField = { key: FieldKey; label: string; unit: string; value: number; step: number; tag: "cited" | "assumed" };
@@ -15,14 +16,6 @@ const FIELDS: [FieldKey, string, string, number][] = [
   ["load_w", "Load", "W", 10],
   ["earth_margin_deg", "Earth margin m_min", "°", 0.5],
 ];
-
-/** Under a day reads in hours ("7.1 h"), so a lander lost in 30 minutes never reads "0 days";
- *  from a day up, whole days drop the decimal point: "10 days", "12.6 days", "1 day". */
-export function fmtDays(hours: number): string {
-  if (hours < 23.95) return `${Math.round(hours * 10) / 10} h`;
-  const d = Math.round((hours / 24) * 10) / 10;
-  return `${Number.isInteger(d) ? d : d.toFixed(1)} ${d === 1 ? "day" : "days"}`;
-}
 
 /** Length of the computed span in days, from its own rows. */
 export const spanDays = (count: number, stepS: number): number => Math.round((count * stepS) / 864) / 100;

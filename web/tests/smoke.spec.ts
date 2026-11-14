@@ -111,6 +111,23 @@ test("a new landing date and a shorter span recompute without losing the time cu
   expect(errors).toEqual([]);
 });
 
+test("Sun and Earth elevation and the sunset and Earthset countdown follow the time marker (T26 #27)", async ({ page }) => {
+  await page.goto("/");
+  const cd = page.getByTestId("countdown");
+  await expect(cd).toBeVisible();
+  const el = /^[+−]\d+\.\d°$/; // one decimal
+  await expect(page.getByTestId("cd-sun-el")).toHaveText(el);
+  await expect(page.getByTestId("cd-earth-el")).toHaveText(el);
+  const when = /^(Sunset|Earthset) in (\d+d \d+h|\d+m)$|^no (sunset|Earthset|sunrise|Earthrise) (in [\d.]+ (h|days?)|before the span ends)$/;
+  await expect(page.getByTestId("sunset")).toHaveText(when);
+  await expect(page.getByTestId("earthset")).toHaveText(when);
+  const before = await cd.textContent();
+  const slider = page.getByLabel("Time within the span");
+  await slider.fill(String(Math.round(Number(await slider.getAttribute("max")) * 0.6)));
+  await expect.poll(() => cd.textContent()).not.toBe(before);
+  await expect(cd.locator(".pill")).toHaveCount(0); // no fake badge on it
+});
+
 test("switching region moves the site and refreshes the lat/lon boxes", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("lat")).toHaveValue("-84.7906");

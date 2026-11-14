@@ -1,6 +1,47 @@
 import { expect, test } from "bun:test";
 import type { Preset, Timeline } from "./engine";
-import { buildChartData, buildSocData, indexAtTime, lethalUnixS, operableMask, operableRuns, thresholdLabel } from "./timelines";
+import { buildChartData, buildSocData, countdown, fmtDH, indexAtTime, lethalUnixS, operableMask, operableRuns, thresholdLabel } from "./timelines";
+
+// T26 (#27): countdowns read the timeline columns only.
+const hourly = (n: number) => Float64Array.from({ length: n }, (_, i) => i * 3600);
+
+test("fmtDH is 'Xd Yh', minutes under an hour", () => {
+  expect(fmtDH(2 * 86400 + 4 * 3600 + 1800)).toBe("2d 4h");
+  expect(fmtDH(5 * 3600)).toBe("0d 5h");
+  expect(fmtDH(600)).toBe("10m");
+  expect(fmtDH(3599)).toBe("59m"); // never "60m"
+  // Up now and the very next 10-minute step is the set.
+  expect(countdown(Float64Array.from([0, 600, 1200]), Float64Array.from([1, 0, 0]), (x) => x > 0, 0, "sunset")).toBe("Sunset in 10m");
+});
+
+test("sunset is the next step where illumination drops to 0", () => {
+  const illum = Float64Array.from([1, 0.5, 0.2, 0, 0, 1]);
+  expect(countdown(hourly(6), illum, (x) => x > 0, 0, "sunset")).toBe("Sunset in 0d 3h");
+  expect(countdown(hourly(6), illum, (x) => x > 0, 2, "sunset")).toBe("Sunset in 0d 1h");
+});
+
+test("when it is already down, count to the next set after it rises, never negative", () => {
+  const illum = Float64Array.from([0, 0, 1, 1, 0, 0]);
+  expect(countdown(hourly(6), illum, (x) => x > 0, 0, "sunset")).toBe("Sunset in 0d 4h");
+});
+
+test("no crossing left in the span says 'no sunset in …', never blank", () => {
+  const up = Float64Array.from([1, 1, 1, 1]);
+  expect(countdown(hourly(4), up, (x) => x > 0, 0, "sunset")).toBe("no sunset in 3 h");
+  const down = Float64Array.from([0, 0, 0]);
+  // Down for the rest of the span: there is nothing to set, so it says no rise (a shadowed site never reads as sunlit).
+  expect(countdown(hourly(3), down, (x) => x > 0, 0, "Earthset")).toBe("no Earthrise in 2 h");
+  expect(countdown(hourly(3), down, (x) => x > 0, 0, "sunset")).toBe("no sunrise in 2 h");
+  // Rises but does not set again: still "no sunset".
+  expect(countdown(hourly(3), Float64Array.from([0, 1, 1]), (x) => x > 0, 0, "sunset")).toBe("no sunset in 2 h");
+  expect(countdown(Float64Array.from([0, 30 * 86400]), Float64Array.from([1, 1]), (x) => x > 0, 0, "sunset")).toBe("no sunset in 30 days");
+  expect(countdown(hourly(4), up, (x) => x > 0, 3, "sunset")).toBe("no sunset before the span ends"); // last step, never "0 h"
+});
+
+test("Earthset uses contact dropping below 0.5", () => {
+  const contact = Float64Array.from([1, 1, 0, 1]);
+  expect(countdown(hourly(4), contact, (x) => x >= 0.5, 0, "Earthset")).toBe("Earthset in 0d 2h");
+});
 
 test("soc data pairs the model's trace with the lethal-charge line", () => {
   const d = buildSocData(Float64Array.from([0, 600]), Float64Array.from([10, 5]), { min_wh: 1 } as unknown as Preset);
