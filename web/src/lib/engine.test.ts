@@ -47,7 +47,7 @@ test("a failed ephemeris load is retried on the next recompute, not cached (T03 
     return servePublic(u);
   }) as unknown as typeof fetch;
   try {
-    const inp = { lat_deg: -84.79, lon_deg: 29.2, mast_m: 2, start_unix_s: 0, span_days: 30 };
+    const inp = { lat_deg: -84.79, lon_deg: 29.2, mast_m: 2, start_unix_s: 1794614400, span_days: 30 };
     await expect(computeScenario(inp)).rejects.toThrow("NO_DATA");
     expect(failed).toBe(true);
     expect((await computeScenario(inp)).track.t_unix_s.length).toBe(4320);
@@ -62,7 +62,7 @@ test("an edited preset reaches computeScenario (T14 recompute wiring)", async ()
   try {
     const base = parseScenario(raw, api_version());
     const preset = { ...base.preset, load_w: 300 };
-    const s = await computeScenario({ lat_deg: -84.79, lon_deg: 29.2, mast_m: 2, start_unix_s: 0, span_days: 30, preset });
+    const s = await computeScenario({ lat_deg: -84.79, lon_deg: 29.2, mast_m: 2, start_unix_s: 1794614400, span_days: 30, preset });
     expect(s.preset).toBe(preset);
   } finally {
     globalThis.fetch = realFetch;
@@ -74,7 +74,7 @@ test("panorama track equals Engine.sun_earth_track on the fixture grid (T03 #4)"
   globalThis.fetch = servePublic;
   try {
     const { loadEngine } = await import("./engine");
-    const inp = { lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 3, start_unix_s: 0, span_days: 30 };
+    const inp = { lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 3, start_unix_s: 1794614400, span_days: 30 };
     const s = await computeScenario(inp);
     expect(s.site.mast_m).toBe(3);
     const engine = await loadEngine();
@@ -94,13 +94,13 @@ test("computeScenario returns the real IM-2 horizon and ground height; outside t
   const realFetch = globalThis.fetch;
   globalThis.fetch = servePublic;
   try {
-    const s = await computeScenario({ lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2, start_unix_s: 0, span_days: 30 });
+    const s = await computeScenario({ lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2, start_unix_s: 1794614400, span_days: 30 });
     expect(s.site.ground_m).toBeCloseTo(5321.92, 1);
     const el = Array.from(s.horizon.el_deg);
     expect(Math.max(...el)).toBeCloseTo(4.04, 1);
     expect(el.indexOf(Math.max(...el)) * 0.5).toBe(117.5);
     expect(Math.min(...el)).toBeCloseTo(-1.475, 1);
-    await expect(computeScenario({ lat_deg: -84.7906, lon_deg: 10, mast_m: 2, start_unix_s: 0, span_days: 30 })).rejects.toThrow("OUT_OF_COVERAGE");
+    await expect(computeScenario({ lat_deg: -84.7906, lon_deg: 10, mast_m: 2, start_unix_s: 1794614400, span_days: 30 })).rejects.toThrow("OUT_OF_COVERAGE");
   } finally {
     globalThis.fetch = realFetch;
   }
@@ -129,7 +129,7 @@ test("computeScenario timelines are Engine.timeline on the real IM-2 horizon, no
   globalThis.fetch = servePublic;
   try {
     const { loadEngine } = await import("./engine");
-    const s = await computeScenario({ lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2, start_unix_s: 0, span_days: 30 });
+    const s = await computeScenario({ lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2, start_unix_s: 1794614400, span_days: 30 });
     const engine = await loadEngine();
     const n = s.count, t0 = s.timeline.t_unix_s[0];
     const hz = Float64Array.from([...s.horizon.el_deg, ...s.horizon.dist_m]);
@@ -177,7 +177,7 @@ test("computeScenario survival maps the WASM header: tracking vs fixed, lethal_h
   globalThis.fetch = servePublic;
   try {
     const base = parseScenario(raw, api_version());
-    const inp = { lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2, start_unix_s: 0, span_days: 30 };
+    const inp = { lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2, start_unix_s: 1794614400, span_days: 30 };
     const s = await computeScenario({ ...inp, preset: base.preset });
     const flat = Float64Array.from(["t_unix_s", "sun_az_deg", "sun_el_deg", "illumination", "visibility", "earth_az_deg", "earth_el_deg", "earth_margin_deg", "contact", "sun_dist_km"]
       .flatMap((k) => Array.from(s.timeline[k as keyof typeof s.timeline])));
@@ -193,6 +193,42 @@ test("computeScenario survival maps the WASM header: tracking vs fixed, lethal_h
     expect(fixed.survival.lethal_h).toBeNull(); // no load: no lethal shadow
     expect(fixed.survival.soc_wh).toEqual(wantFixed.slice(8));
     expect(fixed.survival.soc_wh.length).toBe(s.count);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("computeScenario runs on the landing date and span, not the fixture grid (#13)", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = servePublic;
+  try {
+    const start = Date.UTC(2027, 2, 1) / 1000; // 2027-03-01: inside the table, not the fixture's 2026-11-14
+    const s = await computeScenario({ lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2, start_unix_s: start, span_days: 14 });
+    expect(s.fake).toBe(false);
+    expect(s.start_unix_s).toBe(start);
+    expect(s.count).toBe(14 * 144); // 10-minute steps
+    expect(s.track.t_unix_s[0]).toBe(start);
+    expect(s.track.t_unix_s.length).toBe(s.count);
+    expect(s.timeline.t_unix_s[s.count - 1]).toBe(start + (s.count - 1) * 600);
+    // The values are the Engine's for 2027-03-01, not the fixture's, at both ends of the grid.
+    const { loadEngine } = await import("./engine");
+    const engine = await loadEngine();
+    const n = s.count, hz = Float64Array.from([...s.horizon.el_deg, ...s.horizon.dist_m]);
+    const flat = engine.timeline(hz, s.site.lat_deg, s.site.lon_deg, s.site.ground_m, s.site.mast_m, start, 600, n, s.preset.earth_margin_deg);
+    for (const i of [0, n - 1]) {
+      expect(s.timeline.sun_az_deg[i]).toBe(flat[n + i]);
+      expect(s.timeline.illumination[i]).toBe(flat[3 * n + i]);
+    }
+    expect(s.track.sun_az_deg[0]).not.toBe(parseScenario(raw, api_version()).track.sun_az_deg[0]);
+    // Survival is the WASM result on that same 2027 timeline, with landing at its first step (T09).
+    const p = s.preset;
+    const want = survival(flat, Float64Array.of(p.capacity_wh, p.start_wh, p.min_wh, p.panel_area_m2, p.efficiency, 0, 0, 0, 0, p.load_w, 0, 0), start);
+    expect(s.survival.lethal_h).toBe(Number.isNaN(want[1]) ? null : want[1]);
+    expect(s.survival.soc_wh).toEqual(want.slice(8, 8 + want[7]));
+    const site = { lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2 };
+    await expect(computeScenario({ ...site, start_unix_s: Date.UTC(2025, 2, 6) / 1000, span_days: 14 })).rejects.toThrow("OUT_OF_TABLE"); // before the table
+    await expect(computeScenario({ ...site, start_unix_s: Date.UTC(2030, 11, 25) / 1000, span_days: 14 })).rejects.toThrow("OUT_OF_TABLE"); // runs past its end (P16)
+    for (const span_days of [0, -1, NaN]) await expect(computeScenario({ ...site, start_unix_s: start, span_days })).rejects.toThrow("BAD_INPUT");
   } finally {
     globalThis.fetch = realFetch;
   }

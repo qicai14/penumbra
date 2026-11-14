@@ -1,6 +1,6 @@
 // The only module that imports lib/wasm/ or reads the fixture (ARCHITECTURE §3.5).
 // Typed arrays use platform byte order; every browser target is little-endian, so Int16Array over a file is safe.
-// sun_earth_track (T02), horizon (T07), timeline (T08) and survival (T09) are WASM; the fixture still supplies the time grid and preset defaults.
+// sun_earth_track (T02), horizon (T07), timeline (T08) and survival (T09) are WASM; the fixture still supplies the time step and preset defaults.
 export type Site = { lat_deg: number; lon_deg: number; ground_m: number; mast_m: number };
 export type Horizon = { el_deg: Float64Array; dist_m: Float64Array }; // 720 each
 export type Track = {
@@ -220,9 +220,9 @@ export const SURVIVAL_FAKE = false;
 
 let fixtureBase: Promise<Scenario> | undefined;
 /**
- * Sun and Earth tracks (the panorama's) come from the WASM Engine for the chosen site, on the fixture timeline's own
- * time grid so the shared cursor stays aligned with the timelines. Horizon is the real DEM (T07) and the timelines are Engine.timeline (T08) and survival is
- * the WASM `survival` (T09). `fake` stays true while the grid is the fixture's dates; the panorama badge reads TERRAIN_FAKE instead.
+ * Everything is the WASM Engine on the landing date and span at the fixture's 10-minute step: the panorama track, the
+ * real DEM horizon (T07), Engine.timeline (T08) and the WASM `survival` (T09). Track and timelines share one grid, so the
+ * cursor stays aligned. The fixture still supplies the step and the preset defaults.
  */
 export async function computeScenario(inp: Inputs): Promise<Scenario> {
   const s = await (fixtureBase ??= loadFixture());
@@ -233,7 +233,8 @@ export async function computeScenario(inp: Inputs): Promise<Scenario> {
   const raw = engine.horizon(inp.lat_deg, inp.lon_deg, inp.mast_m);
   const horizon: Horizon = { el_deg: raw.slice(0, 720), dist_m: raw.slice(720, 1440) };
   validate(horizon);
-  const preset = inp.preset ?? s.preset, t0 = s.timeline.t_unix_s[0], n = s.count;
+  const preset = inp.preset ?? s.preset, t0 = inp.start_unix_s, n = Math.round((inp.span_days * 86400) / s.step_s);
+  if (!(n >= 1) || !Number.isFinite(t0)) throw new Error(`BAD_INPUT: span ${inp.span_days} d from ${t0} gives no time steps`);
   const track = await sunEarthTrack(site, t0, s.step_s, n);
   // Timelines from the WASM Engine (T08 #9), on the same grid and against the same horizon.
   const flat = engine.timeline(raw, site.lat_deg, site.lon_deg, ground_m, inp.mast_m, t0, s.step_s, n, preset.earth_margin_deg);
@@ -247,5 +248,5 @@ export async function computeScenario(inp: Inputs): Promise<Scenario> {
   const survival: Survival = { operable_h: sv[0], lethal_h: Number.isNaN(sv[1]) ? null : sv[1], longest_dark_h: sv[2],
     longest_any_sun_h: sv[3], sunlit_h: sv[4], contact_h: sv[5], soc_wh: sv.slice(8, 8 + sv[7]) };
   validate(survival);
-  return { ...s, preset, site, track, horizon, timeline, survival };
+  return { ...s, fake: false, note: "", start_unix_s: t0, count: n, preset, site, track, horizon, timeline, survival };
 }

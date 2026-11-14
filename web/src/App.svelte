@@ -38,7 +38,8 @@
     };
     const mine = ++gen;
     computeScenario(req).then(
-      (s) => { if (mine === gen) { scenario = s; computedFor = req; error = null; } },
+      // A shorter span has fewer steps, so keep the shared time cursor inside the new grid.
+      (s) => { if (mine === gen) { idx = Math.min(idx, s.count - 1); scenario = s; computedFor = req; error = null; } },
       (e) => { if (mine === gen) error = String(e?.message ?? e); },
     );
   });
