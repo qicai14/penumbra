@@ -4,7 +4,7 @@ The `core` → WASM boundary, frozen at Hour 0 (T00, issue #1). This file is can
 
 **Change rule.** From the merge of the T00 PR, this file changes only in a PR approved by both Qi Cai and Charls, and every change bumps `api_version` in `crates/core` (`API_VERSION`), the fixture (`web/public/fixture/scenario.json`) and the manifest together. The adapter's `validate()` refuses a mismatch.
 
-**Manifest.** `manifest.json` (written by `pipeline` from T06) carries `"api_version": 1` next to `format_version`.
+**Manifest.** `manifest.json` (written by `pipeline` from T06) carries `"api_version": 2` next to `format_version`.
 
 ## Conventions (frozen with the API)
 
@@ -13,14 +13,14 @@ The `core` → WASM boundary, frozen at Hour 0 (T00, issue #1). This file is can
 - **Heights**: `ground_m` is metres above the 1 737 400 m sphere; `mast_m` is the mast height H above the ground.
 - Every number crossing the boundary is f64. There is no f32 anywhere in the API (N7).
 - **Errors** are thrown as a JS `Error` whose message starts with a code and a colon: `NOT_LOADED`, `OUT_OF_COVERAGE`, `NO_DATA`, `OUT_OF_TABLE`, `BAD_INPUT`. A function never returns a default in place of an error (P5, P16).
-- `api_version()` returns 1. The fixture and the manifest carry the same number; the adapter refuses a mismatch.
+- `api_version()` returns 2 (1 until T15 made the pit functions throw BAD_INPUT). The fixture and the manifest carry the same number; the adapter refuses a mismatch.
 
 ## Functions and array layouts
 
 Rust signatures in `crates/wasm`. wasm-bindgen generates the `.d.ts` from them.
 
 ```rust
-#[wasm_bindgen] pub fn api_version() -> u32;                                   // 1
+#[wasm_bindgen] pub fn api_version() -> u32;                                   // 2
 #[wasm_bindgen] pub fn latlon_to_xy(lat_deg: f64, lon_deg: f64) -> Vec<f64>;   // [x_m, y_m]
 #[wasm_bindgen] pub fn xy_to_latlon(x_m: f64, y_m: f64) -> Vec<f64>;           // [lat_deg, lon_deg]
 

@@ -17,7 +17,7 @@ test("fixture matches the engine api_version and validates", () => {
 });
 
 test("a mismatched api_version is refused", () => {
-  expect(() => parseScenario({ ...raw, api_version: 2 }, api_version())).toThrow("api_version");
+  expect(() => parseScenario({ ...raw, api_version: 99 }, api_version())).toThrow("api_version");
   expect(() => checkApiVersion(2, 1)).toThrow();
 });
 
