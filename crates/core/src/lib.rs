@@ -1,5 +1,7 @@
 //! Pure maths for Penumbra: no I/O, builds for native and wasm32.
 
+pub mod geometry;
+
 /// Version of the core → WASM API (ARCHITECTURE §3.1). The fixture and the manifest carry the same number.
 pub const API_VERSION: u32 = 1;
 
