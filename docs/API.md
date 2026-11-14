@@ -41,6 +41,9 @@ impl Engine {
     pub fn sun_earth_track(&self, lat_deg: f64, lon_deg: f64, ground_m: f64, mast_m: f64,
                            start_unix_s: f64, step_s: f64, count: u32) -> Result<Vec<f64>, JsError>;
     pub fn horizon(&self, lat_deg: f64, lon_deg: f64, mast_m: f64) -> Result<Vec<f64>, JsError>;
+    // Point-Sun mask over the near tile (T21), not illumination: 1 lit, 0 shadowed, row-major,
+    // cols = ceil((width − 1) / stride), rows = ceil((height − 1) / stride).
+    pub fn point_sun_mask(&self, t_unix_s: f64, mast_m: f64, stride: u32) -> Result<Vec<u8>, JsError>;
     pub fn timeline(&self, horizon: &[f64], lat_deg: f64, lon_deg: f64, ground_m: f64, mast_m: f64,
                     start_unix_s: f64, step_s: f64, count: u32, earth_margin_deg: f64)
                     -> Result<Vec<f64>, JsError>;

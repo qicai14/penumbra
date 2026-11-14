@@ -182,6 +182,33 @@ impl Engine {
         .map_err(dem_err)
     }
 
+    /// Point-Sun mask (T21), not illumination: at `t_unix_s` (Unix s UTC), 1 where the Sun's centre
+    /// clears one ray of near-tile terrain, else 0. Row-major over the near tile's pixel centres
+    /// (col i·stride, row j·stride), `ceil((width − 1) / stride)` per row. Terrain beyond the near
+    /// tile is not seen. `mast_m` is H above the near tile's ground.
+    pub fn point_sun_mask(
+        &self,
+        t_unix_s: f64,
+        mast_m: f64,
+        stride: u32,
+    ) -> Result<Vec<u8>, JsError> {
+        let near = self
+            .near
+            .as_ref()
+            .ok_or_else(|| JsError::new("NOT_LOADED: near tile"))?;
+        let row = self.eph.at(t_unix_s).map_err(js_err)?;
+        // table rows are km; the mask takes metres
+        let sun_moon_me_m = penumbra_core::geometry::Vec3 {
+            x: row[0],
+            y: row[1],
+            z: row[2],
+        }
+        .scale(1000.0);
+        let mask = penumbra_core::horizon::point_sun_mask(near, stride, mast_m, sun_moon_me_m)
+            .map_err(dem_err)?;
+        Ok(mask.lit.into_iter().map(u8::from).collect())
+    }
+
     /// 10 × count, column-major (docs/API.md): t_unix_s, sun_az_deg, sun_el_deg, illumination,
     /// visibility, earth_az_deg, earth_el_deg, earth_margin_deg, contact, sun_dist_km. `horizon` is the
     /// 1 440-value layout `horizon` returns (topocentric ENU degrees, then metres); site in MOON_ME
