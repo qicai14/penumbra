@@ -49,11 +49,12 @@
   }
 
   /** Sunrise and sunset ± uncertainty: a hatched interval around each crossing with its label, from the WASM window_bands. Not the operable band. */
-  function uncertaintyPlugin(list: Band[], colour: string, chip: string, font: string): uPlot.Plugin {
+  function uncertaintyPlugin(getList: () => Band[], colour: string, chip: string, font: string): uPlot.Plugin {
     let hatch: CanvasPattern | null = null;
     return {
       hooks: {
         draw: (u) => {
+          const list = getList();
           const { ctx, bbox } = u;
           const px = uPlot.pxRatio;
           if (!hatch) {
@@ -64,7 +65,7 @@
           }
           ctx.save();
           ctx.beginPath(); ctx.rect(bbox.left, bbox.top, bbox.width, bbox.height); ctx.clip();
-          ctx.font = font.replace(/(d+)px/, (_, n) => `${Number(n) * px}px`);
+          ctx.font = font.replace(/(\d+)px/, (_, n) => `${Number(n) * px}px`);
           ctx.textBaseline = "top";
           const edge = [-Infinity, -Infinity]; // per row (sunrise, sunset): right edge of the last label drawn, so labels never overprint
           list.forEach((b) => {
@@ -171,7 +172,7 @@
       setScale: [(u, key) => { if (key === "x") placeCursors(); }],
     });
     const illum = new uPlot({
-      ...base(150, false), hooks: hooks(), plugins: [...band(), uncertaintyPlugin(bands, k.sun, getComputedStyle(host).getPropertyValue("--surface-carbon").trim() || k.iron, k.font)],
+      ...base(150, false), hooks: hooks(), plugins: [...band(), uncertaintyPlugin(() => bands, k.sun, getComputedStyle(host).getPropertyValue("--surface-carbon").trim() || k.iron, k.font)],
       scales: { x: { time: true }, y: { range: [0, 1.05] } },
       series: [
         {},
@@ -233,15 +234,18 @@
   }
 
   $effect(() => {
-    void scenario; void bands;
+    void scenario;
     untrack(build);
     return () => { for (const u of charts) u.destroy(); charts = []; };
   });
   $effect(() => {
     const s = scenario;
     let live = true;
-    windowBands(s, SIGMA_Z_M).then((f) => { if (live) { bands = parseBands(f); bandError = ""; } },
-      (e) => { if (live) { bands = []; bandError = String(e?.message ?? e); } });
+    bands = []; // never draw the previous scenario's bands on the new timeline
+    // the plugin reads bands at draw time, so a redraw shows them without rebuilding (and keeps the user's zoom)
+    const show = (b: Band[], err: string) => { bands = b; bandError = err; for (const u of charts) u.redraw(false, false); };
+    windowBands(s, SIGMA_Z_M).then((f) => { if (live) show(parseBands(f), ""); },
+      (e) => { if (live) show([], String(e?.message ?? e)); });
     return () => { live = false; };
   });
   $effect(() => { const w = width; for (const u of charts) u.setSize({ width: w, height: u.height }); });
