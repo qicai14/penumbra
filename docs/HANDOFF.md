@@ -14,9 +14,9 @@ Status as of **Sun Nov 15, morning**. Public repo `qicai14/penumbra`; the privat
 - **All T-tickets are closed except T24 (#25, region heatmap, in progress) and T25 (#26, needs-info: no cited region centres).**
 - **Scoreboard** (`web/public/scoreboard.json`): V1, V2, V4, V5 pass. V2b fails honestly on SP-01 (inside Mazarico's 6 h step, reported as a fail, nothing tuned). V3 not run: no NAC images were downloaded.
 - **#48 merged (PR #86):** the three-tier horizon march (20 m near, 80 m middle to 31 km, 240 m far) is the only march; T-1a-4 holds at 0.05°.
-- **Gate G2 passed via U18** (no separate kernel benchmark): every horizon is 13–34 ms native, WASM and browser, under the 50 ms target, so slip cut 3 is not needed (DATA-NOTES U18).
+- **Gate G2 passed via U18** (no separate kernel benchmark): median horizon times are 13–34 ms across native, WASM and browser, under the 50 ms target (one WASM SP-01 call reached 62 ms), so slip cut 3 is not needed (DATA-NOTES U18).
 - Checkpoint audits: [Nov 14](checkpoints/2026-11-14.md), [Nov 15](checkpoints/2026-11-15.md). Their docs-only leftovers closed in #78.
-- After the event: #77 (V2 follow-ups); #62, #64, #69, #72/#73 recorded, no action.
+- After the event: #77 (V2 follow-ups); the notes from #62, #64, #69, #72/#73 are recorded with no action (checkpoint 2).
 
 ## Ticket order (checkpoint 2 and the C3 plan)
 1. T24 cut A (#25), then cut B. T25 (#26) only if T24 A + B merged by 12:00.
@@ -26,7 +26,7 @@ Status as of **Sun Nov 15, morning**. Public repo `qicai14/penumbra`; the privat
 The Nov 14 session order (T05 V1 #6 and T10 V5 #11 last, behind T07–T09) is done: both are closed.
 
 ## Next prompt
-> /ticket 25
+> /ticket 25 (T24)
 
 Each ticket gets its own session: `/ticket <n>` (or `/design-pass` for design work). Pull `main` first.
 
