@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { contour, decodeGrid, nearestBetter, NODATA, readout, operableAt, type GridMeta } from "./grid";
+import { bestCell, contour, decodeGrid, nearestBetter, NODATA, readout, operableAt, type GridMeta } from "./grid";
 
 // 6x4 grid, 100 m cells, top-left (1000, 5000); one date. Operable hours rise to the right: 0, 50, ... 250 per row.
 const meta: GridMeta = { region: "t", pixel_m: 100, x0_m: 1000, y0_m: 5000, width: 6, height: 4, span_days: 30, mast_m: 2, dates: ["2025-03-06"], landing_unix_s: [0], url: "x" };
@@ -50,4 +50,10 @@ test("contour at 120 h crosses between the 100 h and 150 h columns, 40% past the
   const segs = contour(g, 0, 120);
   expect(segs.length).toBeGreaterThan(0);
   for (const [x1, , x2] of segs) { expect(x1).toBeCloseTo(1250 + 40, 6); expect(x2).toBeCloseTo(x1, 6); }
+});
+
+test("best cell: most operable hours, ties to the first in row-major order, no-data skipped", () => {
+  // Every row rises to 250 h at column 5 (row 3's is no-data), so rows 0-2 tie and the top one wins.
+  expect(bestCell(g, 0)).toEqual({ operableH: 250, i: 5, j: 0, x: 1550, y: 4950 });
+  expect(bestCell(decodeGrid(new Uint8Array(24 * 4).fill(0xff).buffer, meta), 0)).toBeNull();
 });
