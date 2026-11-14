@@ -102,7 +102,7 @@ export type EphSegment = { id: string; url: string; t0_unix_s: number; step_s: n
 export type Manifest = {
   format_version: number; api_version: number;
   ephemeris: EphSegment[];
-  far: TileMeta; regions: { id: string; name: string; near: TileMeta }[];
+  far: TileMeta; regions: { id: string; name: string; near: TileMeta; mid: TileMeta }[];
 };
 
 let manifestLoad: Promise<Manifest> | undefined;
@@ -219,8 +219,8 @@ async function ensureNear(engine: WasmEngine, lat: number, lon: number): Promise
   const [x, y] = latlonToXy(lat, lon);
   const r = m.regions.find(({ near }) => edgeDistanceM(x, y, near) >= 0);
   if (!r) throw new Error("OUT_OF_COVERAGE: that site is outside every shipped near tile");
-  const t = r.near, data = await fetchTile(t);
-  if (nearId !== r.id) { engine.load_near(data, t.width, t.height, t.x0_m, t.y0_m, t.pixel_m, t.scale_m, t.offset_m, t.nodata); nearId = r.id; }
+  const t = r.near, u = r.mid, [data, midData] = await Promise.all([fetchTile(t), fetchTile(u)]);
+  if (nearId !== r.id) { engine.load_near(data, t.width, t.height, t.x0_m, t.y0_m, t.pixel_m, t.scale_m, t.offset_m, t.nodata); engine.load_mid(midData, u.width, u.height, u.x0_m, u.y0_m, u.pixel_m, u.scale_m, u.offset_m, u.nodata); nearId = r.id; }
 }
 
 /** The panorama's horizon terrain is the real DEM since T07 (#8); the switch stays. Kept apart from `scenario.fake`,
@@ -325,11 +325,13 @@ export function loadMaskEngine(regionId: string): Promise<{ engine: WasmEngine; 
       const m = await loadManifest();
       const region = m.regions.find((r) => r.id === regionId);
       if (!region) throw new Error(`BAD_INPUT: unknown region ${regionId}`);
-      const [segs, data] = await Promise.all([Promise.all(m.ephemeris.map(fetchSegment)), fetchTile(region.near)]);
+      const [segs, data, midData] = await Promise.all([Promise.all(m.ephemeris.map(fetchSegment)), fetchTile(region.near), fetchTile(region.mid)]);
       const engine = new wasm.Engine();
       m.ephemeris.forEach((seg, i) => engine.load_ephemeris(seg.t0_unix_s, seg.step_s, segs[i]));
       const t = region.near;
       engine.load_near(data, t.width, t.height, t.x0_m, t.y0_m, t.pixel_m, t.scale_m, t.offset_m, t.nodata);
+      const u = region.mid;
+      engine.load_mid(midData, u.width, u.height, u.x0_m, u.y0_m, u.pixel_m, u.scale_m, u.offset_m, u.nodata);
       const { url, ...meta } = t;
       return { engine, meta };
     })();
