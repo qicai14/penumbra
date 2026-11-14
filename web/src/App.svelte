@@ -2,6 +2,7 @@
   import { computeScenario, loadNearTile, type Inputs, type NearTile, type Scenario } from "./lib/engine";
   import Panorama from "./lib/Panorama.svelte";
   import Timelines from "./lib/Timelines.svelte";
+  import Survival from "./lib/Survival.svelte";
   import Tracer from "./lib/Tracer.svelte";
   import Scoreboard from "./lib/Scoreboard.svelte";
   import About from "./lib/About.svelte";
@@ -24,7 +25,7 @@
   $effect(() => {
     const req: Inputs = {
       lat_deg: controls.lat, lon_deg: controls.lon, mast_m: controls.mastM,
-      start_unix_s: parseDate(controls.date)!, span_days: controls.spanDays, // the picker only stores dates that parse
+      start_unix_s: parseDate(controls.date)!, span_days: controls.spanDays, preset: controls.preset ?? undefined, // the picker only stores dates that parse
     };
     const mine = ++gen;
     computeScenario(req).then(
@@ -47,6 +48,7 @@
     <p class="msg" data-testid="computed-for">
       Computed for {scenario.site.lat_deg.toFixed(4)}°, {scenario.site.lon_deg.toFixed(4)}°E · mast {scenario.site.mast_m.toFixed(1)} m · landing {controls.date} · {computedFor.span_days} d
     </p>
+    <Survival {scenario} {controls} />
     <Panorama {scenario} bind:idx />
     <Timelines {scenario} bind:idx />
   {:else if !error}

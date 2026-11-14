@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import init, { api_version } from "./wasm/penumbra_wasm.js";
-import { checkApiVersion, parseScenario, validate } from "./engine";
+import { checkApiVersion, computeScenario, parseScenario, validate } from "./engine";
 
 const raw = JSON.parse(readFileSync(new URL("../../public/fixture/scenario.json", import.meta.url), "utf8"));
 await init({ module_or_path: readFileSync(new URL("./wasm/penumbra_wasm_bg.wasm", import.meta.url)) });
@@ -33,4 +33,17 @@ test("parseScenario rejects null cells and short columns", () => {
   const short = structuredClone(raw);
   for (const k of Object.keys(short.timeline)) short.timeline[k] = short.timeline[k].slice(0, 100);
   expect(() => parseScenario(short, api_version())).toThrow("count");
+});
+
+test("an edited preset reaches computeScenario (T14 recompute wiring)", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async () => new Response(JSON.stringify(raw))) as unknown as typeof fetch;
+  try {
+    const base = parseScenario(raw, api_version());
+    const preset = { ...base.preset, load_w: 300 };
+    const s = await computeScenario({ lat_deg: -84.79, lon_deg: 29.2, mast_m: 2, start_unix_s: 0, span_days: 30, preset });
+    expect(s.preset).toBe(preset);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
