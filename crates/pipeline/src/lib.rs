@@ -4,6 +4,7 @@ pub mod dem;
 pub mod eph;
 pub mod psr;
 pub mod table_check;
+pub mod v2;
 pub mod v4;
 
 use std::path::Path;

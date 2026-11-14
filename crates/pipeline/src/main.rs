@@ -10,6 +10,8 @@
 //! pit depth to hide the Sun per panel height) as JSON from the shipped files; no kernels needed.
 //! `penumbra-pipeline v2b <data_dir>` (release) prints the V2b longest-night table check (T19) as
 //! JSON from the shipped tiles, with an hourly ephemeris built from the kernels in PENUMBRA_DATA.
+//! `penumbra-pipeline v2 <data_dir>` (release, ~10 min on 8 cores) prints the V2 sample against
+//! AVGVISIB and its Earth twin (T20) as JSON; kernels and both AVGVISIB rasters from PENUMBRA_DATA.
 
 use penumbra_core::eph::{
     Ephemeris, MAIN_ROWS, MAIN_STEP_S, MAIN_T0_UNIX_S, REPLAY_IM2_ROWS, REPLAY_IM2_STEP_S,
@@ -39,13 +41,20 @@ fn main() -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&r)?);
             Ok(())
         }
+        [_, cmd, data_dir] if cmd == "v2" => {
+            let resource =
+                PathBuf::from(std::env::var("PENUMBRA_DATA").map_err(|_| "set PENUMBRA_DATA")?);
+            let r = penumbra_pipeline::v2::run(Path::new(data_dir), &resource)?;
+            println!("{}", serde_json::to_string_pretty(&r)?);
+            Ok(())
+        }
         [_, cmd, data_dir] if cmd == "v4-im2" => {
             let s = penumbra_pipeline::v4::im2_statement3(Path::new(data_dir))?;
             println!("{}", serde_json::to_string_pretty(&s)?);
             Ok(())
         }
         _ => Err(
-            "usage: penumbra-pipeline eph|dem|horizon|v4-im2|v2b <dir>  (kernels and DEMs from PENUMBRA_DATA)"
+            "usage: penumbra-pipeline eph|dem|horizon|v4-im2|v2b|v2 <dir>  (kernels and DEMs from PENUMBRA_DATA)"
                 .into(),
         ),
     }
