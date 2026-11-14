@@ -11,6 +11,8 @@
   import Scoreboard from "./lib/Scoreboard.svelte";
   import About from "./lib/About.svelte";
   import SitePicker from "./lib/SitePicker.svelte";
+  import Terrain3D from "./lib/Terrain3D.svelte";
+  import { MaskFeed } from "./lib/maskFeed.svelte";
   import { parseDate } from "./lib/site";
   import { Controls } from "./lib/state.svelte";
 
@@ -61,6 +63,15 @@
   }
   if (new URLSearchParams(location.search).has("a") || new URLSearchParams(location.search).has("b")) openCompare(location.search);
 
+  // One point-Sun mask for the time marker, shared by the picker's 2D map and the 3D terrain so both show the same bits.
+  const maskFeed = new MaskFeed();
+  const markerT = $derived(scenario?.track.t_unix_s[idx] ?? parseDate(controls.date));
+  $effect(() => {
+    if (view !== "site" || !tile || markerT === null || !Number.isFinite(markerT)) return;
+    return maskFeed.follow(tile.region.id, markerT, controls.mastM);
+  });
+  $effect(() => () => maskFeed.dispose());
+
   // Any change to site, date, span or mast recomputes; a stale answer never overwrites a newer one.
   $effect(() => {
     const req: Inputs = {
@@ -95,7 +106,7 @@
     {#if cmp}<Compare {controls} pairs={cmp.pairs} base={cmp.base} metas={cmp.metas} eph={cmp.eph} />{:else if !cmpError}<p class="msg">Loading…</p>{/if}
   {:else}
   <p class="tag">~/site</p>
-  {#if tile}<SitePicker {controls} {tile} {onregion} t={scenario?.track.t_unix_s[idx] ?? parseDate(controls.date)} />{/if}
+  {#if tile}<SitePicker {controls} {tile} {onregion} feed={maskFeed} />{/if}
   {#if tileError}<p class="msg" role="alert">{tileError}</p>{/if}
   {#if error}<p class="msg" role="alert">{error}</p>{/if}
   {#if scenario && computedFor}
@@ -105,6 +116,7 @@
     <Survival {scenario} {controls} />
     <Countdown {scenario} {idx} />
     <Panorama {scenario} bind:idx />
+    {#if tile}<Terrain3D {controls} {tile} feed={maskFeed} t={markerT} sunAz={scenario.track.sun_az_deg[idx]} sunEl={scenario.track.sun_el_deg[idx]} sunLon={computedFor.lon_deg} />{/if}
     <Timelines {scenario} bind:idx />
   {:else if !error}
     <p class="msg">Loading…</p>

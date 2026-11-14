@@ -311,3 +311,30 @@ test("scrubbing the time marker redraws the point-Sun mask off the main thread, 
   }
   await expect(page.locator("canvas[aria-label^='Greyscale height image']")).toBeVisible();
 });
+
+// T23 (#24): the 3D terrain paints the same point-Sun mask as the picker, at the same time marker.
+test("the 3D terrain mounts, shows the picker's mask and time, labels vertical exaggeration (T23 #24)", async ({ page }) => {
+  await page.goto("/");
+  const t3 = page.getByTestId("terrain-3d");
+  const site = page.getByTestId("mask-site");
+  await expect(t3).toBeVisible();
+  await expect(page.locator("canvas[aria-label^='3D height mesh']")).toBeVisible();
+  await expect(t3).toContainText("Point-Sun mask");
+  await expect(t3).toContainText("not illumination");
+  await expect(t3).toHaveAttribute("data-exaggeration", "1");
+  await expect(t3).toContainText("1× (true scale)");
+  await expect(t3).toHaveAttribute("data-stride", "8", { timeout: 60000 });
+  await expect(site).toHaveAttribute("data-stride", "8", { timeout: 60000 });
+  // one mask feeds both views: same time, one vertex per mask point
+  expect(await t3.getAttribute("data-t")).toBe(await site.getAttribute("data-t"));
+  expect(Number(await t3.getAttribute("data-vertices"))).toBe(192 * 192);
+  await page.getByTestId("t3-exaggeration").selectOption("2");
+  await expect(t3).toContainText("Heights drawn ×2");
+  await page.getByTestId("t3-exaggeration").selectOption("1");
+  // scrubbing moves the 3D view's time with the picker's
+  const slider = page.getByLabel("Time within the span");
+  const max = Number(await slider.getAttribute("max"));
+  await slider.fill(String(Math.round(max / 2)));
+  await expect(t3).toHaveAttribute("data-stride", "8", { timeout: 60000 });
+  await expect.poll(async () => (await t3.getAttribute("data-t")) === (await site.getAttribute("data-t")), { timeout: 60000 }).toBe(true);
+});

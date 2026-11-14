@@ -7,6 +7,10 @@ import type { NearMeta } from "./engine";
 export const MASK_STRIDE = 8;
 export const MASK_STRIDE_COARSE = 16;
 
+/** How strongly the mask tints the height image, shared by the 2D map and the 3D terrain so both read alike. */
+export const MASK_LIT_ALPHA = 0.6;
+export const MASK_DARK_ALPHA = 0.5;
+
 export type MaskGrid = { cols: number; rows: number; stride: number };
 export type MaskResult = MaskGrid & { lit: Uint8Array; t_unix_s: number; regionId: string; mastM: number };
 

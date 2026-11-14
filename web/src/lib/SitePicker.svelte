@@ -2,11 +2,13 @@
   import { latlonToXy, xyToLatlon, type EphSegment, type NearTile, type Region } from "./engine";
   import { checkDate, checkPick, dateRange, edgeDistanceM, PICK_BORDER_M, SPANS_DAYS } from "./site";
   import type { Controls } from "./state.svelte";
-  import { coalescing, maskAt, maskGrid, maskPixels, MASK_STRIDE, MASK_STRIDE_COARSE, type MaskResult, type Runner } from "./mask";
+  import { maskAt, maskGrid, maskPixels, MASK_STRIDE, MASK_LIT_ALPHA, MASK_DARK_ALPHA } from "./mask";
+  import { rgb } from "./color";
+  import type { MaskFeed } from "./maskFeed.svelte";
   import { fmtUtc } from "./panorama";
 
-  // `t` is the shared time marker (Unix s UTC); null until a landing date parses. The mask is drawn for it.
-  let { controls, tile, onregion, t = null }: { controls: Controls; tile: NearTile & { regions: Region[]; eph: EphSegment[] }; onregion: (id: string) => void; t?: number | null } = $props();
+  // `feed` is the shared point-Sun mask for the time marker; the 3D terrain paints the same one.
+  let { controls, tile, onregion, feed }: { controls: Controls; tile: NearTile & { regions: Region[]; eph: EphSegment[] }; onregion: (id: string) => void; feed: MaskFeed } = $props();
 
   let canvas: HTMLCanvasElement;
   // svelte-ignore state_referenced_locally -- drafts start from the current value, then follow typing
@@ -21,45 +23,8 @@
   // A region change moves the site from outside this component: re-sync the boxes and clear the old refusal.
   $effect(() => { latDraft = String(controls.lat); lonDraft = String(controls.lon); refusal = null; rejected = null; });
 
-  // Point-Sun mask (T22): computed by the WASM Engine in a Web Worker; the page thread only paints the returned bits.
-  let mask = $state.raw<MaskResult | null>(null);
-  let maskError = $state<string | null>(null);
-  let maskBusy = $state(false);
-  let worker: Worker | undefined;
-  const calls = new Map<number, { ok: (v: any) => void; fail: (e: Error) => void }>();
-  let callId = 0;
-  // A crashed or unloadable worker rejects every pending call and is dropped; the next request builds a fresh one.
-  function dropWorker(why: string) {
-    worker?.terminate(); worker = undefined;
-    for (const c of calls.values()) c.fail(new Error(why));
-    calls.clear();
-  }
-  const run: Runner = (req) => {
-    if (!worker) {
-      const w = (worker = new Worker(new URL("./maskWorker.ts", import.meta.url), { type: "module" }));
-      w.onmessage = (e) => {
-        const c = calls.get(e.data.id); calls.delete(e.data.id);
-        if (e.data.error) c?.fail(new Error(e.data.error)); else c?.ok(e.data);
-      };
-      w.onerror = (e) => { if (worker === w) dropWorker(e.message || "the mask worker failed to run"); };
-      w.onmessageerror = () => { if (worker === w) dropWorker("the mask worker sent an unreadable message"); };
-    }
-    return new Promise((ok, fail) => { const id = ++callId; calls.set(id, { ok, fail }); maskBusy = true; worker!.postMessage({ id, ...req }); });
-  };
-  const requestMask = coalescing(run,
-    (r) => { mask = r; maskError = null; maskBusy = false; },
-    (e) => { maskError = String((e as Error)?.message ?? e); maskBusy = false; });
-  // While the marker moves, a coarse mask (one point per 320 m) keeps the sweep going; 300 ms after it rests, the fine one replaces it.
-  $effect(() => {
-    if (t === null || !Number.isFinite(t)) return;
-    const req = { regionId: tile.region.id, t_unix_s: t, mastM: controls.mastM };
-    requestMask({ ...req, stride: MASK_STRIDE_COARSE });
-    const rest = setTimeout(() => requestMask({ ...req, stride: MASK_STRIDE }), 300);
-    return () => clearTimeout(rest);
-  });
-  $effect(() => () => worker?.terminate());
   // A mask from another region is not this tile's.
-  const shown = $derived(mask && mask.regionId === tile.region.id ? mask : null);
+  const shown = $derived(feed.mask && feed.mask.regionId === tile.region.id ? feed.mask : null);
 
   const dates = $derived(dateRange(tile.eph));
   const m = $derived(tile.meta);
@@ -85,14 +50,6 @@
   const siteLit = $derived(shown ? maskAt(shown, m, siteXy[0], siteXy[1]) : null);
   const edgeKm = $derived(edgeDistanceM(siteXy[0], siteXy[1], m) / 1000);
 
-  // Whatever form the token takes (hex, rgb(), named), paint it on a 1x1 canvas and read the pixel back.
-  function rgb(color: string): [number, number, number] {
-    const px = document.createElement("canvas"); px.width = px.height = 1;
-    const g = px.getContext("2d", { willReadFrequently: true })!;
-    g.fillStyle = color; g.fillRect(0, 0, 1, 1);
-    const d = g.getImageData(0, 0, 1, 1).data;
-    return [d[0], d[1], d[2]];
-  }
   function draw() {
     const g = canvas.getContext("2d")!;
     const s = getComputedStyle(canvas);
@@ -104,7 +61,7 @@
       const gr = maskGrid(m, shown.stride);
       const off = document.createElement("canvas");
       off.width = gr.cols; off.height = gr.rows;
-      off.getContext("2d")!.putImageData(new ImageData(maskPixels(shown, rgb(c("--color-sun")), 0.6, [0, 0, 0], 0.5), gr.cols, gr.rows), 0, 0);
+      off.getContext("2d")!.putImageData(new ImageData(maskPixels(shown, rgb(c("--color-sun")), MASK_LIT_ALPHA, [0, 0, 0], MASK_DARK_ALPHA), gr.cols, gr.rows), 0, 0);
       g.imageSmoothingEnabled = false;
       g.drawImage(off, 0.5 - gr.stride / 2, 0.5 - gr.stride / 2, gr.cols * gr.stride, gr.rows * gr.stride);
     }
@@ -185,10 +142,10 @@
         aria-label="Greyscale height image of the {tile.region.name} near tile, overlaid with the point-Sun mask at the time marker. Click to pick a site, or type latitude and longitude."
       ></canvas>
       <div class="legend" data-testid="mask-legend" data-t={shown?.t_unix_s ?? ""}>
-        <p class="what"><strong>Point-Sun mask</strong>, not illumination{#if shown}{" · "}{fmtUtc(shown.t_unix_s)}{/if}{#if maskBusy}{" · updating"}{/if}</p>
+        <p class="what"><strong>Point-Sun mask</strong>, not illumination{#if shown}{" · "}{fmtUtc(shown.t_unix_s)}{/if}{#if feed.busy}{" · updating"}{/if}</p>
         <p><i class="sw lit" aria-hidden="true"></i>Sun's centre above the terrain <i class="sw dark" aria-hidden="true"></i>Sun's centre below it</p>
         <p class="note">One ray toward the Sun per {(shown?.stride ?? MASK_STRIDE) * m.pixel_m} m point on this tile. The disc, Earth and terrain beyond the tile are not in it, so points near the edge can read lit.</p>
-        {#if maskError}<p class="refusal" role="alert">Mask unavailable. {maskError}</p>{/if}
+        {#if feed.error}<p class="refusal" role="alert">Mask unavailable. {feed.error}</p>{/if}
       </div>
       <figcaption>
         {tile.region.name} · black {grey.lo_m.toFixed(0)} m, white {grey.hi_m.toFixed(0)} m · dashed line: {PICK_BORDER_M / 1000} km from the edge, picks outside it are refused
