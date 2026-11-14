@@ -91,3 +91,20 @@ fn error_codes_match_the_api() {
     assert_eq!(DemError::NoData.code(), "NO_DATA");
     assert_eq!(DemError::BadInput("x").code(), "BAD_INPUT");
 }
+
+// Early-exit bound (docs/API.md load_far finds h_max): highest count 23 (col 3, row 2) →
+// 100 + 0.25·23 = 105.75 m; with that pixel nodata the next is 22 → 105.5 m.
+#[test]
+fn max_height_skips_nodata() {
+    assert!((plane_tile(None).max_height_m() - 105.75).abs() < 1e-12);
+    assert!((plane_tile(Some(11)).max_height_m() - 105.5).abs() < 1e-12);
+}
+
+#[test]
+fn all_nodata_tile_is_refused() {
+    let meta = *plane_tile(None).meta();
+    assert!(matches!(
+        DemTile::new(meta, vec![i16::MIN; 12]),
+        Err(DemError::BadInput(_))
+    ));
+}

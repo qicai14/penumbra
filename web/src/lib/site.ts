@@ -1,7 +1,9 @@
 // Pure checks for the site picker and date controls. No model maths: only the refusal rules P5 and P16.
 import type { NearMeta } from "./engine";
 
-export const PICK_BORDER_M = 7000; // P5: a site must be at least 7 km inside the near tile
+// P5: a site must be at least 7 km inside the near tile. The horizon needs 7 km of ground, which is up to 7.05 km of map
+// (polar stereographic length scale), else the Engine answers OUT_OF_COVERAGE.
+export const PICK_BORDER_M = 7050;
 export const EPH_START_S = Date.UTC(2026, 0, 1) / 1000;
 export const EPH_END_S = Date.UTC(2031, 0, 1) / 1000; // last table row: 2026-01-01 + 1826 days
 export const SPANS_DAYS = [14, 30, 60] as const;
@@ -19,7 +21,7 @@ export function checkPick(x: number, y: number, t: NearMeta): Verdict {
   // !(d >= 0), not d < 0: also catches NaN from a pole or non-finite projection
   if (!(d >= 0)) return { ok: false, reason: "That point is outside the near tile. Pick inside the image." };
   if (d < PICK_BORDER_M)
-    return { ok: false, reason: `Too close to the tile edge: ${(d / 1000).toFixed(1)} km. A site needs at least 7 km of terrain around it (P5).` };
+    return { ok: false, reason: `Too close to the tile edge: ${(Math.floor(d / 10) / 100).toFixed(2)} km. A site needs at least 7 km of terrain around it, which is a ${PICK_BORDER_M / 1000} km map border (P5).` };
   return { ok: true };
 }
 

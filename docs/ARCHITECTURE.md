@@ -122,7 +122,7 @@ Sizes used throughout: R = 1 737 400 m; 720 azimuths at 0.5° (SCIENCE-SPEC §1a
 
 - Runtime download: two regions 2 × 4.72 + 20.28 + 2.10 = 31.8 MB; nine regions 64.9 MB. Both are inside the 100 MB budget.
 - Browser memory, steady state: the engine holds one near tile, the far tile and the ephemeris, 27.1 MB. `web/` keeps its own copy of the near tile to draw the height image, 4.7 MB. While a file loads, its fetch buffer and its WASM copy exist together, so the peak is about 20 MB higher for a moment.
-- The pickable area of a near tile is the tile minus a 7 km border: 16.72 km square.
+- The pickable area of a near tile is the tile minus a 7.05 km border (7 km of ground, map length scale): 16.62 km square.
 
 **Height decode.** `h = offset_m + scale_m × v`, with `v == nodata` an error (never 0 m, P5).
 - Near scale: the encoder picks the finest of 0.0625, 0.125, 0.25 m that fits the tile's height range in ±32 767 counts, and fails if 0.25 m clips. At 0.25 m the quantisation error is 0.072 m RMS (spec); at 0.125 m it is 0.036 m. A 30 km tile whose relief is under 8.19 km gets 0.125 m for free, and the decoder doesn't change because the scale comes from the manifest.

@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { latlonToXy, xyToLatlon, type NearTile } from "./engine";
+  import { latlonToXy, xyToLatlon, type NearTile, type Region } from "./engine";
   import { checkDate, checkPick, edgeDistanceM, PICK_BORDER_M, SPANS_DAYS } from "./site";
   import type { Controls } from "./state.svelte";
 
-  let { controls, tile }: { controls: Controls; tile: NearTile } = $props();
+  let { controls, tile, onregion }: { controls: Controls; tile: NearTile & { regions: Region[] }; onregion: (id: string) => void } = $props();
 
   let canvas: HTMLCanvasElement;
   // svelte-ignore state_referenced_locally -- drafts start from the current value, then follow typing
@@ -14,6 +14,9 @@
   let dateDraft = $state(controls.date);
   let refusal = $state<string | null>(null);
   let rejected = $state<[number, number] | null>(null); // last refused point, map metres
+
+  // A region change moves the site from outside this component: re-sync the boxes and clear the old refusal.
+  $effect(() => { latDraft = String(controls.lat); lonDraft = String(controls.lon); refusal = null; rejected = null; });
 
   const m = $derived(tile.meta);
   const heightM = (v: number) => m.offset_m + m.scale_m * v;
@@ -126,7 +129,9 @@
 
     <div class="fields">
       <label class="row"><span>Region</span>
-        <select aria-label="Region"><option>{tile.region.name}</option></select>
+        <select aria-label="Region" value={tile.region.id} onchange={(e) => onregion(e.currentTarget.value)}>
+          {#each tile.regions as r (r.id)}<option value={r.id}>{r.name}</option>{/each}
+        </select>
       </label>
 
       <form class="latlon" {onsubmit}>

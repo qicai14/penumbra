@@ -3,6 +3,8 @@
 //! `out_dir`, and prints the tracer row (IM-2, 2026-11-14T00:00:00Z).
 //! `penumbra-pipeline dem <out_dir>` crops the two near tiles and the far tile (T06) and merges
 //! them into the same `manifest.json`.
+//! `penumbra-pipeline horizon <data_dir>` (release build) prints the T07 reports: T-1a-4 tier
+//! ablation against the float 20 m DEM in PENUMBRA_DATA, T-1a-5 range check and U18 native timing.
 
 use penumbra_core::eph::{
     Ephemeris, MAIN_ROWS, MAIN_STEP_S, MAIN_T0_UNIX_S, Site, sun_earth_track,
@@ -13,6 +15,8 @@ use penumbra_pipeline::eph::{
 };
 use std::path::{Path, PathBuf};
 
+mod horizon_report;
+
 /// Tracer instant: 2026-11-14T00:00:00Z, Unix s UTC.
 const TRACER_UNIX_S: f64 = 1_794_614_400.0;
 
@@ -21,8 +25,9 @@ fn main() -> Result<()> {
     match args.as_slice() {
         [_, cmd, out_dir] if cmd == "eph" => eph(Path::new(out_dir)),
         [_, cmd, out_dir] if cmd == "dem" => dem(Path::new(out_dir)),
+        [_, cmd, data_dir] if cmd == "horizon" => horizon_report::run(Path::new(data_dir)),
         _ => Err(
-            "usage: penumbra-pipeline eph|dem <out_dir>  (kernels and DEMs from PENUMBRA_DATA)"
+            "usage: penumbra-pipeline eph|dem|horizon <dir>  (kernels and DEMs from PENUMBRA_DATA)"
                 .into(),
         ),
     }

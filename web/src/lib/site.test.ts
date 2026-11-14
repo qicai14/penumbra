@@ -14,10 +14,10 @@ test("edge distance is the nearest of the four edges, negative outside", () => {
   expect(edgeDistanceM(61740 - 50, cy, near)).toBe(-50);
 });
 
-test("a pick under 7 km from the edge is refused with a reason; exactly 7 km passes", () => {
+test("a pick under 7 km from the edge is refused with a reason; exactly 7.05 km passes", () => {
   expect(checkPick(cx, cy, near).ok).toBe(true);
-  expect(checkPick(61740 + 7000, cy, near).ok).toBe(true);
-  const r = checkPick(61740 + 6999, cy, near);
+  expect(checkPick(61740 + 7050, cy, near).ok).toBe(true);
+  const r = checkPick(61740 + 7049, cy, near);
   expect(r.ok).toBe(false);
   expect(!r.ok && r.reason).toContain("7 km");
   const out = checkPick(0, 0, near);
@@ -53,4 +53,10 @@ test("stand-in projection round-trips and matches the pinned IM-2 point", () => 
 test("checkPick refuses non-finite points (pole projects to NaN)", () => {
   expect(checkPick(NaN, Infinity, near).ok).toBe(false);
   expect(checkPick(...latlonToXy(90, 0), near).ok).toBe(false);
+});
+
+test("the refusal text shows the 7.05 km border and rounds the distance down", () => {
+  const r = checkPick(61740 + 7049, cy, near);
+  expect(!r.ok && r.reason).toContain("7.04 km");
+  expect(!r.ok && r.reason).toContain("7.05 km");
 });
