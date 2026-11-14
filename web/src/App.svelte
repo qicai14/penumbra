@@ -1,6 +1,7 @@
 <script lang="ts">
   import { loadFixture, type Scenario } from "./lib/engine";
   import Panorama from "./lib/Panorama.svelte";
+  import Tracer from "./lib/Tracer.svelte";
 
   let scenario = $state.raw<Scenario | null>(null);
   let error = $state<string | null>(null);
@@ -21,6 +22,7 @@
   {:else}
     <p class="msg">Loading…</p>
   {/if}
+  <Tracer />
 </main>
 
 <style>

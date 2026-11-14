@@ -246,7 +246,7 @@ Ranked by how likely each is to fail a V-check, times how hard it is to notice. 
 | P13 | **DEM noise spikes** ("flagpoles", E91) set a false horizon next to the observer. | V2, demo | Local | UI shows the obstacle distance per azimuth. V5 flags any site whose horizon comes from an obstacle under 3 pixels away. |
 | P14 | **Earth-visibility definition** (any fraction, centre, or whole disc). | V2-Earth | Up to 1.9° of elevation (E103) | V2-Earth uses any-fraction (W1b); comms uses centre + 2°. Named differently in code. |
 | P15 | **Horizons inputs**: altitude in metres instead of km (E48b), west-positive longitude, geocentric instead of site. | V1 | Large | Fixtures include one site at +5 km and one at −3 km altitude, and the request text is stored with each fixture. |
-| P16 | **Extrapolating the ephemeris table** outside 2026–2030 or at the last row. | V5 | Silent | Out-of-range time returns an error. |
+| P16 | **Extrapolating the ephemeris table** outside 2026–2030 or past the last row. | V5 | Silent | Out-of-range time returns an error. |
 
 Libration needs no special handling: it is inside the kernels. The test for it is P9's Earth check plus the V5 bound that the Earth's centre, seen from the flat pole, never exceeds 6.87° + 0.26° in elevation (E102).
 
