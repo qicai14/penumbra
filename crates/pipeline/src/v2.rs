@@ -476,21 +476,28 @@ pub fn shift_fit(e: &[f64], gx: &[f64], gy: &[f64]) -> Result<(f64, f64, f64)> {
 }
 
 /// Map `f` over `items` on every core; results in input order. Items are dealt round-robin so
-/// slow neighbours spread across threads.
+/// slow neighbours spread across threads. The first error stops every thread before its next item.
 pub fn par_map<T: Sync, R: Send>(
     items: &[T],
     f: impl Fn(&T) -> std::result::Result<R, String> + Sync,
 ) -> Result<Vec<R>> {
     let threads = std::thread::available_parallelism()?.get();
     let done = std::sync::atomic::AtomicUsize::new(0);
+    let stop = std::sync::atomic::AtomicBool::new(false);
     let parts = std::thread::scope(|s| {
         let handles: Vec<_> = (0..threads)
             .map(|t| {
-                let (f, done) = (&f, &done);
+                let (f, done, stop) = (&f, &done, &stop);
                 s.spawn(move || {
                     let mut out = Vec::new();
                     for (i, item) in items.iter().enumerate().skip(t).step_by(threads) {
-                        out.push((i, f(item)?));
+                        if stop.load(std::sync::atomic::Ordering::Relaxed) {
+                            break;
+                        }
+                        let r = f(item).inspect_err(|_| {
+                            stop.store(true, std::sync::atomic::Ordering::Relaxed);
+                        })?;
+                        out.push((i, r));
                         let k = done.fetch_add(1, std::sync::atomic::Ordering::Relaxed) + 1;
                         if k % 1000 == 0 {
                             eprintln!("  {k} / {}", items.len());
