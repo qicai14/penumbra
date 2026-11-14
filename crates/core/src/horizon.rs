@@ -1,9 +1,10 @@
 //! Terrain horizon: a 720-azimuth great-circle ray march over a near and a far DEM tier
 //! (SCIENCE-SPEC §1a, ARCHITECTURE §2.2). MOON_ME, sphere R = 1 737 400 m, radians inside.
 
-use crate::dem::{DemError, Terrain};
+use crate::dem::{DemError, DemTile, Terrain};
 use crate::geometry::{
-    EnuFrame, LatLon, MOON_RADIUS_M, Vec3, latlon_to_unit, latlon_to_xy, unit_to_xy,
+    EnuFrame, LatLon, MOON_RADIUS_M, MapXy, Vec3, latlon_to_unit, latlon_to_xy, unit_to_xy,
+    xy_to_unit,
 };
 
 /// Azimuth bins, 0.5° each; bin i is azimuth i × 0.5° clockwise from north (§1a, E04).
@@ -99,6 +100,83 @@ fn sample<T: Terrain>(
     let u = up.scale(1.0 - st.vers).plus(d.scale(st.sin));
     let r_t = MOON_RADIUS_M + t.height_m(unit_to_xy(u)?)?;
     Ok(((r_t - r_o) - r_t * st.vers, r_t * st.sin))
+}
+
+/// Point-Sun shadow mask over a near tile at one instant (T21, the SCIENCE-SPEC §3 V3 method).
+/// `lit` is row-major, `cols × rows`; entry (i, j) is the tile's pixel centre (col i·stride,
+/// row j·stride). This is a point Sun, not illumination: no disc fraction.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PointSunMask {
+    pub cols: u32,
+    pub rows: u32,
+    pub lit: Vec<bool>,
+}
+
+/// Point-Sun mask: each grid point (see `PointSunMask`) is lit when the Sun's centre, at MOON_ME
+/// position `sun_moon_me_m` (metres), is above every near-tile sample on one great-circle ray along
+/// the Sun's topocentric ENU azimuth (the §1a closed form along one azimuth, not 720). The observer
+/// is `mast_m` above the near tile's ground. Pixel centres of the last column and row lie outside
+/// the bilinear footprint, so the grid is `ceil((width − 1) / stride)` × `ceil((height − 1) / stride)`.
+/// Near-tile nodata on a ray is an error, never 0 m (P5).
+// shortcut: only the near tile is marched (ARCHITECTURE §2.6), so a point whose ray leaves the tile before the blocking terrain reads lit; add a far-field horizon at the tile centre if that matters.
+pub fn point_sun_mask(
+    near: &DemTile,
+    stride: u32,
+    mast_m: f64,
+    sun_moon_me_m: Vec3,
+) -> Result<PointSunMask, DemError> {
+    if stride == 0 {
+        return Err(DemError::BadInput("stride must be at least 1"));
+    }
+    if !mast_m.is_finite() || mast_m < 0.0 {
+        return Err(DemError::BadInput("mast height must be finite and ≥ 0"));
+    }
+    let m = *near.meta();
+    let (cols, rows) = (
+        (m.width - 1).div_ceil(stride),
+        (m.height - 1).div_ceil(stride),
+    );
+    let half_circle_m = std::f64::consts::PI * MOON_RADIUS_M;
+    let mut lit = Vec::new();
+    for j in 0..rows {
+        for i in 0..cols {
+            let xy = MapXy {
+                x_m: m.x0_m + m.pixel_m * (f64::from(i * stride) + 0.5),
+                y_m: m.y0_m - m.pixel_m * (f64::from(j * stride) + 0.5),
+            };
+            let up = xy_to_unit(xy)?;
+            let frame = EnuFrame::at(up)?;
+            let r_o = MOON_RADIUS_M + near.height_m(xy)? + mast_m;
+            let sun = frame.az_el(up.scale(r_o), sun_moon_me_m)?;
+            let (sa, ca) = sun.az_rad.sin_cos();
+            let d = frame.north.scale(ca).plus(frame.east.scale(sa));
+            let (sin_el, cos_el) = sun.el_rad.sin_cos();
+            // below the bare-sphere limb seen from the mast: dark even if the ray leaves the tile at once
+            let dip = ((r_o - mast_m) / r_o).acos();
+            let mut point_lit = sun.el_rad >= -dip;
+            for k in 1u32.. {
+                if !point_lit {
+                    break;
+                }
+                let st = Step::at(m.pixel_m * f64::from(k));
+                if st.s_m > half_circle_m {
+                    break;
+                }
+                let (num, den) = match sample(near, up, d, r_o, &st) {
+                    Ok(v) => v,
+                    Err(DemError::OutOfCoverage) => break,
+                    Err(e) => return Err(e),
+                };
+                // sample el > Sun el; den > 0 and cos el ≥ 0, so no division is needed
+                if num * cos_el > sin_el * den {
+                    point_lit = false;
+                    break;
+                }
+            }
+            lit.push(point_lit);
+        }
+    }
+    Ok(PointSunMask { cols, rows, lit })
 }
 
 /// Horizon at `site` (MOON_ME lat, east lon) for an observer `mast_m` metres above the near tile's
