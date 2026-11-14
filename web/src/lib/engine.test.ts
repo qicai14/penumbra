@@ -13,7 +13,7 @@ test("fixture matches the engine api_version and validates", () => {
   const s = parseScenario(raw, api_version());
   expect(s.fake).toBe(true);
   expect(s.timeline.t_unix_s.length).toBe(4320);
-  expect(s.scoreboard.map((e) => e.id)).toEqual(["V1", "V2", "V3", "V4", "V5"]);
+  expect(s.scoreboard.map((e) => e.id)).toEqual(["V1", "V2", "V2b", "V3", "V4", "V5"]);
 });
 
 test("a mismatched api_version is refused", () => {
