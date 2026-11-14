@@ -3,6 +3,7 @@
   import Panorama from "./lib/Panorama.svelte";
   import Timelines from "./lib/Timelines.svelte";
   import Survival from "./lib/Survival.svelte";
+  import Countdown from "./lib/Countdown.svelte";
   import Tracer from "./lib/Tracer.svelte";
   import Scoreboard from "./lib/Scoreboard.svelte";
   import About from "./lib/About.svelte";
@@ -59,6 +60,7 @@
       Computed for {scenario.site.lat_deg.toFixed(4)}°, {scenario.site.lon_deg.toFixed(4)}°E · mast {scenario.site.mast_m.toFixed(1)} m · landing {controls.date} · {computedFor.span_days} d
     </p>
     <Survival {scenario} {controls} />
+    <Countdown {scenario} {idx} />
     <Panorama {scenario} bind:idx />
     <Timelines {scenario} bind:idx />
   {:else if !error}
