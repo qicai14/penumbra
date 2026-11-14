@@ -198,7 +198,7 @@
 <section class="panel" aria-labelledby="tl-h">
   <header>
     <h2 id="tl-h">Timelines · sunlight and Earth over the span</h2>
-    {#if scenario.fake}<span class="pill" data-testid="fake-badge-timelines">FAKE DATA</span>{/if}
+    {#if scenario.fake}<span class="pill" data-testid="fake-badge-timelines">FAKE CHARGE DATA</span>{/if}
   </header>
 
   <div class="charts" bind:this={host} bind:clientWidth={width} data-testid="timelines" role="group"
