@@ -28,7 +28,7 @@
   let copied = $state("");
 
   // A region change moves the site from outside this component: re-sync the boxes and clear the old refusal.
-  $effect(() => { latDraft = String(controls.lat); lonDraft = String(controls.lon); refusal = null; rejected = null; outSite = null; });
+  $effect(() => { latDraft = String(controls.lat); lonDraft = String(controls.lon); refusal = null; rejected = null; outSite = null; copied = ""; });
 
   // A mask from another region is not this tile's.
   const shown = $derived(feed.mask && feed.mask.regionId === tile.region.id ? feed.mask : null);
@@ -115,7 +115,7 @@
   function setSite(lat: number, lon: number) {
     controls.lat = lat; controls.lon = lon;
     latDraft = String(lat); lonDraft = String(lon);
-    refusal = null; rejected = null; outSite = null;
+    refusal = null; rejected = null; outSite = null; copied = "";
   }
   function onsite(id: string) {
     const s = SITES.find((x) => x.id === id);
