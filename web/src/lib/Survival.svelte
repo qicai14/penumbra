@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { Scenario } from "./engine";
+  import { SURVIVAL_FAKE, type Scenario } from "./engine";
   import { headline, presetFields, setPresetField, spanDays, type FieldKey } from "./headline";
   import type { Controls } from "./state.svelte";
 
@@ -20,7 +20,7 @@
 <section class="panel" aria-labelledby="sv-h">
   <header>
     <h2 id="sv-h">Survival · lander preset</h2>
-    {#if scenario.fake}<span class="pill" data-testid="fake-badge-survival">FAKE DATA</span>{/if}
+    {#if SURVIVAL_FAKE}<span class="pill" data-testid="fake-badge-survival">FAKE DATA</span>{/if}
   </header>
 
   <div class="body">

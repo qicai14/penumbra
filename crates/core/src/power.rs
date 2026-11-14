@@ -7,7 +7,7 @@ use crate::timeline::Timeline;
 
 /// Solar constant S₀ at 1 AU, W/m² (E57).
 pub const SOLAR_CONSTANT_W_M2: f64 = 1366.1;
-/// 1 AU in km (IAU 2012 Resolution B2; not in the evidence ledger).
+/// 1 AU in km (IAU 2012 Resolution B2; W8).
 pub const AU_KM: f64 = 149_597_870.7;
 
 /// Panel orientation.

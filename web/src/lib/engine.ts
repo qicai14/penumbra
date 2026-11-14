@@ -215,6 +215,8 @@ async function ensureNear(engine: WasmEngine, lat: number, lon: number): Promise
 /** The panorama's horizon terrain is the real DEM since T07 (#8); the switch stays. Kept apart from `scenario.fake`,
  *  which T08/T09 turn off for the timelines and survival while the terrain may still be fake. */
 export const TERRAIN_FAKE = false;
+/** Survival (headline, charge, lethal time) is the WASM `survival` since T09 (#10); same pattern as TERRAIN_FAKE. */
+export const SURVIVAL_FAKE = false;
 
 let fixtureBase: Promise<Scenario> | undefined;
 /**

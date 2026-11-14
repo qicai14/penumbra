@@ -606,6 +606,7 @@ Web rows (NASA documents fetched Nov 10 by a subagent with curl; not in the corp
 | W5 | https://raw.githubusercontent.com/nyx-space/anise/master/anise/src/astro/aberration.rs | `pub const LT_S: Option<Self> = Some(Self {` | ANISE has light time + stellar aberration (master branch, read Nov 10) |
 | W6 | https://lroc.im-ldi.com/images/1408 | `ended up on its side within a 20-meter diameter crater` | IM-2 crater size (from facts-grill-1.md; fetched through a summarising tool, re-read by eye) |
 | W7 | https://pgda.gsfc.nasa.gov/products/69 | `averaged over hourly timesteps spanning 18.6 years, for the south polar region.` | AVGVISIB span and step (from facts-grill-1.md) |
+| W8 | https://ssd-api.jpl.nasa.gov/doc/horizons.html (header saved in `crates/core/tests/fixtures/horizons/tracer-sun.json`, Nov 13) | `1 au= 149597870.700 km` | AU used to scale solar flux (§1e) |
 
 Negative results (looked for, not found):
 - Observer height of AVGVISIB: not in README_ILLUMINATION_2016.TXT, not in the .LBL, not on PGDA product 69.
@@ -621,4 +622,4 @@ Negative results (looked for, not found):
 - W-rows are quotes from web documents fetched by subagents or copied from `facts-grill-1.md`. They are not in the corpus and were not re-fetched by this review.
 - [D] items are derivations and are not counted.
 
-**Count: 178 claims [V] · 10 claims [W] (web, not grep-checkable) · 20 claims [U].** (E131 re-tagged [V]→[U] by the independent review.)
+**Count: 178 claims [V] · 11 claims [W] (web, not grep-checkable) · 20 claims [U].** (E131 re-tagged [V]→[U] by the independent review.)
