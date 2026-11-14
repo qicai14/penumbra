@@ -10,14 +10,15 @@
   ];
 
   // Dataset names: docs/SUBMISSION.md rubric item 4. Roles tie to the V1-V5 judges in scoreboard.json.
-  // docs/EVIDENCE.md holds the citation rules only and lists no source ids yet, so every citation reads "pending".
+  // Citations are source ids in the SCIENCE-SPEC §6 evidence ledger, each with its quote and where it comes from.
+  const ledger = "https://github.com/qicai14/penumbra/blob/main/docs/SCIENCE-SPEC.md#6-evidence-ledger";
   const datasets = [
-    { name: "LOLA DEMs (20 m and 240 m)", role: "Terrain input to the horizon and shadow model" },
-    { name: "PGDA AVGVISIB_85S_060M_201608", role: "Outside judge for V2 (visibility)" },
-    { name: "NAIF kernels", role: "Sun and Earth positions in the model" },
-    { name: "JPL Horizons", role: "Outside judge for V1 (az/el)" },
-    { name: "LROC NAC (PGDA map-projected)", role: "Outside judge for V3 (shadow IoU)" },
-    { name: "IM-1 / IM-2 mission reports", role: "Outside judge for V4 (published timelines)" },
+    { name: "LOLA DEMs (20 m and 240 m)", role: "Terrain input to the horizon and shadow model", cite: "E133, E89, E135, E34b" },
+    { name: "PGDA AVGVISIB_85S_060M_201608", role: "Outside judge for V2 (visibility)", cite: "W1, W7" },
+    { name: "NAIF kernels (DE440, lunar frame kernel)", role: "Ephemeris and lunar frame kernels: Sun and Earth positions in the model", cite: "E141, E40, E44" },
+    { name: "JPL Horizons", role: "Outside judge for V1 (az/el)", cite: "W8, E46" },
+    { name: "LROC NAC (PGDA map-projected)", role: "Outside judge for V3 (illumination: shadow IoU)", cite: "E95, E94" },
+    { name: "IM-1 / IM-2 mission reports", role: "Outside judge for V4: published landing reports and the LROC crater image", cite: "E72a, E72b, E75a–c, E73, E74, W6" },
   ];
 </script>
 
@@ -36,7 +37,7 @@
       <thead><tr><th scope="col">Dataset</th><th scope="col">Role</th><th scope="col">Citation</th></tr></thead>
       <tbody>
         {#each datasets as d (d.name)}
-          <tr><th scope="row">{d.name}</th><td>{d.role}</td><td class="off">Citation pending</td></tr>
+          <tr><th scope="row">{d.name}</th><td>{d.role}</td><td data-testid="citation"><a href={ledger}>SCIENCE-SPEC §6: {d.cite}</a></td></tr>
         {/each}
       </tbody>
     </table>
@@ -53,5 +54,7 @@
   caption { text-align: left; color: var(--color-ash); padding-bottom: var(--spacing-8); font-size: var(--text-caption); }
   th, td { border: 1px solid var(--color-iron); padding: var(--spacing-8); text-align: left; vertical-align: top; }
   thead th { color: var(--color-fog); font-weight: var(--font-weight-regular); background: var(--surface-carbon); }
-  .off { color: var(--color-fog); }
+  a { color: var(--color-paper); text-underline-offset: 2px; }
+  a:visited { color: var(--color-paper); }
+  a:focus-visible { outline: 2px solid var(--color-paper); outline-offset: 2px; }
 </style>

@@ -26,7 +26,7 @@
   {
     "id": "V3",
     "judge": "PGDA map-projected NACs",
-    "metric": "shadow IoU gap to NASA _MODEL.TIF",
+    "metric": "illumination: shadow IoU gap to NASA _MODEL.TIF",
     "threshold": 0.05,
     "value": null,
     "pass": null,
