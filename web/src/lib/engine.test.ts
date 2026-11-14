@@ -124,13 +124,6 @@ test("computeScenario returns the real IM-2 horizon and ground height; outside t
   }
 });
 
-test("fixture projection puts IM-2 at about (77.11, 137.99) km (DATA-NOTES), guarding drift until T01", async () => {
-  const { latlonToXy } = await import("./projection");
-  const [x, y] = latlonToXy(-84.7906, 29.1957);
-  expect(x / 1000).toBeCloseTo(77.11, 1);
-  expect(y / 1000).toBeCloseTo(137.99, 1);
-});
-
 test("an unknown region id is refused", async () => {
   const realFetch = globalThis.fetch;
   globalThis.fetch = servePublic;

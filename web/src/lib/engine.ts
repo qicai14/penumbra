@@ -192,7 +192,7 @@ import { serialize } from "./serialize";
 import { checkPit, DEGRADED_SLOPE_DEG } from "./replay";
 import { latlonToXy } from "./projection";
 // ---- Site picker and recompute (T11) ----
-// The projection is still a fixture stand-in until T01 #2 merges; the model calls above are the WASM Engine.
+// The projection is TS (projection.ts), pinned to core::geometry by projection.test.ts (#58); the model calls above are the WASM Engine.
 export { latlonToXy, xyToLatlon } from "./projection";
 
 export type NearMeta = {

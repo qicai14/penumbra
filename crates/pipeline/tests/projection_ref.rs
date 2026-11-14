@@ -34,7 +34,7 @@ fn from_xy(name: &str, x_m: f64, y_m: f64) -> Value {
     json!({ "name": name, "lat_deg": ll.lat_rad.to_degrees(), "lon_deg": ll.lon_east_rad.to_degrees(), "x_m": x_m, "y_m": y_m })
 }
 
-/// SP-01 and IM-2 (T01 brief rows 1–2) plus the four corners of each near tile in the manifest.
+/// SP-01 and IM-2 (T01 brief rows 1–2), the four corners of each near tile in the manifest, and three wrap points.
 fn expected() -> Vec<Value> {
     let text = std::fs::read_to_string(root().join("web/public/data/manifest.json")).unwrap();
     let m: Value = serde_json::from_str(&text).unwrap();
@@ -56,6 +56,10 @@ fn expected() -> Vec<Value> {
             pts.push(from_xy(&format!("{id} {corner}"), x, y));
         }
     }
+    // Longitude wrap at 0/360: both sides of the seam, and x a hair below 0, where +360 rounds to 360.
+    pts.push(from_latlon("wrap lon 0", -89.0, 0.0));
+    pts.push(from_latlon("wrap lon 359.9999", -89.0, 359.9999));
+    pts.push(from_xy("wrap x -1e-12", -1e-12, 100_000.0));
     pts
 }
 
@@ -72,7 +76,12 @@ fn reference_file_matches_core_geometry_to_half_a_millimetre() {
     let path = root().join("web/src/lib/projection-ref.json");
     let want = expected();
     if std::env::var_os("PROJECTION_REF_WRITE").is_some() {
+        assert!(
+            std::env::var_os("CI").is_none(),
+            "PROJECTION_REF_WRITE must not run in CI"
+        );
         std::fs::write(&path, serde_json::to_string_pretty(&want).unwrap() + "\n").unwrap();
+        return; // a write run is not a check; rerun without the variable
     }
     let text = std::fs::read_to_string(&path).unwrap();
     let got: Vec<Value> = serde_json::from_str(&text).unwrap();
