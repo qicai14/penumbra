@@ -181,4 +181,46 @@ impl Engine {
         .map(|h| h.to_api())
         .map_err(dem_err)
     }
+
+    /// 10 × count, column-major (docs/API.md): t_unix_s, sun_az_deg, sun_el_deg, illumination,
+    /// visibility, earth_az_deg, earth_el_deg, earth_margin_deg, contact, sun_dist_km. `horizon` is the
+    /// 1 440-value layout `horizon` returns (topocentric ENU degrees, then metres); site in MOON_ME
+    /// degrees, heights metres, times Unix s UTC. Contact is margin ≥ `earth_margin_deg` (§1d).
+    #[allow(clippy::too_many_arguments)] // frozen API signature (docs/API.md)
+    pub fn timeline(
+        &self,
+        horizon: &[f64],
+        lat_deg: f64,
+        lon_deg: f64,
+        ground_m: f64,
+        mast_m: f64,
+        start_unix_s: f64,
+        step_s: f64,
+        count: u32,
+        earth_margin_deg: f64,
+    ) -> Result<Vec<f64>, JsError> {
+        let n_az = penumbra_core::horizon::N_AZ;
+        if horizon.len() != 2 * n_az {
+            return Err(JsError::new("BAD_INPUT: horizon must have 1440 values"));
+        }
+        let el_hor_rad: [f64; penumbra_core::horizon::N_AZ] =
+            std::array::from_fn(|i| horizon[i].to_radians());
+        let site = penumbra_core::eph::Site {
+            lat_rad: lat_deg.to_radians(),
+            lon_east_rad: lon_deg.to_radians(),
+            ground_m,
+            mast_m,
+        };
+        penumbra_core::timeline::timeline(
+            &self.eph,
+            &el_hor_rad,
+            &site,
+            start_unix_s,
+            step_s,
+            count,
+            earth_margin_deg.to_radians(),
+        )
+        .map(|t| t.to_api())
+        .map_err(js_err)
+    }
 }
