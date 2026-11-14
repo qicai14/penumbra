@@ -24,6 +24,7 @@ const FAR_PX: u32 = 3184;
 /// Sites checked.
 pub const SITES: usize = 20;
 /// Span: 18.6 years hourly from 2010-01-01T00:00:00Z (§3 V2 details): ceil(18.6 × 365.25 × 24) rows.
+/// The start is arbitrary (V2's start reused); V5 only asks for 18.6 years.
 pub const START_UNIX_S: f64 = 1_262_304_000.0;
 pub const STEPS: usize = 163_048;
 const STEP_S: f64 = 3600.0;

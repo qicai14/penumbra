@@ -52,14 +52,11 @@ fn pick_spread_takes_evenly_spaced_entries_in_order() {
     assert_eq!(pick_spread(&all[..3], 20), vec![0, 1, 2]);
 }
 
-// V5 case 3, the real run. Skips cleanly when PENUMBRA_DATA is unset.
+// V5 case 3, the real run. Panics when PENUMBRA_DATA is unset so --ignored never passes empty.
 #[test]
 #[ignore = "needs the kernels and LPSR/LDEM GeoTIFFs in PENUMBRA_DATA (not in CI); run with --release"]
 fn v5_case3_twenty_well_inside_psr_pixels_are_dark_for_18_6_years() {
-    let Ok(dir) = std::env::var("PENUMBRA_DATA") else {
-        eprintln!("skipped: PENUMBRA_DATA is not set");
-        return;
-    };
+    let dir = std::env::var("PENUMBRA_DATA").expect("set PENUMBRA_DATA to the download folder");
     let r = run(std::path::Path::new(&dir)).unwrap();
     println!(
         "V5 case 3: {} sites x {} hourly steps from {} (unix s UTC)",

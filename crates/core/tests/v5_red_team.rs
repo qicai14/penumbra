@@ -160,8 +160,8 @@ fn case2_flat_pole_sun_within_1_6_deg_and_earth_within_7_2_deg() {
     assert!(earth <= 7.2, "Earth el {earth}°");
 }
 
-// Case 4 (P4): positions are continuous from 2026-12-31T23:59 to 2027-01-01T00:01 UTC, so a UTC/TDB
-// mix-up at the year boundary (a 69 s step, 0.010° of Sun azimuth) would show as unequal minute steps.
+// Case 4 (P4): positions are continuous from 2026-12-31T23:59 to 2027-01-01T00:01 UTC, so a kink or
+// misaligned row at the boundary shows as unequal minute steps; the constant 69 s offset is V1's job (P4).
 #[test]
 fn case4_year_boundary_is_continuous() {
     let start = 1_798_761_600.0 - 60.0; // 2026-12-31T23:59:00Z
@@ -248,7 +248,7 @@ fn case5_far_side_60s_earth_never_visible() {
     assert_eq!(visible, 0);
 }
 
-/// Far tile 834² flat at 240 m on the pole (footprint ends at ±99 960 m), flat 20 m near tile
+/// Far tile 834² flat at 240 m on the pole (footprint ends at ±100 080 m), flat 20 m near tile
 /// centred on the site: the P5 scene of `tests/horizon.rs`, rebuilt here so this suite stands alone.
 fn edge_case(x_m: f64, y_m: f64) -> Result<(), DemError> {
     let s = xy_to_latlon(MapXy { x_m, y_m }).unwrap();
