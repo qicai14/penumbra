@@ -82,7 +82,7 @@ sequenceDiagram
   Note over P,E: Per click
   P->>UI: click the height image at (x, y)
   UI->>A: run(site, landing date, lander preset)
-  A->>E: xy_to_latlon(x, y)
+  Note over A: (x, y) to (lat, lon) in TS, projection.ts (#58)
   A->>E: ground_height(lat, lon)
   E-->>A: metres, or OUT_OF_COVERAGE
   A->>E: horizon(lat, lon, mast)
@@ -359,7 +359,7 @@ PLAN-DRAFT §1 already proposes the function names and units for the Hour 0 free
 | `sun_earth_track` returns 8 columns with no time | Time is column 0 of every series result | One x array for every chart, and no way to pair a series with the wrong times. |
 | `horizon` returns a "closer than 3 pixels" flag | Dropped; the reader tests `dist_m < 60` | It is derivable, and a flag is one more array to keep in step. |
 
-It also adds three small functions the plan needs but doesn't name: `ground_height`, `xy_to_latlon` and `latlon_to_xy`. Without them `web/` would have to do projection maths to turn a click into a site.
+It also adds `ground_height`, which the plan needs but doesn't name. It first added `xy_to_latlon` and `latlon_to_xy` too; #58 dropped them, and `web/src/lib/projection.ts` projects in TS, cross-checked against `core::geometry` to 1 mm.
 
 ### 3.1 Conventions (frozen with the API)
 
@@ -368,7 +368,7 @@ It also adds three small functions the plan needs but doesn't name: `ground_heig
 - **Heights**: `ground_m` is metres above the 1 737 400 m sphere; `mast_m` is the mast height H above the ground.
 - Every number crossing the boundary is f64. There is no f32 anywhere in the API (N7).
 - **Errors** are thrown as a JS `Error` whose message starts with a code and a colon: `NOT_LOADED`, `OUT_OF_COVERAGE`, `NO_DATA`, `OUT_OF_TABLE`, `BAD_INPUT`. A function never returns a default in place of an error (P5, P16).
-- `api_version()` returns 1. The fixture and the manifest carry the same number; the adapter refuses a mismatch.
+- `api_version()` returns 3 (see API.md for the history). The fixture and the manifest carry the same number; the adapter refuses a mismatch.
 
 ### 3.2 The API to freeze at Hour 0
 
@@ -377,9 +377,7 @@ Canonical copy since T00: [docs/API.md](API.md). Change it there first, under it
 Rust signatures in `crates/wasm`. wasm-bindgen generates the `.d.ts` from them.
 
 ```rust
-#[wasm_bindgen] pub fn api_version() -> u32;                                   // 1
-#[wasm_bindgen] pub fn latlon_to_xy(lat_deg: f64, lon_deg: f64) -> Vec<f64>;   // [x_m, y_m]
-#[wasm_bindgen] pub fn xy_to_latlon(x_m: f64, y_m: f64) -> Vec<f64>;           // [lat_deg, lon_deg]
+#[wasm_bindgen] pub fn api_version() -> u32;                                   // 3
 
 #[wasm_bindgen] pub struct Engine { /* ephemeris segments, near tile, far tile */ }
 
@@ -501,7 +499,7 @@ The type keys are the column names of §3.2 and the keys of the fixture, letter 
 ```json
 {
   "format_version": 1,
-  "api_version": 1,
+  "api_version": 3,
   "ephemeris": [
     { "id": "main", "url": "data/eph-main.1a2b3c.bin", "t0_unix_s": 1767225600, "step_s": 3600, "rows": 43825 }
   ],
@@ -521,7 +519,7 @@ The type keys are the column names of §3.2 and the keys of the fixture, letter 
 {
   "fake": true,
   "note": "FAKE DATA for layout only. Not a model result.",
-  "api_version": 1,
+  "api_version": 3,
   "site": { "lat_deg": -84.7906, "lon_deg": 29.1957, "ground_m": 0, "mast_m": 2 },
   "start_unix_s": 1794614400,
   "step_s": 600,

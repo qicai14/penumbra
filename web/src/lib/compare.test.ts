@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import type { NearMeta, Preset } from "./engine";
 import { applyPresetEdits, compareSentence, decodeCompare, diffDays, encodeCompare, presetEdits, type Pair } from "./compare";
-import { xyToLatlon } from "./fixture-projection";
+import { xyToLatlon } from "./projection";
 
 const A: Pair = { lat: -84.7906, lon: 29.1957, date: "2026-11-14" };
 // The manifest example near tile: 30.72 km square, upper-left (61740, 153360).
