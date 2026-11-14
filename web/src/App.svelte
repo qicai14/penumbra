@@ -163,12 +163,12 @@
     font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono);
   }
   .bar { padding: var(--spacing-16); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-16); border-bottom: 1px solid var(--color-iron); }
-  /* Site v2 B: countdown first, survival headline beside it; the row stays pinned on wide screens (T26). */
+  /* Site v2 B: countdown first, survival headline beside it; the row stays pinned only where it fits on one line and leaves room below (T26). */
   .toprow { display: flex; flex-wrap: wrap; gap: var(--spacing-16); margin-top: var(--spacing-24); }
   .toprow > :global(:first-child) { flex: 2 1 420px; }
   .toprow > :global(:last-child) { flex: 1 1 260px; }
   .toprow :global(.panel) { margin-top: 0; }
-  @media (min-width: 768px) { .toprow { position: sticky; top: 0; z-index: 1; background: var(--surface-void); padding-bottom: var(--spacing-8); } }
+  @media (min-width: 1100px) and (min-height: 800px) { .toprow { position: sticky; top: 0; z-index: 1; background: var(--surface-void); padding-bottom: var(--spacing-8); } }
   nav { display: flex; }
   .gh { display: inline-flex; align-items: center; gap: var(--spacing-8); color: var(--color-fog); text-decoration: none; font: var(--text-caption)/var(--leading-caption) var(--font-mono); }
   .gh:hover { color: var(--color-paper); }

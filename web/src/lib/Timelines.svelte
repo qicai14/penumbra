@@ -299,7 +299,7 @@
   .zoom { display: flex; }
   .zoom button {
     font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-fog); background: transparent;
-    border: 1px solid var(--color-slate); padding: var(--spacing-8) var(--spacing-16); margin-left: -1px; cursor: pointer; min-width: 44px;
+    border: 1px solid var(--color-slate); padding: var(--spacing-8) var(--spacing-16); margin-left: -1px; cursor: pointer; min-width: 44px; min-height: 44px;
   }
   .zoom button:first-child { margin-left: 0; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
   .zoom button:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
