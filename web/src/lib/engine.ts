@@ -179,6 +179,7 @@ export function loadTracerTrack(): Promise<Track> {
 }
 
 import { edgeDistanceM } from "./site";
+import { serialize } from "./serialize";
 import { latlonToXy } from "./fixture-projection";
 // ---- Site picker and recompute (T11) ----
 // The projection is still a fixture stand-in until T01 #2 merges; the model calls above are the WASM Engine.
@@ -224,7 +225,7 @@ let fixtureBase: Promise<Scenario> | undefined;
  * real DEM horizon (T07), Engine.timeline (T08) and the WASM `survival` (T09). Track and timelines share one grid, so the
  * cursor stays aligned. The fixture still supplies the step and the preset defaults.
  */
-export async function computeScenario(inp: Inputs): Promise<Scenario> {
+async function computeNow(inp: Inputs): Promise<Scenario> {
   const s = await (fixtureBase ??= loadFixture());
   const engine = await loadEngine();
   await ensureNear(engine, inp.lat_deg, inp.lon_deg);
@@ -250,3 +251,7 @@ export async function computeScenario(inp: Inputs): Promise<Scenario> {
   validate(survival);
   return { ...s, fake: false, note: "", start_unix_s: t0, count: n, preset, site, track, horizon, timeline, survival };
 }
+
+// The Engine holds one near tile at a time (ensureNear swaps it), so two computes must never interleave.
+/** computeNow, one at a time: a second call waits for the first (the compare view runs A then B, and the site view may be mid-compute). */
+export const computeScenario = serialize(computeNow);

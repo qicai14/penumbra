@@ -7,6 +7,9 @@ export const PICK_BORDER_M = 7050;
 export const EPH_START_S = Date.UTC(2026, 0, 1) / 1000;
 export const EPH_END_S = Date.UTC(2031, 0, 1) / 1000; // last table row: 2026-01-01 + 1826 days
 export const SPANS_DAYS = [14, 30, 60] as const;
+export const DEFAULT_SPAN_DAYS = 30;
+export const DEFAULT_MAST_M = 2;
+export const MAST_MAX_M = 10; // the site view's mast slider runs 0..10 m in 0.5 m steps
 
 export type Verdict = { ok: true } | { ok: false; reason: string };
 
