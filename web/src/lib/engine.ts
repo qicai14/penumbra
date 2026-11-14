@@ -203,7 +203,8 @@ export async function loadNearTile(regionId?: string): Promise<NearTile & { regi
   const region = regionId === undefined ? m.regions[0] : m.regions.find((r) => r.id === regionId);
   if (!region) throw new Error(`BAD_INPUT: unknown region ${regionId}`);
   const { url, ...meta } = region.near;
-  return { fake: false, region: { id: region.id, name: region.name }, regions: m.regions.map(({ id, name }) => ({ id, name })), eph: m.ephemeris, meta, data: await fetchTile(region.near) };
+  // shortcut: only ephemeris[0] is loaded (line 151), so only it is offered; T16 (#17) loads the replay segment too.
+  return { fake: false, region: { id: region.id, name: region.name }, regions: m.regions.map(({ id, name }) => ({ id, name })), eph: m.ephemeris.slice(0, 1), meta, data: await fetchTile(region.near) };
 }
 
 let nearId: string | undefined; // region now in the Engine
