@@ -2,6 +2,26 @@
 
 For Qi Cai's review on Nov 13. Newest first.
 
+## 2026-11-14 · Screen 6 lo-fi pick: Compare A vs B (Charls + Claude review)
+
+Method:
+- The three pages in `wireframes-v2/compare/` were checked in the browser.
+- They were scored against IDEA.md "What the challenge page stresses" and PLAN-DRAFT T27 and Q10 (1 h budget).
+- None needs a redo.
+
+| Screen | Pick | Why | Fix before hi-fi |
+|---|---|---|---|
+| Compare A vs B | **C** Difference as summary (B − A sentence moved to the bottom, Charls) | A and B and the shared timeline come first, then one sentence sums up B − A for planners and the public. It answers the schedule-slip question ("compare sites and dates quickly") and builds from the same pieces as A plus one sentence, so it fits T27's 1 h. | 1. The sentence must handle a site change, a date change, both, B being better, and no difference, not only "3 days later costs…". 2. Say which moment the clocks show: one shared time cursor, or each side's own calendar date. 3. Add a "custom coordinates" entry to the site picker (IDEA asks for curated sites plus custom coordinates). 4. Label the shared axis with calendar dates, not only "+3d". |
+
+**Not picked:**
+- **A, Two columns:** sound, but the reader has to work out B − A, and the timeline sits far from the numbers it explains. Keep it as C's fallback layout.
+- **B, One timeline with two lanes:** needs a new two-lane chart (over the 1 h budget), and its clocks are too small for the challenge's "time left before sunset or Earthset". If reused, fix:
+  - the oversized SVG labels that overlap the lanes;
+  - the clipped "+33d" tick;
+  - the table that scrolls sideways on phones.
+
+**Open question for Qi Cai:** should the clocks follow one shared time cursor, or each side's own landing time?
+
 ## 2026-11-14 · Round-2 picks against the Resources tab, plus a screen-6 redo (Qi Cai + Claude review)
 
 Method:
