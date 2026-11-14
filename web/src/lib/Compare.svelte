@@ -1,14 +1,14 @@
 <script lang="ts">
   // T27 (#28): two site-date pairs side by side with one shared lander preset. Each column is its own scenario, so its
   // clocks follow its own landing time (Qi Cai, 2026-11-14). Every figure is the model's; the page only subtracts and words it.
-  import { computeScenario, latlonToXy, type NearMeta, type Preset, type Scenario } from "./engine";
+  import { computeScenario, latlonToXy, type EphSegment, type NearMeta, type Preset, type Scenario } from "./engine";
   import { compareSentence, diffDays, encodeCompare, presetEdits, type Pair } from "./compare";
   import Countdown from "./Countdown.svelte";
   import { headline, presetFields, setPresetField, spanDays, type FieldKey } from "./headline";
   import { checkDate, checkPick } from "./site";
   import type { Controls } from "./state.svelte";
 
-  let { controls, pairs, base, metas }: { controls: Controls; pairs: Record<"a" | "b", Pair>; base: Preset; metas: NearMeta[] } = $props();
+  let { controls, pairs, base, metas, eph }: { controls: Controls; pairs: Record<"a" | "b", Pair>; base: Preset; metas: NearMeta[]; eph: EphSegment[] } = $props();
 
   type Side = "a" | "b";
   const SIDES: Side[] = ["a", "b"];
@@ -61,7 +61,7 @@
     const fail = (m: string) => { refusals[s] = m; };
     if (!d.lat.trim() || !d.lon.trim() || !Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 360)
       return fail("Enter a latitude between −90 and 90 and a longitude between −180 and 360.");
-    const dv = checkDate(d.date, controls.spanDays);
+    const dv = checkDate(d.date, controls.spanDays, eph);
     if (!dv.ok) return fail(dv.reason);
     const [x, y] = latlonToXy(lat, lon);
     const picks = metas.map((t) => checkPick(x, y, t));
@@ -113,6 +113,7 @@
         <input type="number" min="0" step={f.step} max={f.key === "earth_margin_deg" ? 90 : undefined} value={f.value} data-testid="cmp-preset-{f.key}" onchange={(e) => editPreset(f.key, f.label, e)} />
         <span class="unit">{f.unit}</span>
         <span class="tag">{f.tag}</span>
+        {#if f.note}<span class="field-note" data-testid="cmp-note-{f.key}">{f.note}</span>{/if}
       </label>
     {/each}
   </form>
@@ -169,6 +170,7 @@
     font-variant-numeric: tabular-nums;
   }
   .preset input { width: 9ch; flex: none; }
+  .field-note { flex-basis: 100%; }
   button {
     font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-fog); background: transparent;
     border: 1px solid var(--color-slate); border-radius: var(--radius-sm); padding: var(--spacing-8) var(--spacing-16); cursor: pointer;

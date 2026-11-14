@@ -4,7 +4,7 @@
   import "uplot/dist/uPlot.min.css";
   import { SURVIVAL_FAKE, type Scenario } from "./engine";
   import { fmtUtc } from "./panorama";
-  import { buildChartData, buildSocData, citedTag, indexAtTime, lethalUnixS, operableMask, operableRuns, thresholdLabel } from "./timelines";
+  import { buildChartData, buildSocData, citedTag, clipRunsAt, indexAtTime, lethalUnixS, operableMask, operableRuns, thresholdLabel } from "./timelines";
 
   let { scenario, idx = $bindable(0) }: { scenario: Scenario; idx: number } = $props();
 
@@ -106,8 +106,8 @@
     const d = buildChartData(tl, scenario.preset);
     const t = d.illum[0];
     const full: [number, number] = [t[0], t[t.length - 1] + scenario.step_s];
-    const runs = operableRuns(tl.t_unix_s, operableMask(tl), scenario.step_s);
     const lethalS = lethalUnixS(scenario.start_unix_s, scenario.survival.lethal_h);
+    const runs = clipRunsAt(operableRuns(tl.t_unix_s, operableMask(tl), scenario.step_s), lethalS);
     const band = (text = false) => [bandPlugin(runs, k.fog + "26"), lethalPlugin(lethalS, k.paper, k.font, text), wheelPlugin(full)];
     const x = (show: boolean): uPlot.Axis => ({ show, stroke: k.ash, grid: { stroke: k.iron, width: 1 }, ticks: { stroke: k.iron }, font: k.font });
     const y = (extra: Partial<uPlot.Axis> = {}): uPlot.Axis => ({ size: 56, stroke: k.ash, grid: { stroke: k.iron, width: 1 }, ticks: { stroke: k.iron }, font: k.font, ...extra });

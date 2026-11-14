@@ -5,7 +5,7 @@ import { citedTag, fmtDays } from "./timelines";
 export { fmtDays }; // lives in timelines.ts so the two modules import one way only
 
 export type FieldKey = "capacity_wh" | "start_wh" | "min_wh" | "panel_area_m2" | "efficiency" | "load_w" | "earth_margin_deg";
-export type PresetField = { key: FieldKey; label: string; unit: string; value: number; step: number; tag: "cited" | "assumed" };
+export type PresetField = { key: FieldKey; label: string; unit: string; value: number; step: number; tag: "cited" | "assumed"; note?: string };
 
 const FIELDS: [FieldKey, string, string, number][] = [
   ["capacity_wh", "Battery capacity", "Wh", 100],
@@ -32,10 +32,14 @@ export function headline(s: Pick<Survival, "operable_h" | "lethal_h">, span: num
   };
 }
 
+/** Beside the load while it still reads "cited": the 220 W is the rover driving load (E58d); holding it for 24 h is our assumption. */
+export const LOAD_NOTE = "cited value (rover driving load, E58d); constant 24 h use is assumed";
+
 /** Rows for the preset form. Efficiency is a fraction in the model and a percent on screen. */
 export function presetFields(p: Preset): PresetField[] {
   return FIELDS.map(([key, label, unit, step]) => ({
     key, label, unit, step, tag: citedTag(p, key),
+    ...(key === "load_w" && citedTag(p, key) === "cited" ? { note: LOAD_NOTE } : {}),
     value: key === "efficiency" ? Math.round(p.efficiency * 1e6) / 1e4 : p[key],
   }));
 }
@@ -54,8 +58,7 @@ export function setPresetField(p: Preset, key: FieldKey, value: number): Preset 
     }
   }
   if (next.capacity_wh <= 0) return "battery capacity must be above 0 Wh";
-  if (next.panel_area_m2 <= 0) return "panel area must be above 0 m²";
-  if (next.efficiency <= 0 || next.efficiency > 1) return "cell efficiency must be above 0 % and at most 100 %";
+  if (next.efficiency > 1) return "cell efficiency must be at most 100 %"; // 0 is valid: battery only
   if (next.earth_margin_deg > 90) return "Earth margin must be at most 90°";
   if (next.start_wh > next.capacity_wh) return `charge at landing must not exceed battery capacity (${next.capacity_wh} Wh)`;
   if (next.min_wh > next.capacity_wh) return `lethal charge must not exceed battery capacity (${next.capacity_wh} Wh)`;

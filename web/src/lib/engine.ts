@@ -98,9 +98,10 @@ export function validate(result: Horizon | Track | Timeline | Survival): void {
 }
 
 type TileMeta = { url: string; width: number; height: number; x0_m: number; y0_m: number; pixel_m: number; scale_m: number; offset_m: number; nodata: number };
+export type EphSegment = { id: string; url: string; t0_unix_s: number; step_s: number; rows: number };
 export type Manifest = {
   format_version: number; api_version: number;
-  ephemeris: { id: string; url: string; t0_unix_s: number; step_s: number; rows: number }[];
+  ephemeris: EphSegment[];
   far: TileMeta; regions: { id: string; name: string; near: TileMeta }[];
 };
 
@@ -162,12 +163,15 @@ export function loadEngine(): Promise<WasmEngine> {
   })().catch((e) => { engineLoad = undefined; throw e; }));
 }
 
+/** Column order of the flat arrays from the WASM `sun_earth_track` and `timeline` calls (docs/API.md). */
+export const TRACK_COLUMNS = ["t_unix_s", "sun_az_deg", "sun_el_deg", "sun_radius_deg", "sun_dist_km", "earth_az_deg", "earth_el_deg", "earth_radius_deg", "earth_dist_km"] as const;
+export const TIMELINE_COLUMNS = ["t_unix_s", "sun_az_deg", "sun_el_deg", "illumination", "visibility", "earth_az_deg", "earth_el_deg", "earth_margin_deg", "contact", "sun_dist_km"] as const;
+
 /** Sun and Earth az/el from the WASM Engine for one site and time grid (SCIENCE-SPEC 1c, degrees, Unix s UTC). */
 export async function sunEarthTrack(site: Site, start_unix_s: number, step_s: number, count: number): Promise<Track> {
   const engine = await loadEngine();
   const flat = engine.sun_earth_track(site.lat_deg, site.lon_deg, site.ground_m, site.mast_m, start_unix_s, step_s, count);
-  const names = ["t_unix_s", "sun_az_deg", "sun_el_deg", "sun_radius_deg", "sun_dist_km", "earth_az_deg", "earth_el_deg", "earth_radius_deg", "earth_dist_km"];
-  const track = Object.fromEntries(names.map((k, i) => [k, flat.slice(i * count, (i + 1) * count)])) as Track;
+  const track = Object.fromEntries(TRACK_COLUMNS.map((k, i) => [k, flat.slice(i * count, (i + 1) * count)])) as Track;
   validate(track);
   return track;
 }
@@ -194,12 +198,12 @@ export type Inputs = { lat_deg: number; lon_deg: number; mast_m: number; start_u
 
 export type Region = { id: string; name: string };
 /** The near tile of one region (the first when no id is given); the int16 counts exactly as shipped. */
-export async function loadNearTile(regionId?: string): Promise<NearTile & { regions: Region[] }> {
+export async function loadNearTile(regionId?: string): Promise<NearTile & { regions: Region[]; eph: EphSegment[] }> {
   const m = await loadManifest();
   const region = regionId === undefined ? m.regions[0] : m.regions.find((r) => r.id === regionId);
   if (!region) throw new Error(`BAD_INPUT: unknown region ${regionId}`);
   const { url, ...meta } = region.near;
-  return { fake: false, region: { id: region.id, name: region.name }, regions: m.regions.map(({ id, name }) => ({ id, name })), meta, data: await fetchTile(region.near) };
+  return { fake: false, region: { id: region.id, name: region.name }, regions: m.regions.map(({ id, name }) => ({ id, name })), eph: m.ephemeris, meta, data: await fetchTile(region.near) };
 }
 
 let nearId: string | undefined; // region now in the Engine
@@ -239,8 +243,7 @@ async function computeNow(inp: Inputs): Promise<Scenario> {
   const track = await sunEarthTrack(site, t0, s.step_s, n);
   // Timelines from the WASM Engine (T08 #9), on the same grid and against the same horizon.
   const flat = engine.timeline(raw, site.lat_deg, site.lon_deg, ground_m, inp.mast_m, t0, s.step_s, n, preset.earth_margin_deg);
-  const names = ["t_unix_s", "sun_az_deg", "sun_el_deg", "illumination", "visibility", "earth_az_deg", "earth_el_deg", "earth_margin_deg", "contact", "sun_dist_km"];
-  const timeline = Object.fromEntries(names.map((k, i) => [k, flat.slice(i * n, (i + 1) * n)])) as Timeline;
+  const timeline = Object.fromEntries(TIMELINE_COLUMNS.map((k, i) => [k, flat.slice(i * n, (i + 1) * n)])) as Timeline;
   validate(timeline);
   // Survival from the WASM free function (T09 #10) on that timeline; landing is its first step. NaN lethal_h = none in span.
   const wasm = await import("./wasm/penumbra_wasm.js");

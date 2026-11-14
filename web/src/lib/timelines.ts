@@ -37,6 +37,12 @@ export function operableRuns(t: ArrayLike<number>, mask: ArrayLike<number>, step
   return runs;
 }
 
+/** Operable runs cut off at the lethal time (SCIENCE-SPEC 1e: operable hours stop there): a run spanning it ends exactly there, later runs are dropped. No lethal time leaves the runs as they are. */
+export function clipRunsAt(runs: Run[], lethalS: number | null): Run[] {
+  if (lethalS === null) return runs;
+  return runs.filter(([a]) => a < lethalS).map(([a, b]): Run => [a, Math.min(b, lethalS)]);
+}
+
 /** Index of the step nearest to a time, clamped to the span. */
 export function indexAtTime(t: ArrayLike<number>, tUnix: number): number {
   let lo = 0, hi = t.length - 1;

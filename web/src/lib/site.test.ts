@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { NearMeta } from "./engine";
-import { checkDate, checkPick, edgeDistanceM, parseDate } from "./site";
+import { checkDate, checkPick, dateRange, edgeDistanceM, parseDate } from "./site";
 import { latlonToXy, xyToLatlon } from "./fixture-projection";
 
 // 30.72 km square, upper-left (61740, 153360), as in the manifest example.
@@ -31,14 +31,36 @@ test("parseDate is strict", () => {
   expect(parseDate("")).toBeNull();
 });
 
+// The shipped manifest today: one segment, 2026-01-01 00:00 .. 2031-01-01 00:00 hourly.
+const MAIN = { id: "main", url: "", t0_unix_s: 1767225600, step_s: 3600, rows: 43825 };
+// A replay segment (IM-2 landed 2025-03-06): 2025-03-01 .. 2025-04-01, hourly, with a gap before MAIN.
+const REPLAY = { id: "replay", url: "", t0_unix_s: 1740787200, step_s: 3600, rows: 745 };
+
 test("a date outside 2026-01-01..2030-12-31 is refused (P16)", () => {
-  expect(checkDate("2026-01-01", 30).ok).toBe(true);
-  expect(checkDate("2030-11-30", 30).ok).toBe(true);
-  expect(checkDate("2025-12-31", 30).ok).toBe(false);
-  expect(checkDate("2031-01-01", 30).ok).toBe(false);
-  const e = checkDate("2030-12-20", 30);
+  const eph = [MAIN];
+  expect(checkDate("2026-01-01", 30, eph).ok).toBe(true);
+  expect(checkDate("2030-11-30", 30, eph).ok).toBe(true);
+  expect(checkDate("2025-12-31", 30, eph).ok).toBe(false);
+  expect(checkDate("2031-01-01", 30, eph).ok).toBe(false);
+  const e = checkDate("2030-12-20", 30, eph);
   expect(!e.ok && e.reason).toContain("past the end");
-  expect(checkDate("nope", 30).ok).toBe(false);
+  expect(!e.ok && e.reason).toContain("(2030-12-31)");
+  const before = checkDate("2025-12-31", 30, eph);
+  expect(!before.ok && before.reason).toContain("starts (2026-01-01)");
+  expect(checkDate("nope", 30, eph).ok).toBe(false);
+  expect(dateRange(eph)).toEqual({ min: "2026-01-01", max: "2030-12-31" });
+});
+
+test("with two segments a date and its span must fit inside one; the gap is refused (P16)", () => {
+  const eph = [REPLAY, MAIN];
+  expect(checkDate("2025-03-06", 14, eph).ok).toBe(true);
+  expect(checkDate("2025-03-20", 14, eph).ok).toBe(false); // 03-20 + 14 d = 04-03, past the replay segment (ends 04-01)
+  expect(checkDate("2026-01-01", 30, eph).ok).toBe(true);
+  const gap = checkDate("2025-08-01", 14, eph);
+  expect(!gap.ok && gap.reason).toContain("gap between ephemeris tables (2025-03-31 to 2026-01-01)");
+  expect(checkDate("2024-01-01", 14, eph).ok).toBe(false);
+  expect(checkDate("2031-01-01", 14, eph).ok).toBe(false);
+  expect(dateRange(eph)).toEqual({ min: "2025-03-01", max: "2030-12-31" });
 });
 
 test("stand-in projection round-trips and matches the pinned IM-2 point", () => {

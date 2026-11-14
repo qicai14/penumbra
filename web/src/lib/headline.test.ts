@@ -72,7 +72,21 @@ test("bad edits are refused with the rule they break", () => {
   expect(setPresetField(preset, "load_w", -1)).toContain("0 or more");
   expect(setPresetField(preset, "capacity_wh", 0)).toContain("capacity");
   expect(setPresetField(preset, "efficiency", 120)).toContain("efficiency");
+  expect(setPresetField(preset, "efficiency", -1)).toContain("0 or more");
   expect(setPresetField(preset, "earth_margin_deg", 500)).toContain("90°");
   expect(setPresetField(preset, "start_wh", 20000)).toContain("charge at landing");
   expect(setPresetField(preset, "min_wh", 10001)).toContain("lethal charge");
+});
+
+test("panel area 0 and efficiency 0 are valid (battery only), as in the Rust check", () => {
+  expect((setPresetField(preset, "panel_area_m2", 0) as Preset).panel_area_m2).toBe(0);
+  expect((setPresetField(preset, "efficiency", 0) as Preset).efficiency).toBe(0);
+  expect(setPresetField(preset, "panel_area_m2", -0.1)).toContain("0 or more");
+});
+
+test("the load shows its caveat while cited, and not once the planner edits it", () => {
+  const load = (p: Preset) => presetFields(p).find((r) => r.key === "load_w")!;
+  expect(load(preset).tag).toBe("cited");
+  expect(load(preset).note).toContain("E58d");
+  expect(load(setPresetField(preset, "load_w", 100) as Preset).note).toBeUndefined();
 });

@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { Preset, Timeline } from "./engine";
-import { buildChartData, buildSocData, countdown, fmtDH, indexAtTime, lethalUnixS, operableMask, operableRuns, thresholdLabel } from "./timelines";
+import { buildChartData, buildSocData, clipRunsAt, countdown, fmtDH, indexAtTime, lethalUnixS, operableMask, operableRuns, thresholdLabel } from "./timelines";
 
 // T26 (#27): countdowns read the timeline columns only.
 const hourly = (n: number) => Float64Array.from({ length: n }, (_, i) => i * 3600);
@@ -83,6 +83,15 @@ test("runs are half-open and include the trailing step", () => {
   const t = [0, 600, 1200, 1800, 2400];
   expect(operableRuns(t, [0, 1, 1, 0, 1], 600)).toEqual([[600, 1800], [2400, 3000]]);
   expect(operableRuns(t, [0, 0, 0, 0, 0], 600)).toEqual([]);
+});
+
+test("operable runs are cut off at the lethal time", () => {
+  const runs: [number, number][] = [[600, 1800], [2400, 3000]];
+  expect(clipRunsAt(runs, null)).toEqual(runs);
+  expect(clipRunsAt(runs, 1000)).toEqual([[600, 1000]]); // spanning run ends exactly there
+  expect(clipRunsAt(runs, 2400)).toEqual([[600, 1800]]); // a run starting at the lethal second is dropped
+  expect(clipRunsAt(runs, 3600)).toEqual(runs);
+  expect(clipRunsAt(runs, 600)).toEqual([]);
 });
 
 test("indexAtTime picks the nearest step and clamps", () => {
