@@ -226,10 +226,8 @@ async function ensureNear(engine: WasmEngine, lat: number, lon: number): Promise
 }
 
 /** The panorama's horizon terrain is the real DEM since T07 (#8); the switch stays. Kept apart from `scenario.fake`,
- *  which T08/T09 turn off for the timelines and survival while the terrain may still be fake. */
+ *  which T08/T09 turned off for the timelines and survival. */
 export const TERRAIN_FAKE = false;
-/** Survival (headline, charge, lethal time) is the WASM `survival` since T09 (#10); same pattern as TERRAIN_FAKE. */
-export const SURVIVAL_FAKE = false;
 
 /** Timeline (T08) and survival (T09) for one horizon in the 1440 layout; landing is the first step. NaN lethal_h = none in span. */
 async function timelineAndSurvival(engine: WasmEngine, rawHorizon: Float64Array, site: Site, preset: Preset, t0: number, step_s: number, n: number) {

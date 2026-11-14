@@ -6,6 +6,7 @@
   import Panorama from "./lib/Panorama.svelte";
   import Timelines from "./lib/Timelines.svelte";
   import Survival from "./lib/Survival.svelte";
+  import Headline from "./lib/Headline.svelte";
   import Countdown from "./lib/Countdown.svelte";
   import Tracer from "./lib/Tracer.svelte";
   import Scoreboard from "./lib/Scoreboard.svelte";
@@ -142,8 +143,11 @@
     <p class="msg" data-testid="computed-for">
       Computed for {scenario.site.lat_deg.toFixed(4)}°, {scenario.site.lon_deg.toFixed(4)}°E · mast {scenario.site.mast_m.toFixed(1)} m · landing {controls.date} · {computedFor.span_days} d
     </p>
-    <Survival {scenario} {controls} {nearby} />
-    <Countdown {scenario} {idx} />
+    <div class="toprow">
+      <Countdown {scenario} {idx} sticky={false} />
+      <Headline {scenario} {nearby} />
+    </div>
+    <Survival {scenario} {controls} />
     <Panorama {scenario} bind:idx />
     {#if tile}<Terrain3D {controls} {tile} feed={maskFeed} t={markerT} sunAz={scenario.track.sun_az_deg[idx]} sunEl={scenario.track.sun_el_deg[idx]} sunLon={computedFor.lon_deg} />{/if}
     <Timelines {scenario} bind:idx />
@@ -159,6 +163,12 @@
     font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono);
   }
   .bar { padding: var(--spacing-16); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-16); border-bottom: 1px solid var(--color-iron); }
+  /* Site v2 B: countdown first, survival headline beside it; the row stays pinned on wide screens (T26). */
+  .toprow { display: flex; flex-wrap: wrap; gap: var(--spacing-16); margin-top: var(--spacing-24); }
+  .toprow > :global(:first-child) { flex: 2 1 420px; }
+  .toprow > :global(:last-child) { flex: 1 1 260px; }
+  .toprow :global(.panel) { margin-top: 0; }
+  @media (min-width: 768px) { .toprow { position: sticky; top: 0; z-index: 1; background: var(--surface-void); padding-bottom: var(--spacing-8); } }
   nav { display: flex; }
   .gh { display: inline-flex; align-items: center; gap: var(--spacing-8); color: var(--color-fog); text-decoration: none; font: var(--text-caption)/var(--leading-caption) var(--font-mono); }
   .gh:hover { color: var(--color-paper); }

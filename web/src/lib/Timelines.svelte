@@ -2,7 +2,7 @@
   import { untrack } from "svelte";
   import uPlot from "uplot";
   import "uplot/dist/uPlot.min.css";
-  import { SURVIVAL_FAKE, windowBands, type Scenario } from "./engine";
+  import { windowBands, type Scenario } from "./engine";
   import { fmtUtc } from "./panorama";
   import { type Band, bandInterval, bandLabel, parseBands, SIGMA_Z_M, SIGMA_Z_TEXT, buildChartData, buildSocData, citedTag, clipRunsAt, indexAtTime, lethalUnixS, operableMask, operableRuns, thresholdLabel } from "./timelines";
 
@@ -13,6 +13,8 @@
   let host: HTMLDivElement;
   let socHost: HTMLDivElement;
   let charts: uPlot[] = [];
+  let full: [number, number] = [0, 1]; // the whole span, set by build
+  let vis = $state<[number, number]>([0, 1]); // the visible x range, from the charts
   let placing = false; // true while we move the cursors ourselves, so the cursor hook does not echo back
 
   let bands = $state.raw<Band[]>([]);
@@ -121,7 +123,7 @@
   }
 
   /** Ctrl/⌘+wheel zooms around the pointer; with shift it pans. A plain wheel scrolls the page. The scale change syncs to the other charts. */
-  function wheelPlugin(full: [number, number]): uPlot.Plugin {
+  function wheelPlugin(): uPlot.Plugin {
     return {
       hooks: {
         ready: (u) => {
@@ -152,10 +154,10 @@
     const k = colours();
     const d = buildChartData(tl, scenario.preset);
     const t = d.illum[0];
-    const full: [number, number] = [t[0], t[t.length - 1] + scenario.step_s];
+    full = [t[0], t[t.length - 1] + scenario.step_s];
     const lethalS = lethalUnixS(scenario.start_unix_s, scenario.survival.lethal_h);
     const runs = clipRunsAt(operableRuns(tl.t_unix_s, operableMask(tl), scenario.step_s), lethalS);
-    const band = (text = false) => [bandPlugin(runs, k.fog + "26"), lethalPlugin(lethalS, k.paper, k.font, text), wheelPlugin(full)];
+    const band = (text = false) => [bandPlugin(runs, k.fog + "26"), lethalPlugin(lethalS, k.paper, k.font, text), wheelPlugin()];
     const x = (show: boolean): uPlot.Axis => ({ show, stroke: k.ash, grid: { stroke: k.iron, width: 1 }, ticks: { stroke: k.iron }, font: k.font });
     const y = (extra: Partial<uPlot.Axis> = {}): uPlot.Axis => ({ size: 56, stroke: k.ash, grid: { stroke: k.iron, width: 1 }, ticks: { stroke: k.iron }, font: k.font, ...extra });
     const base = (height: number, show: boolean) => ({
@@ -169,7 +171,7 @@
     });
     const hooks = (): uPlot.Hooks.Arrays => ({
       setCursor: [onCursor],
-      setScale: [(u, key) => { if (key === "x") placeCursors(); }],
+      setScale: [(u, key) => { if (key === "x") { const { min, max } = u.scales.x; if (min != null && max != null) vis = [min, max]; placeCursors(); } }],
     });
     const illum = new uPlot({
       ...base(150, false), hooks: hooks(), plugins: [...band(), uncertaintyPlugin(() => bands, k.sun, getComputedStyle(host).getPropertyValue("--surface-carbon").trim() || k.iron, k.font)],
@@ -210,6 +212,7 @@
       ],
     }, buildSocData(tl.t_unix_s, scenario.survival.soc_wh, scenario.preset), socHost);
     charts = [illum, margin, contact, soc];
+    for (const u of charts) u.setScale("x", { min: full[0], max: full[1] });
     placeCursors();
   }
 
@@ -222,6 +225,14 @@
       u.setCursor({ left: left >= 0 && left <= u.bbox.width / uPlot.pxRatio ? left : -10, top: -10 }, false);
     }
     placing = false;
+  }
+
+  /** − / + / Reset: every chart gets the same x range, so the synced charts and the time cursor stay in step. */
+  function zoom(factor: number | null) {
+    const [a, b] = full, [lo, hi] = vis;
+    const w = factor === null ? b - a : Math.min(Math.max((hi - lo) * factor, 4 * scenario.step_s), b - a);
+    const min = factor === null ? a : Math.min(Math.max((lo + hi) / 2 - w / 2, a), b - w);
+    for (const u of charts) u.setScale("x", { min, max: min + w });
   }
 
   function onCursor(u: uPlot) {
@@ -255,11 +266,15 @@
 <section class="panel" aria-labelledby="tl-h">
   <header>
     <h2 id="tl-h">Timelines · sunlight and Earth over the span</h2>
-    {#if SURVIVAL_FAKE}<span class="pill" data-testid="fake-badge-timelines">FAKE CHARGE DATA</span>{/if}
+    <div class="zoom" role="group" aria-label="Zoom the timelines" data-testid="zoom" data-span={vis[1] - vis[0]}>
+      <button type="button" onclick={() => zoom(2)} aria-label="Zoom out" data-testid="zoom-out">−</button>
+      <button type="button" onclick={() => zoom(0.5)} aria-label="Zoom in" data-testid="zoom-in">+</button>
+      <button type="button" onclick={() => zoom(null)} data-testid="zoom-reset">Reset zoom</button>
+    </div>
   </header>
 
   <div class="charts" bind:this={host} bind:clientWidth={width} data-testid="timelines" role="group"
-    aria-label="Timelines chart. Illumination, visibility, Earth margin, Earth contact; the shaded band is the operable window; hatched intervals with a label are the plus or minus uncertainty of each sunrise and sunset. Move the time slider to move the cursor. Ctrl or Command with the wheel zooms, add shift to pan, drag to zoom to a range, double-click resets.">
+    aria-label="Timelines chart. Illumination, visibility, Earth margin, Earth contact; the shaded band is the operable window; hatched intervals with a label are the plus or minus uncertainty of each sunrise and sunset. Move the time slider to move the cursor. The zoom buttons, or Ctrl or Command with the wheel, zoom; add shift to pan; drag to zoom to a range; double-click resets.">
     <div></div><div></div><div></div>
   </div>
   <div class="charts" bind:this={socHost} data-testid="soc-chart" role="group"
@@ -269,7 +284,7 @@
     {fmtUtc(tl.t_unix_s[idx])} · illumination {tl.illumination[idx].toFixed(2)} · visibility {tl.visibility[idx].toFixed(0)} · Earth margin {tl.earth_margin_deg[idx].toFixed(2)}° (threshold {label}) · contact {tl.contact[idx] >= 0.5 ? "yes" : "no"}
   </p>
   <p class="key"><span class="swatch"></span>Shaded band: operable window (illumination above zero and Earth contact).</p>
-  <p class="key" data-testid="band-key"><span class="swatch hatch"></span>Hatched interval: ± uncertainty of each sunrise and sunset (UTC, from DEM height error), {SIGMA_Z_TEXT}. "ill-conditioned" = wider than 6 h [est].</p>
+  <p class="key" data-testid="band-key"><span class="swatch hatch"></span>Hatched: ± uncertainty from DEM height error, {SIGMA_Z_TEXT}. "ill-conditioned" = wider than 6 h [est].</p>
   {#if bandError}<p class="key" role="alert">Sunrise and sunset bands unavailable: {bandError}</p>{/if}
   <details class="bands" data-testid="band-list">
     <summary>Sunrise and sunset times with ± uncertainty ({bands.length})</summary>
@@ -281,10 +296,15 @@
   .panel { background: var(--surface-carbon); border-radius: var(--radius-sm); padding: var(--spacing-16); margin-top: var(--spacing-24); }
   header { display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-16); margin-bottom: var(--spacing-16); }
   h2 { margin: 0; font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
-  .pill {
-    border: 1px solid var(--color-slate); border-radius: var(--radius-full); padding: 0 var(--spacing-8);
-    font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); text-transform: uppercase; white-space: nowrap;
+  .zoom { display: flex; }
+  .zoom button {
+    font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-fog); background: transparent;
+    border: 1px solid var(--color-slate); padding: var(--spacing-8) var(--spacing-16); margin-left: -1px; cursor: pointer; min-width: 44px;
   }
+  .zoom button:first-child { margin-left: 0; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+  .zoom button:last-child { border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+  .zoom button:hover { color: var(--color-paper); background: var(--surface-iron); }
+  .zoom button:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }
   .charts { width: 100%; }
   .now, .key { margin: var(--spacing-8) 0 0; font: var(--text-caption)/var(--leading-caption) var(--font-mono); font-variant-numeric: tabular-nums; }
   .now { color: var(--color-fog); }
