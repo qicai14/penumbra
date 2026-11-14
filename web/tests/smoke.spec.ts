@@ -60,3 +60,13 @@ test("hovering the chart moves the panorama time", async ({ page }) => {
   await page.mouse.move(box.x + box.width * 0.6, box.y + box.height / 2);
   await expect.poll(() => page.getByTestId("now").textContent()).not.toBe(before);
 });
+
+test("scoreboard lists V1-V5 and shows 'not run' for checks that have not run", async ({ page, request }) => {
+  await page.goto("/");
+  const table = page.getByRole("table", { name: /One row per check/ });
+  await expect(table.getByTestId("score-row")).toHaveCount(5);
+  const rows = (await (await request.get("scoreboard.json")).json()) as { pass: boolean | null }[];
+  const notRun = rows.filter((r) => r.pass === null).length;
+  await expect(table.getByRole("cell", { name: "not run" })).toHaveCount(notRun);
+  await expect(page.getByRole("heading", { name: "Limitations" })).toBeVisible();
+});

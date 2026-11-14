@@ -3,6 +3,8 @@
   import Panorama from "./lib/Panorama.svelte";
   import Timelines from "./lib/Timelines.svelte";
   import Tracer from "./lib/Tracer.svelte";
+  import Scoreboard from "./lib/Scoreboard.svelte";
+  import About from "./lib/About.svelte";
 
   let scenario = $state.raw<Scenario | null>(null);
   let error = $state<string | null>(null);
@@ -26,6 +28,8 @@
     <p class="msg">Loading…</p>
   {/if}
   <Tracer />
+  <Scoreboard />
+  <About />
 </main>
 
 <style>
