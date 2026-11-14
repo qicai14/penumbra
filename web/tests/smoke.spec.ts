@@ -270,3 +270,10 @@ test("IM-2 replay shows the regional and pit answers with their tags and refuses
   await page.getByTestId("pit-diameter").dispatchEvent("change");
   await expect(page.getByTestId("pit-refusal")).toContainText("diameter");
 });
+
+// T18 (#19): sunrise and sunset ± bands from the WASM window_bands, σ_z visible as assumed.
+test("timelines show the ± band list and the assumed σ_z", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("band-key")).toContainText("σ_z = 0.5 m (assumed)");
+  await expect(page.getByTestId("band-list").locator("li").first()).toHaveText(/^(sunrise|sunset) \d{4}-\d{2}-\d{2} \d{2}:\d{2} (± (<1|\d+) min|ill-conditioned)$/);
+});
