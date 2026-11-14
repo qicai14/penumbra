@@ -6,6 +6,8 @@
   import { rgb } from "./color";
   import type { MaskFeed } from "./maskFeed.svelte";
   import { fmtUtc } from "./panorama";
+  import { coverageRegion, latLonText, MOON_TREK_URL, QUICKMAP_URL, SITES, type CuratedSite } from "./sites";
+  import { loadManifest } from "./engine";
   import { bestCell, contour, CONTOUR_H, dateIndex, NODATA, type Grid } from "./grid";
 
   // `feed` is the shared point-Sun mask for the time marker; the 3D terrain paints the same one.
@@ -20,9 +22,13 @@
   let dateDraft = $state(controls.date);
   let refusal = $state<string | null>(null);
   let rejected = $state<[number, number] | null>(null); // last refused point, map metres
+  let regionMetas = $state.raw<{ id: string; near: NearTile["meta"] }[]>([]); // every region's near tile, for the curated-site coverage check
+  loadManifest().then((mf) => (regionMetas = mf.regions), () => {}); // no manifest: the list stays disabled, the tile itself already reports it
+  let outSite = $state<CuratedSite | null>(null); // a curated site chosen outside every tile: the site does not move
+  let copied = $state("");
 
   // A region change moves the site from outside this component: re-sync the boxes and clear the old refusal.
-  $effect(() => { latDraft = String(controls.lat); lonDraft = String(controls.lon); refusal = null; rejected = null; });
+  $effect(() => { latDraft = String(controls.lat); lonDraft = String(controls.lon); refusal = null; rejected = null; outSite = null; });
 
   // A mask from another region is not this tile's.
   const shown = $derived(feed.mask && feed.mask.regionId === tile.region.id ? feed.mask : null);
@@ -109,7 +115,19 @@
   function setSite(lat: number, lon: number) {
     controls.lat = lat; controls.lon = lon;
     latDraft = String(lat); lonDraft = String(lon);
-    refusal = null; rejected = null;
+    refusal = null; rejected = null; outSite = null;
+  }
+  function onsite(id: string) {
+    const s = SITES.find((x) => x.id === id);
+    if (!s) return;
+    const r = coverageRegion(s.lat, s.lon, regionMetas);
+    if (r === null) { outSite = s; refusal = null; rejected = null; return; }
+    if (r === tile.region.id) setSite(s.lat, s.lon); else onregion(r, [s.lat, s.lon]);
+  }
+  const linkSite = $derived<[number, number]>(outSite ? [outSite.lat, outSite.lon] : [controls.lat, controls.lon]);
+  const linkText = $derived(latLonText(linkSite[0], linkSite[1]));
+  async function copy() {
+    try { await navigator.clipboard.writeText(linkText); copied = "Copied"; } catch { copied = "Copy blocked: select the text instead"; }
   }
   // P5 / ARCHITECTURE §2.1: a nodata pixel is an error, never 0 m.
   function verdict(x: number, y: number) {
@@ -203,6 +221,18 @@
         </select>
       </label>
 
+      <label class="row"><span>Curated site</span>
+        <select data-testid="curated" aria-label="Curated site" disabled={!regionMetas.length} value="" onchange={(e) => { onsite(e.currentTarget.value); e.currentTarget.value = ""; }}>
+          <option value="">Choose a site…</option>
+          {#each SITES as s (s.id)}<option value={s.id}>{s.name}{regionMetas.length && coverageRegion(s.lat, s.lon, regionMetas) === null ? " · out of coverage" : ""}</option>{/each}
+        </select>
+      </label>
+      {#if outSite}
+        <p class="oc" role="status" data-testid="out-of-coverage">
+          OUT_OF_COVERAGE · {outSite.name} ({latLonText(outSite.lat, outSite.lon)}) is outside every shipped near tile, so the model does not run there. The site stays at {controls.lat.toFixed(4)}°, {controls.lon.toFixed(4)}°E.
+        </p>
+      {/if}
+
       <form class="latlon" {onsubmit}>
         <label><span>Latitude °</span><input data-testid="lat" bind:value={latDraft} inputmode="decimal" autocomplete="off" /></label>
         <label><span>Longitude °E</span><input data-testid="lon" bind:value={lonDraft} inputmode="decimal" autocomplete="off" /></label>
@@ -214,6 +244,15 @@
       <p class="now" role="status" aria-live="polite" aria-atomic="true" data-testid="mask-site" data-lit={siteLit ?? ""} data-t={shown?.t_unix_s ?? ""} data-stride={shown?.stride ?? ""}>
         Nearest mask point (within {((shown?.stride ?? MASK_STRIDE) * m.pixel_m) / 2} m of the site), point Sun: {siteLit === null ? "computing" : siteLit ? "lit" : "in shadow"}
       </p>
+
+      <div class="tools" data-testid="tool-links">
+        <p>Look at {outSite ? outSite.name : "the current site"} in a map tool:</p>
+        <p>
+          <a data-testid="quickmap" href={QUICKMAP_URL} target="_blank" rel="noopener" aria-label="Open in QuickMap (opens in a new tab)">Open in QuickMap</a>
+          <a data-testid="moontrek" href={MOON_TREK_URL} target="_blank" rel="noopener" aria-label="Open in Moon Trek (opens in a new tab)">Open in Moon Trek</a>
+        </p>
+        <p>Paste into the tool's search box: <code data-testid="latlon-text">{linkText}</code> <button type="button" onclick={copy}>Copy</button> <span role="status" aria-live="polite">{copied}</span></p>
+      </div>
 
       <label class="row"><span>Landing date (UTC)</span>
         <input data-testid="date" type="date" min={dates.min} max={dates.max} bind:value={dateDraft} onchange={ondate} />
@@ -291,6 +330,11 @@
   }
   .now { margin: calc(-1 * var(--spacing-8)) 0 0; color: var(--color-fog); font-variant-numeric: tabular-nums; }
   .refusal { margin: 0; padding: var(--spacing-8) var(--spacing-16); border: 1px solid var(--color-pewter); border-radius: var(--radius-sm); background: var(--surface-iron); color: var(--color-paper); }
+  .oc { margin: 0; padding: var(--spacing-8) var(--spacing-16); border: 1px solid var(--color-slate); border-radius: var(--radius-sm); background: var(--surface-iron); color: var(--color-paper); }
+  .tools p { margin: 0 0 4px; }
+  .tools a { color: var(--color-fog); margin-right: var(--spacing-16); }
+  .tools a:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }
+  code { color: var(--color-paper); font-family: inherit; user-select: all; }
   .best { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--spacing-8) var(--spacing-16); border: 1px solid var(--color-slate); border-radius: var(--radius-sm); padding: var(--spacing-8) var(--spacing-16); }
   .best .col p, .best .note { margin: 0 0 4px; }
   .best .who { color: var(--color-paper); }
