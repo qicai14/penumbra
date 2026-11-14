@@ -29,7 +29,7 @@ const scoreboard = [
 const scenario = {
   fake: true,
   note: "FAKE DATA for layout only. Not a model result.",
-  api_version: 1,
+  api_version: 2,
   site: { lat_deg: -84.7906, lon_deg: 29.1957, ground_m: 0, mast_m: 2 },
   start_unix_s: T0,
   step_s: STEP,
@@ -88,6 +88,6 @@ for (let j = 0; j < W; j++)
     tile.setInt16((j * W + i) * 2, Math.round(h / SCALE), true);
   }
 const near = { url: "fixture/near-fake.i16", width: W, height: W, x0_m: 61740, y0_m: 153360, pixel_m: PX, scale_m: SCALE, offset_m: 0, nodata: -32768 };
-const manifest = { fake: true, note: "FAKE stub manifest for T11. Not a pipeline output.", format_version: 1, api_version: 1, regions: [{ id: "fake-region", name: "Fake region", near }] };
+const manifest = { fake: true, note: "FAKE stub manifest for T11. Not a pipeline output.", format_version: 1, api_version: 2, regions: [{ id: "fake-region", name: "Fake region", near }] };
 await Bun.write(new URL("../web/public/fixture/near-fake.i16", import.meta.url), tile.buffer);
 await Bun.write(new URL("../web/public/fixture/manifest.json", import.meta.url), JSON.stringify(manifest, null, 2) + "\n");

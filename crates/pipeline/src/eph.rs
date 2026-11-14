@@ -16,6 +16,8 @@ pub const KERNELS: [&str; 3] = ["de440.bsp", "moon_pa_de440_200625.bpc", "moon_f
 
 /// Prefix and suffix of the shipped table file, `eph-main.<hash6>.bin`.
 pub const MAIN_FILE_PREFIX: &str = "eph-main.";
+/// Prefix of the IM-2 replay segment file, `eph-replay-im2.<hash6>.bin` (T15).
+pub const REPLAY_IM2_FILE_PREFIX: &str = "eph-replay-im2.";
 pub const MAIN_FILE_SUFFIX: &str = ".bin";
 
 /// Load DE440, the DE440 Moon PA kernel and the Moon frame kernel from `dir`.
@@ -73,25 +75,25 @@ pub fn hash6(bytes: &[u8]) -> String {
     format!("{h:016x}")[..6].to_string()
 }
 
-/// Every `eph-main.*.bin` in `dir`.
-pub fn shipped_table_paths(dir: &Path) -> Result<Vec<PathBuf>> {
+/// Every `<prefix>*.bin` in `dir` (prefix `MAIN_FILE_PREFIX` or `REPLAY_IM2_FILE_PREFIX`).
+pub fn shipped_table_paths(dir: &Path, prefix: &str) -> Result<Vec<PathBuf>> {
     let mut paths = Vec::new();
     for entry in std::fs::read_dir(dir)? {
         let path = entry?.path();
         let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        if name.starts_with(MAIN_FILE_PREFIX) && name.ends_with(MAIN_FILE_SUFFIX) {
+        if name.starts_with(prefix) && name.ends_with(MAIN_FILE_SUFFIX) {
             paths.push(path);
         }
     }
     Ok(paths)
 }
 
-/// The single shipped main table in `dir`, decoded. Errors unless exactly one file is there.
-pub fn read_shipped_table(dir: &Path) -> Result<Vec<f64>> {
-    let paths = shipped_table_paths(dir)?;
+/// The single shipped `<prefix>*.bin` table in `dir`, decoded. Errors unless exactly one file is there.
+pub fn read_shipped_table(dir: &Path, prefix: &str) -> Result<Vec<f64>> {
+    let paths = shipped_table_paths(dir, prefix)?;
     let [path] = paths.as_slice() else {
         return Err(format!(
-            "expected one eph-main.*.bin in {}, found {}",
+            "expected one {prefix}*.bin in {}, found {}",
             dir.display(),
             paths.len()
         )

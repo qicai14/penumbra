@@ -4,11 +4,12 @@ pub mod dem;
 pub mod eph;
 pub mod geometry;
 pub mod horizon;
+pub mod pit;
 pub mod power;
 pub mod timeline;
 
 /// Version of the core → WASM API (ARCHITECTURE §3.1). The fixture and the manifest carry the same number.
-pub const API_VERSION: u32 = 1;
+pub const API_VERSION: u32 = 2;
 
 /// Placeholder kept for the template page until the first science ticket lands.
 pub fn add(a: i32, b: i32) -> i32 {
@@ -25,7 +26,7 @@ mod tests {
     }
 
     #[test]
-    fn api_version_is_frozen_at_one() {
-        assert_eq!(API_VERSION, 1);
+    fn api_version_is_frozen_at_two() {
+        assert_eq!(API_VERSION, 2);
     }
 }
