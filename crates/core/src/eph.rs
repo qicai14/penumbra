@@ -191,6 +191,9 @@ pub fn sun_earth_track(
     let frame = EnuFrame::at(up)?;
     let site_m = up.scale(MOON_RADIUS_M + site.ground_m + site.mast_m);
 
+    // Check both ends before allocating 9 × count, so a huge count fails with a code, not an OOM trap.
+    eph.at(start_unix_s)?;
+    eph.at(start_unix_s + f64::from(count - 1) * step_s)?;
     let n = count as usize;
     let mut out = vec![0.0; TRACK_COLS * n];
     for i in 0..n {

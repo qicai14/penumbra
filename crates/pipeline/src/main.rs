@@ -30,15 +30,18 @@ fn eph(out_dir: &Path) -> Result<()> {
     let name = format!("{MAIN_FILE_PREFIX}{}{MAIN_FILE_SUFFIX}", hash6(&bytes));
 
     std::fs::create_dir_all(out_dir)?;
-    for old in shipped_table_paths(out_dir)? {
-        std::fs::remove_file(old)?;
-    }
     std::fs::write(out_dir.join(&name), &bytes)?;
     let manifest = format!(
         "{{\"format_version\":1,\"api_version\":{},\"ephemeris\":[{{\"id\":\"main\",\"url\":\"data/{name}\",\"t0_unix_s\":{MAIN_T0_UNIX_S},\"step_s\":{MAIN_STEP_S},\"rows\":{MAIN_ROWS}}}]}}\n",
         penumbra_core::API_VERSION
     );
     std::fs::write(out_dir.join("manifest.json"), manifest)?;
+    // remove older tables only after the new table and manifest are on disk
+    for old in shipped_table_paths(out_dir)? {
+        if old.file_name() != Some(std::ffi::OsStr::new(&name)) {
+            std::fs::remove_file(old)?;
+        }
+    }
     println!(
         "wrote {} ({} bytes) and manifest.json",
         out_dir.join(&name).display(),

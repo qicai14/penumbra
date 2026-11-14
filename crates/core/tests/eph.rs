@@ -185,6 +185,11 @@ fn sun_earth_track_refuses_zero_count_and_times_outside_the_table() {
         sun_earth_track(&eph, &site_85s(), t0, 1801.0, 3),
         Err(EphError::OutOfTable)
     );
+    // a huge count is refused before the 9 × count allocation (would trap in wasm)
+    assert_eq!(
+        sun_earth_track(&eph, &site_85s(), t0, 1.0, u32::MAX),
+        Err(EphError::OutOfTable)
+    );
     assert!(matches!(
         sun_earth_track(&eph, &site_85s(), t0, 0.0, 3),
         Err(EphError::BadInput(_))
@@ -225,6 +230,32 @@ fn shipped_main_table() -> Vec<f64> {
     assert_eq!(bytes.len(), 6 * 8 * MAIN_ROWS, "2 103 600 bytes");
     let (words, _) = bytes.as_chunks::<8>();
     words.iter().map(|w| f64::from_le_bytes(*w)).collect()
+}
+
+// The manifest the browser reads must describe the committed table with the core constants (ARCHITECTURE §3.5).
+#[test]
+fn shipped_manifest_matches_table_and_constants() {
+    let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../web/public/data");
+    let m = std::fs::read_to_string(dir.join("manifest.json")).unwrap();
+    for field in [
+        format!("\"t0_unix_s\":{MAIN_T0_UNIX_S}"),
+        format!("\"step_s\":{MAIN_STEP_S}"),
+        format!("\"rows\":{MAIN_ROWS}"),
+    ] {
+        assert!(m.contains(&field), "manifest.json lacks {field}: {m}");
+    }
+    let url = m
+        .split("\"url\":\"data/")
+        .nth(1)
+        .unwrap()
+        .split('"')
+        .next()
+        .unwrap();
+    assert!(
+        dir.join(url).is_file(),
+        "manifest url data/{url} is not a shipped file"
+    );
+    shipped_main_table(); // and it is the single eph-main.*.bin, of the right length
 }
 
 fn shipped_ephemeris() -> Ephemeris {

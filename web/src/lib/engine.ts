@@ -1,6 +1,6 @@
 // The only module that imports lib/wasm/ or reads the fixture (ARCHITECTURE §3.5).
 // Typed arrays use platform byte order; every browser target is little-endian, so Int16Array over a file is safe.
-// Stub: every function is still on the fixture. Flip each to WASM when its science ticket merges.
+// Stub: every function is still on the fixture except sun_earth_track (WASM, T02). Flip each when its science ticket merges.
 export type Site = { lat_deg: number; lon_deg: number; ground_m: number; mast_m: number };
 export type Horizon = { el_deg: Float64Array; dist_m: Float64Array }; // 720 each
 export type Track = {
@@ -97,9 +97,6 @@ export function validate(result: Horizon | Track | Timeline | Survival): void {
   if (t) for (let i = 1; i < t.length; i++) if (!(t[i] > t[i - 1])) fail(`t_unix_s is not increasing at ${i}`);
 }
 
-/** Per-function switch (ARCHITECTURE §3.5): "wasm" = computed in the browser by the Engine, "fixture" = still stubbed. */
-export const source = { sun_earth_track: "wasm" as "wasm" | "fixture" };
-
 export type Manifest = {
   format_version: number; api_version: number;
   ephemeris: { id: string; url: string; t0_unix_s: number; step_s: number; rows: number }[];
@@ -125,7 +122,9 @@ export async function loadTracerTrack(): Promise<Track> {
   const seg = m.ephemeris[0];
   const res = await fetch(`${import.meta.env?.BASE_URL ?? "/"}${seg.url}`);
   if (!res.ok) throw new Error(`NO_DATA: ${seg.url} returned ${res.status}`);
-  const data = new Float64Array(await res.arrayBuffer());
+  const buf = await res.arrayBuffer();
+  if (buf.byteLength % 8) throw new Error(`BAD_INPUT: ${seg.url} is ${buf.byteLength} bytes, not whole f64s`);
+  const data = new Float64Array(buf);
   if (data.length !== 6 * seg.rows) throw new Error(`BAD_INPUT: ${seg.url} has ${data.length} values, expected ${6 * seg.rows}`);
   const engine = new wasm.Engine();
   engine.load_ephemeris(seg.t0_unix_s, seg.step_s, data);
