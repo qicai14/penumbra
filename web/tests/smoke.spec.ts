@@ -362,3 +362,23 @@ test("four views, a keyboard-reachable GitHub link, and a verdict strip built fr
   await expect(nav.getByRole("button", { name: "About" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("table", { name: /One row per check/ })).toBeVisible();
 });
+
+// T80 (#80): About content. Limitations carry their issue or scoreboard ids; empty video URLs render nothing.
+test("About lists team, user story, limitations with ids, and no video slot while URLs are empty", async ({ page, request }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "About", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Team" })).toBeVisible();
+  await expect(page.getByText("Fractured Toes")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Why Penumbra" })).toBeVisible();
+  const lim = page.getByTestId("limitations");
+  for (const id of ["V2b", "V3", "#75", "#48"]) await expect(lim.locator(`[data-limit="${id}"]`)).toHaveCount(1);
+  // Every scoreboard row that is not a pass is named in the limitations.
+  const rows = (await (await request.get("scoreboard.json")).json()) as { id: string; pass: boolean | null }[];
+  for (const r of rows.filter((r) => r.pass !== true)) await expect(lim.locator(`[data-limit="${r.id}"]`).first()).toBeVisible();
+  await expect(lim).toContainText("0.21 d");
+  await expect(lim).toContainText("123 sampled pixels above 60 %");
+  await expect(page.getByTestId("videos")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Videos" })).toHaveCount(0);
+  await expect(page.locator("main video, main iframe")).toHaveCount(0);
+  await expect(page.getByText("V1’s live demo")).toBeVisible();
+});

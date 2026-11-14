@@ -1,13 +1,6 @@
 <script lang="ts">
-  const limits = [
-    "No limb darkening.",
-    "Terrain smaller than a 20 m pixel is not in the DEM.",
-    "The Earth margin and σ_z are assumed.",
-    "No charge or discharge efficiency.",
-    "Lander values are assumed unless marked cited.",
-    "The IM-2 pit depth is assumed (U9): the ESA degraded-crater model, not a measured depth.",
-    "The IM-2 pit view keeps the regional far horizon: inside a pit the panel sits H below regional ground, under 2 m of observer height at kilometres of distance.",
-  ];
+  import { limits, shownVideos, videoSlots } from "./about";
+  const videos = shownVideos(videoSlots);
 
   // Dataset names: docs/SUBMISSION.md rubric item 4. Roles tie to the V1-V5 judges in scoreboard.json.
   // Each row links its original sources (URLs from docs/research/lunar-landing or the ledger's W rows).
@@ -41,9 +34,22 @@
 <section aria-labelledby="about-h">
   <h2 id="about-h">About</h2>
 
+  <h3>Team</h3>
+  <p>Fractured Toes: <strong>Qi Cai</strong> built the science core (horizon, ephemeris, visibility, validation); <strong>Charls</strong> (<code>ambatuCode887</code>) built the app and design.</p>
+
+  <h3>Why Penumbra</h3>
+  <p>A lander planner at a south-pole site has to pick a landing date. Penumbra says how many hours of sunlight and Earth contact the lander gets, and when the first lethal shadow arrives. The case is IM-2, which landed on its side in a small crater near Mons Mouton in March 2025 and lasted about a day: replay its site and date, then look for the nearest site within 1 km, or the nearest date, with more than 5 days of operations.</p>
+
+  {#if videos.length}
+    <h3>Videos</h3>
+    <ul data-testid="videos">
+      {#each videos as v (v.id)}<li><a href={v.url} target="_blank" rel="noopener noreferrer" data-testid="video-{v.id}">{v.label}<span class="sr-only"> (opens in a new tab)</span></a></li>{/each}
+    </ul>
+  {/if}
+
   <h3>Limitations</h3>
   <ul data-testid="limitations">
-    {#each limits as l (l)}<li>{l}</li>{/each}
+    {#each limits as l (l.text)}<li data-limit={l.id}>{l.text} <span class="ids">[{l.id}]</span></li>{/each}
   </ul>
 
   <h3>Datasets</h3>
@@ -76,7 +82,8 @@
   th, td { border: 1px solid var(--color-iron); padding: var(--spacing-8); text-align: left; vertical-align: top; }
   thead th { color: var(--color-fog); font-weight: var(--font-weight-regular); background: var(--surface-carbon); }
   .sources { padding-left: var(--spacing-16); }
-  .ids { display: block; margin-top: var(--spacing-8); color: var(--color-ash); font-size: var(--text-caption); }
+  li > .ids { display: inline; color: var(--color-ash); font-size: var(--text-caption); }
+  td .ids { display: block; margin-top: var(--spacing-8); color: var(--color-ash); font-size: var(--text-caption); }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   a { color: var(--color-paper); text-underline-offset: 2px; }
   a:visited { color: var(--color-paper); }
