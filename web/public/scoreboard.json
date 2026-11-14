@@ -1,0 +1,62 @@
+[
+  {
+    "id": "V1",
+    "judge": "JPL Horizons",
+    "metric": "worst az/el difference, deg",
+    "threshold": 0.002,
+    "value": null,
+    "pass": null,
+    "sample_size": 20,
+    "notes": "not run",
+    "commit": null,
+    "date": null
+  },
+  {
+    "id": "V2",
+    "judge": "PGDA AVGVISIB_85S_060M_201608",
+    "metric": "pooled median visibility error, points",
+    "threshold": 5,
+    "value": null,
+    "pass": null,
+    "sample_size": 10000,
+    "notes": "not run",
+    "commit": null,
+    "date": null
+  },
+  {
+    "id": "V3",
+    "judge": "PGDA map-projected NACs",
+    "metric": "shadow IoU gap to NASA _MODEL.TIF",
+    "threshold": 0.05,
+    "value": null,
+    "pass": null,
+    "sample_size": 3,
+    "notes": "not run",
+    "commit": null,
+    "date": null
+  },
+  {
+    "id": "V4",
+    "judge": "IM-1 / IM-2 published timelines",
+    "metric": "consistent with published timeline",
+    "threshold": null,
+    "value": null,
+    "pass": null,
+    "sample_size": 2,
+    "notes": "not run",
+    "commit": null,
+    "date": null
+  },
+  {
+    "id": "V5",
+    "judge": "Red-team edge cases",
+    "metric": "automated tests passing",
+    "threshold": null,
+    "value": null,
+    "pass": null,
+    "sample_size": null,
+    "notes": "not run",
+    "commit": null,
+    "date": null
+  }
+]

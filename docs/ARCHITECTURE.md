@@ -372,6 +372,8 @@ It also adds three small functions the plan needs but doesn't name: `ground_heig
 
 ### 3.2 The API to freeze at Hour 0
 
+Canonical copy since T00: [docs/API.md](API.md). Change it there first, under its change rule, and mirror it here.
+
 Rust signatures in `crates/wasm`. wasm-bindgen generates the `.d.ts` from them.
 
 ```rust
@@ -499,6 +501,7 @@ The type keys are the column names of §3.2 and the keys of the fixture, letter 
 ```json
 {
   "format_version": 1,
+  "api_version": 1,
   "ephemeris": [
     { "id": "main", "url": "data/eph-main.1a2b3c.bin", "t0_unix_s": 1767225600, "step_s": 3600, "rows": 43825 }
   ],

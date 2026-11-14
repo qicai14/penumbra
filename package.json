@@ -9,6 +9,7 @@
     "build": "bun run wasm && bun run --cwd web build",
     "check": "bun run --cwd web check",
     "test": "cargo test --workspace",
+    "fixture": "bun scripts/make-fixture.ts",
     "smoke": "bun run --cwd web smoke",
     "paper": "typst compile docs/paper/penumbra.typ docs/paper/penumbra.pdf"
   }
