@@ -158,8 +158,8 @@
   .picker { display: flex; flex-direction: column; gap: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .picker label { display: flex; flex-direction: column; gap: 4px; }
   .picker button { align-self: flex-start; }
-  .preset { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: var(--spacing-8) var(--spacing-24); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
-  .preset label { display: flex; align-items: center; gap: var(--spacing-8); }
+  .preset { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr)); gap: var(--spacing-8) var(--spacing-24); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
+  .preset label { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-8); }
   .name { flex: 0 0 150px; }
   .unit { flex: 0 0 3ch; }
   .tag { margin-left: auto; border: 1px solid var(--color-slate); border-radius: var(--radius-full); padding: 0 var(--spacing-8); color: var(--color-fog); }
@@ -168,7 +168,7 @@
     border: 1px solid var(--color-slate); border-radius: var(--radius-sm); padding: 4px var(--spacing-8); min-width: 0; color-scheme: dark;
     font-variant-numeric: tabular-nums;
   }
-  .preset input { width: 9ch; }
+  .preset input { width: 9ch; flex: none; }
   button {
     font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-fog); background: transparent;
     border: 1px solid var(--color-slate); border-radius: var(--radius-sm); padding: var(--spacing-8) var(--spacing-16); cursor: pointer;
