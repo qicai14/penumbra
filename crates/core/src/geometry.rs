@@ -47,13 +47,19 @@ pub fn latlon_to_xy(site: LatLon) -> Result<MapXy, GeometryError> {
 }
 
 /// Inverse projection: colatitude from the south pole c = 2·arctan(r / 2R) (E31b), lon = atan2(x, y).
+/// Angle into [0, 2π): `rem_euclid` alone rounds a tiny negative angle up to exactly 2π.
+fn wrap_tau(a: f64) -> f64 {
+    let w = a.rem_euclid(TAU);
+    if w >= TAU { 0.0 } else { w }
+}
+
 /// Longitude is returned in [0, 2π); at the pole itself it is 0.
 pub fn xy_to_latlon(xy: MapXy) -> Result<LatLon, GeometryError> {
     check_finite_xy(xy)?;
     let r_m = xy.x_m.hypot(xy.y_m);
     Ok(LatLon {
         lat_rad: 2.0 * (r_m / (2.0 * MOON_RADIUS_M)).atan() - FRAC_PI_2,
-        lon_east_rad: xy.x_m.atan2(xy.y_m).rem_euclid(TAU),
+        lon_east_rad: wrap_tau(xy.x_m.atan2(xy.y_m)),
     })
 }
 
@@ -208,10 +214,7 @@ impl EnuFrame {
             ));
         }
         Ok(AzEl {
-            az_rad: d_m
-                .dot(self.east)
-                .atan2(d_m.dot(self.north))
-                .rem_euclid(TAU),
+            az_rad: wrap_tau(d_m.dot(self.east).atan2(d_m.dot(self.north))),
             el_rad: (d_m.dot(self.up) / range_m).clamp(-1.0, 1.0).asin(),
         })
     }

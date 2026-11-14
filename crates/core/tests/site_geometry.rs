@@ -211,6 +211,44 @@ fn t_1a_curvature_drop_matches_spec() {
         6.5,
         0.05,
     );
+    // The spec rounds to 2 sig figs; pin s²/2R exactly so a wrong R (±0.7%) cannot hide in it.
+    assert_close(
+        "drop at 1.6 km, exact",
+        curvature_drop_m(1_600.0),
+        0.7367,
+        1e-4,
+    );
+    assert_close(
+        "drop at 50 km, exact",
+        curvature_drop_m(50_000.0),
+        719.47,
+        0.01,
+    );
+}
+
+// A hair west of lon 0 rounds to 2π under rem_euclid; the range is [0, 2π), so it must wrap to 0.
+#[test]
+fn longitude_and_azimuth_never_reach_2pi() {
+    let lon = xy_to_latlon(MapXy {
+        x_m: -1e-300,
+        y_m: 1_000.0,
+    })
+    .unwrap()
+    .lon_east_rad;
+    assert!((0.0..std::f64::consts::TAU).contains(&lon), "lon = {lon}");
+    let frame = EnuFrame::at(latlon_to_unit(site_deg(-85.0, 0.0)).unwrap()).unwrap();
+    let az = frame
+        .az_el(
+            Vec3 {
+                x: 0.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            frame.north.minus(frame.east.scale(1e-300)),
+        )
+        .unwrap()
+        .az_rad;
+    assert!((0.0..std::f64::consts::TAU).contains(&az), "az = {az}");
 }
 
 // §1a small-angle form el ≈ (h − h_s − H)/s − s/2R: on a bare sphere seen from the ground the
