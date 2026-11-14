@@ -6,9 +6,10 @@
   import { rgb } from "./color";
   import type { MaskFeed } from "./maskFeed.svelte";
   import { fmtUtc } from "./panorama";
+  import { contour, CONTOUR_H, NODATA, type Grid } from "./grid";
 
   // `feed` is the shared point-Sun mask for the time marker; the 3D terrain paints the same one.
-  let { controls, tile, onregion, feed }: { controls: Controls; tile: NearTile & { regions: Region[]; eph: EphSegment[] }; onregion: (id: string) => void; feed: MaskFeed } = $props();
+  let { controls, tile, onregion, feed, grid = null, gridK = -1 }: { controls: Controls; tile: NearTile & { regions: Region[]; eph: EphSegment[] }; onregion: (id: string) => void; feed: MaskFeed; grid?: Grid | null; gridK?: number } = $props();
 
   let canvas: HTMLCanvasElement;
   // svelte-ignore state_referenced_locally -- drafts start from the current value, then follow typing
@@ -45,6 +46,7 @@
     return { img, lo_m: heightM(lo), hi_m: heightM(hi) };
   });
 
+  const HEAT_ALPHA = 200;
   const mapToPx = (x: number, y: number): [number, number] => [(x - m.x0_m) / m.pixel_m, (m.y0_m - y) / m.pixel_m];
   const siteXy = $derived(latlonToXy(controls.lat, controls.lon));
   const siteLit = $derived(shown ? maskAt(shown, m, siteXy[0], siteXy[1]) : null);
@@ -64,6 +66,26 @@
       off.getContext("2d")!.putImageData(new ImageData(maskPixels(shown, rgb(c("--color-sun")), MASK_LIT_ALPHA, [0, 0, 0], MASK_DARK_ALPHA), gr.cols, gr.rows), 0, 0);
       g.imageSmoothingEnabled = false;
       g.drawImage(off, 0.5 - gr.stride / 2, 0.5 - gr.stride / 2, gr.cols * gr.stride, gr.rows * gr.stride);
+    }
+    if (grid && gridK >= 0) {
+      // Regional point grid (derived operable hours): sequential slate-to-sun ramp, one line at 5 operable days.
+      const gm = grid.meta, lo = rgb(c("--color-slate")), hi = rgb(c("--color-sun")), top = gm.span_days * 24;
+      const img = new ImageData(gm.width, gm.height), a = grid.operable[gridK];
+      for (let i = 0; i < a.length; i++) {
+        if (a[i] === NODATA) continue;
+        const t = Math.min(1, a[i] / top);
+        img.data.set([0, 1, 2].map((k) => Math.round(lo[k] + t * (hi[k] - lo[k]))).concat(HEAT_ALPHA), i * 4);
+      }
+      const off = document.createElement("canvas");
+      off.width = gm.width; off.height = gm.height;
+      off.getContext("2d")!.putImageData(img, 0, 0);
+      const k = gm.pixel_m / m.pixel_m, [gx, gy] = mapToPx(gm.x0_m, gm.y0_m);
+      g.imageSmoothingEnabled = false;
+      g.drawImage(off, gx, gy, gm.width * k, gm.height * k);
+      g.strokeStyle = c("--color-paper"); g.lineWidth = 1.5;
+      g.beginPath();
+      for (const [x1, y1, x2, y2] of contour(grid, gridK)) { const [a1, b1] = mapToPx(x1, y1), [a2, b2] = mapToPx(x2, y2); g.moveTo(a1, b1); g.lineTo(a2, b2); }
+      g.stroke();
     }
     // Dim the 7 km border: picks there are refused.
     const b = PICK_BORDER_M / m.pixel_m;
@@ -147,6 +169,17 @@
         <p class="note">One ray toward the Sun per {(shown?.stride ?? MASK_STRIDE) * m.pixel_m} m point on this tile. The disc, Earth and terrain beyond the tile are not in it, so points near the edge can read lit.</p>
         {#if feed.error}<p class="refusal" role="alert">Mask unavailable. {feed.error}</p>{/if}
       </div>
+      {#if grid}
+        <div class="legend" data-testid="heat-legend">
+          {#if gridK >= 0}
+            <p class="what"><strong>Operable days</strong>, regional terrain, point grid {grid.meta.pixel_m} m</p>
+            <p><i class="ramp" aria-hidden="true"></i>0 to {grid.meta.span_days} d <i class="line" aria-hidden="true"></i>{CONTOUR_H / 24} d line</p>
+            <p class="note">Landing {controls.date} 00:00 UTC,{grid.meta.span_days} d span, mast {grid.meta.mast_m} m: set at grid build, not the controls on the right.</p>
+          {:else}
+            <p class="note" data-testid="heat-dates">Regional terrain, point grid {grid.meta.pixel_m} m: no heatmap for {controls.date}. Grid landing dates: {grid.meta.dates.join(", ")}.</p>
+          {/if}
+        </div>
+      {/if}
       <figcaption>
         {tile.region.name} · black {grey.lo_m.toFixed(0)} m, white {grey.hi_m.toFixed(0)} m · dashed line: {PICK_BORDER_M / 1000} km from the edge, picks outside it are refused
       </figcaption>
@@ -213,6 +246,8 @@
   .sw { display: inline-block; width: 12px; height: 12px; margin: 0 var(--spacing-8) -2px 0; border: 1px solid var(--color-slate); }
   .sw.lit { background: color-mix(in srgb, var(--color-sun) 60%, var(--color-slate)); }
   .sw.dark { background: color-mix(in srgb, black 50%, var(--color-fog)); margin-left: var(--spacing-16); }
+  .ramp { display: inline-block; width: 48px; height: 10px; margin: 0 var(--spacing-8) 0 0; background: linear-gradient(to right, var(--color-slate), var(--color-sun)); }
+  .line { display: inline-block; width: 16px; border-top: 2px solid var(--color-paper); margin: 0 var(--spacing-8) 3px var(--spacing-16); }
   figcaption { margin-top: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .fields { flex: 1 1 280px; display: flex; flex-direction: column; gap: var(--spacing-16); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .row { display: flex; align-items: center; gap: var(--spacing-8); }

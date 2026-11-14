@@ -13,6 +13,9 @@
 //! JSON from the shipped tiles, with an hourly ephemeris built from the kernels in PENUMBRA_DATA.
 //! `penumbra-pipeline v2 <data_dir>` (release, ~10 min on 8 cores) prints the V2 sample against
 //! AVGVISIB and its Earth twin (T20) as JSON; kernels and both AVGVISIB rasters from PENUMBRA_DATA.
+//! `penumbra-pipeline grid <data_dir> <region>` (release, ~2 min on 8 threads: 114 s measured, #25's 1 min target missed) runs the browser's
+//! site chain over the region's 100 m usable grid for `GRID_DATES` (#25) from the shipped files,
+//! writes `grid-<region>.<hash6>.bin` and merges its entry into the manifest's `grids`.
 
 use penumbra_core::eph::{
     Ephemeris, MAIN_ROWS, MAIN_STEP_S, MAIN_T0_UNIX_S, REPLAY_IM2_ROWS, REPLAY_IM2_STEP_S,
@@ -47,13 +50,21 @@ fn main() -> Result<()> {
             println!("{}", serde_json::to_string_pretty(&r)?);
             Ok(())
         }
+        [_, cmd, data_dir, region] if cmd == "grid" => grid(Path::new(data_dir), region),
+        [_, cmd, data_dir, region] if cmd == "grid-v2" => {
+            let resource =
+                PathBuf::from(std::env::var("PENUMBRA_DATA").map_err(|_| "set PENUMBRA_DATA")?);
+            let r = penumbra_pipeline::grid_avgvisib::run(Path::new(data_dir), &resource, region)?;
+            println!("{}", serde_json::to_string_pretty(&r)?);
+            Ok(())
+        }
         [_, cmd, data_dir] if cmd == "v4-im2" => {
             let s = penumbra_pipeline::v4::im2_statement3(Path::new(data_dir))?;
             println!("{}", serde_json::to_string_pretty(&s)?);
             Ok(())
         }
         _ => Err(
-            "usage: penumbra-pipeline eph|dem|horizon|v4-im2|v2b|v2 <dir>  (kernels and DEMs from PENUMBRA_DATA)"
+            "usage: penumbra-pipeline eph|dem|horizon|v4-im2|v2b|v2 <dir> | grid|grid-v2 <data_dir> <region>  (kernels and DEMs from PENUMBRA_DATA)"
                 .into(),
         ),
     }
@@ -221,6 +232,96 @@ fn dem(out_dir: &Path) -> Result<()> {
             && name.ends_with(".bin");
         if is_tile && !written.contains(&name) {
             std::fs::remove_file(out_dir.join(name))?;
+        }
+    }
+    Ok(())
+}
+
+/// Landing dates for the region grid (#25), each 00:00 UTC as the site view's date picker gives it,
+/// with Unix s UTC. 2025-03-06 is IM-2's landing day, in the replay-im2 segment (ends 2025-04-06, so
+/// the span stays ≤ 30 d). The other two are the 2026 south-pole extremes of the subsolar latitude
+/// read from eph-main (MOON_ME): 2026-11-14 is the most southern (−1.56°, south-pole summer, also
+/// the app's default date) and 2026-05-31 the most northern (+1.59°, south-pole winter).
+const GRID_DATES: [(&str, f64); 3] = [
+    ("2025-03-06", 1_741_219_200.0),
+    ("2026-11-14", 1_794_614_400.0),
+    ("2026-05-31", 1_780_185_600.0),
+];
+/// Span from landing, days: the site view's default (DEFAULT_SPAN_DAYS) and within replay-im2.
+const GRID_SPAN_DAYS: u32 = 30;
+/// Timeline step, s: the browser's fixture step (web/public/fixture/scenario.json `step_s`).
+const GRID_STEP_S: u32 = 600;
+/// Mast above ground, m: the site view's default (DEFAULT_MAST_M) and the IM-2 tracer's.
+const GRID_MAST_M: f64 = 2.0;
+
+fn grid(data_dir: &Path, region: &str) -> Result<()> {
+    use penumbra_core::timeline::DEFAULT_EARTH_MARGIN_DEG;
+    use penumbra_pipeline::grid::{
+        GRID_PIXEL_M, GridSpec, RunInputs, USABLE_BORDER_M, encode, run_grid,
+    };
+    let tiles = penumbra_pipeline::dem::ShippedTiles::load(data_dir)?;
+    let (near, mid) = (tiles.near(region)?, tiles.mid(region)?);
+    let mut eph = Ephemeris::default();
+    eph.add(
+        MAIN_T0_UNIX_S,
+        MAIN_STEP_S,
+        penumbra_pipeline::eph::read_shipped_table(data_dir, MAIN_FILE_PREFIX)?,
+    )
+    .map_err(|e| format!("{e}"))?;
+    eph.add(
+        REPLAY_IM2_T0_UNIX_S,
+        REPLAY_IM2_STEP_S,
+        penumbra_pipeline::eph::read_shipped_table(data_dir, REPLAY_IM2_FILE_PREFIX)?,
+    )
+    .map_err(|e| format!("{e}"))?;
+    let spec = GridSpec::usable(near.meta(), GRID_PIXEL_M, USABLE_BORDER_M)?;
+    let inp = RunInputs {
+        mast_m: GRID_MAST_M,
+        step_s: f64::from(GRID_STEP_S),
+        count: GRID_SPAN_DAYS * 86_400 / GRID_STEP_S,
+        earth_margin_deg: DEFAULT_EARTH_MARGIN_DEG,
+        // the lander preset the web loads (fixture `preset`, E58a–d)
+        preset: penumbra_core::power::ROVER_PRESET,
+    };
+    let landings: Vec<f64> = GRID_DATES.iter().map(|d| d.1).collect();
+    let t = std::time::Instant::now();
+    let results = run_grid((near, mid, &tiles.far), &eph, &spec, &landings, &inp)?;
+    eprintln!(
+        "{} cells × {} dates in {:.1} s",
+        spec.cells(),
+        landings.len(),
+        t.elapsed().as_secs_f64()
+    );
+    let bytes = encode(&results)?;
+    let prefix = format!("grid-{region}.");
+    let name = format!("{prefix}{}.bin", hash6(&bytes));
+    std::fs::write(data_dir.join(&name), &bytes)?;
+    println!("wrote {name} ({} bytes)", bytes.len());
+
+    let entry = serde_json::json!({
+        "region": region, "pixel_m": spec.pixel_m, "x0_m": spec.x0_m, "y0_m": spec.y0_m,
+        "width": spec.width, "height": spec.height, "span_days": GRID_SPAN_DAYS, "mast_m": GRID_MAST_M,
+        "dates": GRID_DATES.iter().map(|d| d.0).collect::<Vec<_>>(),
+        "landing_unix_s": GRID_DATES.iter().map(|d| whole_s(d.1)).collect::<Result<Vec<_>>>()?,
+        "url": format!("data/{name}"),
+    });
+    // keep other regions' grids; this region's entry is replaced
+    let text = std::fs::read_to_string(data_dir.join("manifest.json"))?;
+    let m: serde_json::Value = serde_json::from_str(&text)?;
+    let mut grids: Vec<serde_json::Value> = match m.get("grids") {
+        None => Vec::new(),
+        Some(g) => g
+            .as_array()
+            .ok_or("manifest grids is not an array")?
+            .clone(),
+    };
+    grids.retain(|g| g["region"] != region);
+    grids.push(entry);
+    penumbra_pipeline::merge_manifest(data_dir, vec![("grids", serde_json::Value::Array(grids))])?;
+    // remove this region's older grids only after the new grid and manifest are on disk
+    for old in penumbra_pipeline::eph::shipped_table_paths(data_dir, &prefix)? {
+        if old.file_name() != Some(std::ffi::OsStr::new(&name)) {
+            std::fs::remove_file(old)?;
         }
     }
     Ok(())

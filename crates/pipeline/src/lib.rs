@@ -2,6 +2,8 @@
 
 pub mod dem;
 pub mod eph;
+pub mod grid;
+pub mod grid_avgvisib;
 pub mod horizon_report;
 pub mod psr;
 pub mod table_check;

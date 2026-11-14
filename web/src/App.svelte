@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { computeScenario, loadFixture, loadManifest, loadNearTile, xyToLatlon, type EphSegment, type Inputs, type NearMeta, type NearTile, type Preset, type Region, type Scenario } from "./lib/engine";
+  import { computeScenario, latlonToXy, loadFixture, loadManifest, loadNearTile, xyToLatlon, type EphSegment, type Inputs, type NearMeta, type NearTile, type Preset, type Region, type Scenario } from "./lib/engine";
   import Compare from "./lib/Compare.svelte";
   import Replay from "./lib/Replay.svelte";
   import { applyPresetEdits, decodeCompare, type Pair } from "./lib/compare";
@@ -14,6 +14,7 @@
   import Terrain3D from "./lib/Terrain3D.svelte";
   import { MaskFeed } from "./lib/maskFeed.svelte";
   import { parseDate } from "./lib/site";
+  import { dateIndex, fetchGrid, nearestBetter, readout, type Grid } from "./lib/grid";
   import { Controls } from "./lib/state.svelte";
 
   const controls = new Controls();
@@ -35,6 +36,25 @@
       controls.lat = +lat.toFixed(4); controls.lon = +lon.toFixed(4);
     }, (e) => (tileError = String(e?.message ?? e)));
   }
+
+  // Regional point grid (T24) for the picked region, if the manifest lists one; the app works without it.
+  let grid = $state.raw<Grid | null>(null);
+  $effect(() => {
+    const id = tile?.region.id;
+    let live = true;
+    grid = null;
+    if (id) loadManifest().then((m) => { const g = m.grids?.find((x) => x.region === id); return g ? fetchGrid(g) : null; }).then((g) => { if (live) grid = g; }, (e) => { if (live) tileError = `Heatmap not loaded: ${e?.message ?? e}`; });
+    return () => { live = false; };
+  });
+  const gridK = $derived(grid ? dateIndex(grid, controls.date) : -1);
+  const nearby = $derived.by(() => {
+    if (!grid || gridK < 0) return null;
+    // The grid is built for the default preset, mast and span; once the planner changes any, its numbers no longer match the headline.
+    if (controls.preset || controls.mastM !== grid.meta.mast_m || controls.spanDays !== grid.meta.span_days)
+      return `Nearest better site: the grid is built for the default preset, mast ${grid.meta.mast_m} m and ${grid.meta.span_days} d span; reset those to compare.`;
+    const [x, y] = latlonToXy(controls.lat, controls.lon);
+    return readout(nearestBetter(grid, gridK, x, y)) + ` · grid: ${grid.meta.span_days} d span, mast ${grid.meta.mast_m} m. Direction is on the map, not lunar north.`;
+  });
 
   // Compare A vs B (T27). The URL query holds both pairs and the preset (`?a=<lat>,<lon>@<date>&b=...&preset=...`); a query
   // with `a` or `b` opens the compare view on load. The site view keeps a clean URL.
@@ -106,14 +126,14 @@
     {#if cmp}<Compare {controls} pairs={cmp.pairs} base={cmp.base} metas={cmp.metas} eph={cmp.eph} />{:else if !cmpError}<p class="msg">Loading…</p>{/if}
   {:else}
   <p class="tag">~/site</p>
-  {#if tile}<SitePicker {controls} {tile} {onregion} feed={maskFeed} />{/if}
+  {#if tile}<SitePicker {controls} {tile} {onregion} feed={maskFeed} {grid} {gridK} />{/if}
   {#if tileError}<p class="msg" role="alert">{tileError}</p>{/if}
   {#if error}<p class="msg" role="alert">{error}</p>{/if}
   {#if scenario && computedFor}
     <p class="msg" data-testid="computed-for">
       Computed for {scenario.site.lat_deg.toFixed(4)}°, {scenario.site.lon_deg.toFixed(4)}°E · mast {scenario.site.mast_m.toFixed(1)} m · landing {controls.date} · {computedFor.span_days} d
     </p>
-    <Survival {scenario} {controls} />
+    <Survival {scenario} {controls} {nearby} />
     <Countdown {scenario} {idx} />
     <Panorama {scenario} bind:idx />
     {#if tile}<Terrain3D {controls} {tile} feed={maskFeed} t={markerT} sunAz={scenario.track.sun_az_deg[idx]} sunEl={scenario.track.sun_el_deg[idx]} sunLon={computedFor.lon_deg} />{/if}
