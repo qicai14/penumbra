@@ -26,6 +26,7 @@ test("keyboard focus reads the horizon elevation and obstacle distance", async (
 // Native values, IM-2, 2026-11-14T00:00:00Z (T02 brief row 14).
 test("tracer shows the native Sun and Earth az/el, no FIXTURE badge", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "About", exact: true }).click();
   const want = { "sun-az": 97.531671689975, "sun-el": 0.878280821, "earth-az": 329.676179426621, "earth-el": -0.153898865224 };
   for (const [id, v] of Object.entries(want)) {
     await expect(page.getByTestId(id)).toBeVisible();
@@ -68,6 +69,7 @@ test("hovering the chart moves the panorama time", async ({ page }) => {
 
 test("scoreboard lists V1-V5 plus V2b and shows 'not run' for checks that have not run", async ({ page, request }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "About", exact: true }).click();
   const table = page.getByRole("table", { name: /One row per check/ });
   await expect(table.getByTestId("score-row")).toHaveCount(6);
   const rows = (await (await request.get("scoreboard.json")).json()) as { pass: boolean | null }[];
@@ -80,6 +82,7 @@ test("scoreboard lists V1-V5 plus V2b and shows 'not run' for checks that have n
 // Each citation links to its original source, and every link is one the research lists or a ledger W row already name.
 test("every dataset row has a role, SCIENCE-SPEC §6 ids and links to the original sources", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "About", exact: true }).click();
   const rows = page.getByTestId("datasets").locator("tbody tr");
   await expect(rows).toHaveCount(6);
   await expect(page.getByTestId("datasets")).not.toContainText("pending");
@@ -337,4 +340,25 @@ test("the 3D terrain mounts, shows the picker's mask and time, labels vertical e
   await slider.fill(String(Math.round(max / 2)));
   await expect(t3).toHaveAttribute("data-stride", "8", { timeout: 60000 });
   await expect.poll(async () => (await t3.getAttribute("data-t")) === (await site.getAttribute("data-t")), { timeout: 60000 }).toBe(true);
+});
+
+test("four views, a keyboard-reachable GitHub link, and a verdict strip built from scoreboard.json (T79 #79)", async ({ page, request }) => {
+  await page.goto("/");
+  const nav = page.getByRole("navigation", { name: "View" });
+  for (const name of ["Site", "Compare A vs B", "IM-2 replay", "About"]) await expect(nav.getByRole("button", { name })).toBeVisible();
+  // Scoreboard, About and Tracer live in the About view, not on the Site scroll.
+  await expect(page.getByRole("table", { name: /One row per check/ })).toHaveCount(0);
+  await expect(page.getByTestId("sun-az")).toHaveCount(0);
+  const gh = page.getByRole("link", { name: "GitHub" });
+  await expect(gh).toHaveAttribute("href", "https://github.com/qicai14/penumbra");
+  await gh.focus();
+  await expect(gh).toBeFocused();
+  // The strip text is rebuilt from the data file: every id with its status.
+  const rows = (await (await request.get("scoreboard.json")).json()) as { id: string; pass: boolean | null }[];
+  const ids = (s: boolean | null) => rows.filter((r) => r.pass === s).map((r) => r.id).join(", ");
+  const want = ([[true, "pass"], [false, "fails"], [null, "not run"]] as const).filter(([s]) => ids(s)).map(([s, w]) => `${ids(s)} ${w}`).join(" · ");
+  await expect(page.getByTestId("verdict-strip")).toHaveText(want);
+  await page.getByRole("button", { name: "Validation details" }).click();
+  await expect(nav.getByRole("button", { name: "About" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("table", { name: /One row per check/ })).toBeVisible();
 });

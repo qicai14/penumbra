@@ -10,6 +10,7 @@
   import Tracer from "./lib/Tracer.svelte";
   import Scoreboard from "./lib/Scoreboard.svelte";
   import About from "./lib/About.svelte";
+  import VerdictStrip from "./lib/VerdictStrip.svelte";
   import SitePicker from "./lib/SitePicker.svelte";
   import Terrain3D from "./lib/Terrain3D.svelte";
   import { MaskFeed } from "./lib/maskFeed.svelte";
@@ -58,7 +59,7 @@
 
   // Compare A vs B (T27). The URL query holds both pairs and the preset (`?a=<lat>,<lon>@<date>&b=...&preset=...`); a query
   // with `a` or `b` opens the compare view on load. The site view keeps a clean URL.
-  let view = $state<"site" | "compare" | "replay">("site");
+  let view = $state<"site" | "compare" | "replay" | "about">("site");
   let cmp = $state<{ pairs: { a: Pair; b: Pair }; base: Preset; metas: NearMeta[]; eph: EphSegment[] } | null>(null); // deep state: Compare edits the pairs in place, so they survive a trip to the site view
   let cmpError = $state<string | null>(null);
   async function openCompare(search: string) {
@@ -75,6 +76,10 @@
   }
   function openReplay() {
     view = "replay";
+    try { history.replaceState(null, "", location.pathname); } catch { /* ignore */ }
+  }
+  function openAbout() {
+    view = "about";
     try { history.replaceState(null, "", location.pathname); } catch { /* ignore */ }
   }
   function openSite() {
@@ -113,11 +118,18 @@
     <button type="button" aria-pressed={view === "site"} onclick={openSite}>Site</button>
     <button type="button" aria-pressed={view === "compare"} onclick={() => openCompare("")}>Compare A vs B</button>
     <button type="button" aria-pressed={view === "replay"} onclick={openReplay}>IM-2 replay</button>
+    <button type="button" aria-pressed={view === "about"} onclick={openAbout}>About</button>
   </nav>
+  <a class="gh" href="https://github.com/qicai14/penumbra" target="_blank" rel="noopener noreferrer"><svg aria-hidden="true" viewBox="0 0 16 16" width="16" height="16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.6 7.6 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>GitHub</a>
 </header>
 
 <main>
-  {#if view === "replay"}
+  {#if view === "about"}
+    <p class="tag">~/about</p>
+    <Tracer />
+    <Scoreboard />
+    <About />
+  {:else if view === "replay"}
     <p class="tag">~/replay</p>
     <Replay />
   {:else if view === "compare"}
@@ -126,6 +138,7 @@
     {#if cmp}<Compare {controls} pairs={cmp.pairs} base={cmp.base} metas={cmp.metas} eph={cmp.eph} />{:else if !cmpError}<p class="msg">Loading…</p>{/if}
   {:else}
   <p class="tag">~/site</p>
+  <VerdictStrip onopen={openAbout} />
   {#if tile}<SitePicker {controls} {tile} {onregion} feed={maskFeed} {grid} {gridK} />{/if}
   {#if tileError}<p class="msg" role="alert">{tileError}</p>{/if}
   {#if error}<p class="msg" role="alert">{error}</p>{/if}
@@ -141,9 +154,6 @@
   {:else if !error}
     <p class="msg">Loading…</p>
   {/if}
-  <Tracer />
-  <Scoreboard />
-  <About />
   {/if}
 </main>
 
@@ -154,6 +164,9 @@
   }
   .bar { padding: var(--spacing-16); display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-16); border-bottom: 1px solid var(--color-iron); }
   nav { display: flex; }
+  .gh { display: inline-flex; align-items: center; gap: var(--spacing-8); color: var(--color-fog); text-decoration: none; font: var(--text-caption)/var(--leading-caption) var(--font-mono); }
+  .gh:hover { color: var(--color-paper); }
+  .gh:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }
   nav button {
     font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-fog); background: transparent;
     border: 1px solid var(--color-slate); padding: var(--spacing-8) var(--spacing-16); margin-left: -1px; cursor: pointer;
