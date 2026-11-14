@@ -207,3 +207,27 @@ test("the Compare button opens the compare view from the site view, and a bad UR
   await expect(page.getByTestId("col-a")).toContainText("-84.7906");
   await expect(page.getByTestId("col-b")).toContainText("-84.7906");
 });
+
+// T16 (#17): IM-2 replay. One click, two answers side by side, tagged assumptions, editable pit.
+test("IM-2 replay shows the regional and pit answers with their tags and refuses a bad pit", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "IM-2 replay" }).click();
+  for (const tag of ["assumed · U8", "assumed · U10", "unconfirmed · U19"]) await expect(page.getByTestId("replay-assumptions")).toContainText(tag);
+  await page.getByTestId("replay-load").click();
+  await expect(page.getByTestId("answer-regional")).toContainText("Regional terrain says");
+  await expect(page.getByTestId("answer-pit")).toContainText("A pit of 20 × 1.94 m says");
+  await expect(page.getByTestId("regional-operable")).toHaveText(/\S/);
+  await expect(page.getByTestId("pit-operable")).toHaveText(/\S/);
+  await expect(page.getByTestId("dstar-sentence")).toContainText(/would need to be [\d.]+ m deep to hide the Sun/);
+  await expect(page.getByTestId("pano-pair")).toContainText("Regional terrain");
+  await expect(page.getByTestId("pano-pair")).toContainText("Pit rim");
+  await expect(page.getByTestId("pit-depth")).toHaveValue("1.94");
+  await expect(page.getByTestId("pit-depth-tag")).toContainText("U9");
+  await page.getByTestId("pit-depth").fill("3");
+  await page.getByTestId("pit-depth").dispatchEvent("change");
+  await expect(page.getByTestId("answer-pit")).toContainText("20 × 3 m");
+  await expect(page.getByTestId("pit-depth-tag")).toContainText("assumed");
+  await page.getByTestId("pit-diameter").fill("0");
+  await page.getByTestId("pit-diameter").dispatchEvent("change");
+  await expect(page.getByTestId("pit-refusal")).toContainText("diameter");
+});
