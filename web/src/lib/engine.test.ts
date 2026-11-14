@@ -226,9 +226,57 @@ test("computeScenario runs on the landing date and span, not the fixture grid (#
     expect(s.survival.lethal_h).toBe(Number.isNaN(want[1]) ? null : want[1]);
     expect(s.survival.soc_wh).toEqual(want.slice(8, 8 + want[7]));
     const site = { lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2 };
-    await expect(computeScenario({ ...site, start_unix_s: Date.UTC(2025, 2, 6) / 1000, span_days: 14 })).rejects.toThrow("OUT_OF_TABLE"); // before the table
+    await expect(computeScenario({ ...site, start_unix_s: Date.UTC(2025, 0, 1) / 1000, span_days: 14 })).rejects.toThrow("OUT_OF_TABLE"); // before every segment (2025-03-06 is in the replay-im2 segment since T16)
     await expect(computeScenario({ ...site, start_unix_s: Date.UTC(2030, 11, 25) / 1000, span_days: 14 })).rejects.toThrow("OUT_OF_TABLE"); // runs past its end (P16)
     for (const span_days of [0, -1, NaN]) await expect(computeScenario({ ...site, start_unix_s: start, span_days })).rejects.toThrow("BAD_INPUT");
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+// ---- T16 (#17): every ephemeris segment is loaded, so IM-2 dates pass; the pit answer is the WASM pit_horizon ----
+const IM2_TOUCHDOWN = 1741282080; // 2025-03-06T17:28:00Z, assumed (U8)
+
+test("every manifest segment is loaded: IM-2 touchdown (replay-im2 segment) computes (T16)", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = servePublic;
+  try {
+    const s = await computeScenario({ lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 1, start_unix_s: IM2_TOUCHDOWN, span_days: 3 });
+    expect(s.track.t_unix_s[0]).toBe(IM2_TOUCHDOWN);
+    expect(s.track.sun_el_deg[0]).toBeLessThan(6.8); // E104: the Sun never rises above 6.75 deg here
+    expect(s.track.sun_el_deg[0]).toBeGreaterThan(-1);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("loadNearTile offers both ephemeris segments to the date check (T16)", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = servePublic;
+  try {
+    const { loadNearTile } = await import("./engine");
+    expect((await loadNearTile()).eph.map((e) => e.id)).toEqual(["main", "replay-im2"]);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test("computePit raises the horizon to the pit rim and can only lower illumination (T16)", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = servePublic;
+  try {
+    const { computePit, defaultPitDepth } = await import("./engine");
+    const reg = await computeScenario({ lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 0, start_unix_s: IM2_TOUCHDOWN, span_days: 3 });
+    const depth = await defaultPitDepth(20);
+    expect(Math.abs(depth - 1.9438)).toBeLessThan(1e-4); // (D/2) tan 11 deg, from the WASM
+    const pit = await computePit(reg, { diameter_m: 20, depth_m: depth });
+    // H = 0: el_pit = 11.0 deg (SCIENCE-SPEC 1f), so no bin is below it
+    expect(Math.min(...pit.horizon.el_deg)).toBeGreaterThan(10.999);
+    expect(pit.count).toBe(reg.count);
+    for (let i = 0; i < reg.count; i++) expect(pit.timeline.illumination[i]).toBeLessThanOrEqual(reg.timeline.illumination[i]);
+    // the Sun never exceeds 6.75 deg and the rim is at 11 deg: fully hidden whenever it is above terrain
+    expect(Math.max(...pit.timeline.illumination)).toBe(0);
+    await expect(computePit(reg, { diameter_m: 0, depth_m: 1 })).rejects.toThrow("BAD_INPUT");
   } finally {
     globalThis.fetch = realFetch;
   }
