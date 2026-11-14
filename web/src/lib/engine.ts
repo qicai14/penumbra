@@ -114,26 +114,41 @@ export async function loadManifest(): Promise<Manifest> {
 // IM-2 tracer call (T02): site, mast, 2026-11-14T00:00Z, hourly, 24 rows.
 export const TRACER = { lat_deg: -84.7906, lon_deg: 29.1957, ground_m: 0, mast_m: 2, start_unix_s: 1794614400, step_s: 3600, count: 24 };
 
-/** Sun and Earth az/el for the IM-2 tracer, from the WASM Engine and the shipped hourly table. */
-export async function loadTracerTrack(): Promise<Track> {
-  const wasm = await import("./wasm/penumbra_wasm.js");
-  await wasm.default();
-  const m = await loadManifest();
-  const seg = m.ephemeris[0];
-  const res = await fetch(`${import.meta.env?.BASE_URL ?? "/"}${seg.url}`);
-  if (!res.ok) throw new Error(`NO_DATA: ${seg.url} returned ${res.status}`);
-  const buf = await res.arrayBuffer();
-  if (buf.byteLength % 8) throw new Error(`BAD_INPUT: ${seg.url} is ${buf.byteLength} bytes, not whole f64s`);
-  const data = new Float64Array(buf);
-  if (data.length !== 6 * seg.rows) throw new Error(`BAD_INPUT: ${seg.url} has ${data.length} values, expected ${6 * seg.rows}`);
-  const engine = new wasm.Engine();
-  engine.load_ephemeris(seg.t0_unix_s, seg.step_s, data);
-  const t = TRACER;
-  const flat = engine.sun_earth_track(t.lat_deg, t.lon_deg, t.ground_m, t.mast_m, t.start_unix_s, t.step_s, t.count);
+type WasmEngine = InstanceType<typeof import("./wasm/penumbra_wasm.js").Engine>;
+let engineLoad: Promise<WasmEngine> | undefined;
+/** The WASM Engine with the shipped ephemeris table loaded; built once and cached (a failed load is retried). */
+export function loadEngine(): Promise<WasmEngine> {
+  return (engineLoad ??= (async () => {
+    const wasm = await import("./wasm/penumbra_wasm.js");
+    await wasm.default();
+    const m = await loadManifest();
+    const seg = m.ephemeris[0];
+    const res = await fetch(`${import.meta.env?.BASE_URL ?? "/"}${seg.url}`);
+    if (!res.ok) throw new Error(`NO_DATA: ${seg.url} returned ${res.status}`);
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength % 8) throw new Error(`BAD_INPUT: ${seg.url} is ${buf.byteLength} bytes, not whole f64s`);
+    const data = new Float64Array(buf);
+    if (data.length !== 6 * seg.rows) throw new Error(`BAD_INPUT: ${seg.url} has ${data.length} values, expected ${6 * seg.rows}`);
+    const engine = new wasm.Engine();
+    engine.load_ephemeris(seg.t0_unix_s, seg.step_s, data);
+    return engine;
+  })().catch((e) => { engineLoad = undefined; throw e; }));
+}
+
+/** Sun and Earth az/el from the WASM Engine for one site and time grid (SCIENCE-SPEC 1c, degrees, Unix s UTC). */
+export async function sunEarthTrack(site: Site, start_unix_s: number, step_s: number, count: number): Promise<Track> {
+  const engine = await loadEngine();
+  const flat = engine.sun_earth_track(site.lat_deg, site.lon_deg, site.ground_m, site.mast_m, start_unix_s, step_s, count);
   const names = ["t_unix_s", "sun_az_deg", "sun_el_deg", "sun_radius_deg", "sun_dist_km", "earth_az_deg", "earth_el_deg", "earth_radius_deg", "earth_dist_km"];
-  const track = Object.fromEntries(names.map((k, i) => [k, flat.slice(i * t.count, (i + 1) * t.count)])) as Track;
+  const track = Object.fromEntries(names.map((k, i) => [k, flat.slice(i * count, (i + 1) * count)])) as Track;
   validate(track);
   return track;
+}
+
+/** Sun and Earth az/el for the IM-2 tracer. */
+export function loadTracerTrack(): Promise<Track> {
+  const t = TRACER;
+  return sunEarthTrack(t, t.start_unix_s, t.step_s, t.count);
 }
 
 // ---- Site picker and recompute (T11) ----
@@ -161,9 +176,21 @@ export async function loadNearTile(root = import.meta.env?.BASE_URL ?? "/"): Pro
   return { fake: m.fake === true, region: { id: region.id, name: region.name }, meta, data };
 }
 
+/** The panorama's horizon terrain is still the fixture; T07 (#8) sets this false. Kept apart from `scenario.fake`,
+ *  which T08/T09 turn off for the timelines and survival while the terrain may still be fake. */
+export const TERRAIN_FAKE = true;
+
 let fixtureBase: Promise<Scenario> | undefined;
-/** FIXTURE: returns the same fake data whatever the inputs; only `site` and `preset` echo the inputs (T09 will make the survival numbers follow them). */
+/**
+ * Sun and Earth tracks (the panorama's) come from the WASM Engine for the chosen site, on the fixture timeline's own
+ * time grid so the shared cursor stays aligned with the timelines. Horizon, timelines and survival are still fixture
+ * (T07/T08/T09), so `fake` stays true; the panorama badge reads TERRAIN_FAKE instead.
+ */
 export async function computeScenario(inp: Inputs): Promise<Scenario> {
   const s = await (fixtureBase ??= loadFixture());
-  return { ...s, preset: inp.preset ?? s.preset, site: { ...s.site, lat_deg: inp.lat_deg, lon_deg: inp.lon_deg, mast_m: inp.mast_m } };
+  // shortcut: ground_m stays the fixture's 0 until a DEM height lookup lands; a few km of ground height moves Earth's
+  // topocentric position by about 0.0003° per km (Moon–Earth 384,000 km) and the Sun far less, below the panorama's 0.1°.
+  const site = { ...s.site, lat_deg: inp.lat_deg, lon_deg: inp.lon_deg, mast_m: inp.mast_m };
+  const track = await sunEarthTrack(site, s.timeline.t_unix_s[0], s.step_s, s.count);
+  return { ...s, preset: inp.preset ?? s.preset, site, track };
 }

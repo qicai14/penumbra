@@ -8,7 +8,9 @@ test("panorama loads the fixture (api_version checked against WASM) and shows th
   // The badge follows the data's own `fake` flag.
   const res = await request.get("fixture/scenario.json");
   const { fake } = await res.json();
-  await expect(page.getByTestId("fake-badge")).toHaveCount(fake ? 1 : 0);
+  // The panorama badge follows TERRAIN_FAKE (horizon fixture until T07 #8); the fixture-dates note follows `fake`.
+  await expect(page.getByTestId("fake-badge")).toHaveText("FAKE TERRAIN");
+  await expect(page.getByTestId("track-dates")).toHaveCount(fake ? 1 : 0);
 });
 
 test("keyboard focus reads the horizon elevation and obstacle distance", async ({ page }) => {
