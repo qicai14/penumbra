@@ -1,5 +1,6 @@
 //! Pure maths for Penumbra: no I/O, builds for native and wasm32.
 
+pub mod dem;
 pub mod eph;
 pub mod geometry;
 
