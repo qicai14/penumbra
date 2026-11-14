@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Compare A: Two columns</title>
+<link rel="stylesheet" href="../../wireframes/wf.css"><link rel="stylesheet" href="../v2.css"><link rel="stylesheet" href="compare.css">
+<script src="../v2.js"></script><script src="compare.js"></script>
+<script type="application/json" id="scenarios">{ "a": { "seed": 7, "start": 300 }, "b": { "seed": 7, "start": 390 } }</script>
+</head>
+<body>
+<div class="frame">
+  <header class="bar"><span class="logo">Penumbra</span>
+    <nav><span>Site</span><span>Planner</span><span>Terrain</span><span>IM-2 replay</span><span class="on">Compare</span><span>Validation</span></nav>
+    <span class="spacer"></span><span class="chip">Preset: Generic 1 kW (assumed)</span></header>
+  <main>
+    <div class="tools" data-tools></div>
+    <div class="cols">
+      <section class="box side"><h2><b>A</b>Mons Mouton <span class="assumed">FAKE</span></h2>
+        <div data-pick="a"></div><div class="links" data-links="a"></div>
+        <div class="cmp"><div class="lbl">Four clocks at landing + 0.8 d</div><div data-clocks="a"></div></div>
+        <div class="facts"><div class="box"><div class="lbl">Operable days</div><span class="num" data-v="opA"></span></div>
+          <div class="box"><div class="lbl">First lethal shadow</div><span class="num sm" data-v="leA"></span><span class="pm"> ±40 min</span></div></div>
+      </section>
+      <section class="box side"><h2><b>B</b>Mons Mouton <span class="assumed">FAKE</span></h2>
+        <div data-pick="b"></div><div class="links" data-links="b"></div>
+        <div class="cmp"><div class="lbl">Four clocks at landing + 0.8 d</div><div data-clocks="b"></div></div>
+        <div class="facts"><div class="box"><div class="lbl">Operable days</div><span class="num" data-v="opB"></span></div>
+          <div class="box"><div class="lbl">First lethal shadow</div><span class="num sm" data-v="leB"></span><span class="pm"> ±40 min</span></div></div>
+      </section>
+    </div>
+    <section class="diff"><div class="lbl">B − A <span class="assumed">FAKE</span></div>
+      <div><div class="lbl">Operable days</div><span class="num" data-v="opD"></span></div>
+      <div><div class="lbl">First lethal shadow shift</div><span class="num" data-v="leD"></span></div></section>
+    <section class="box"><div class="lbl">One shared time axis · A and B on the same calendar <span class="assumed">FAKE</span></div>
+      <div class="svgfill" data-shared="{}"></div>
+      <p class="ann">B lands 3 days after A, so its lane starts 3 days in (hatched = before landing). Lethal-shadow lines are read on the same axis.</p></section>
+  </main>
+</div>
+<div class="fake">FAKE DATA</div>
+</body>
+</html>

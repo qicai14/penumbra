@@ -26,7 +26,7 @@
 <body>
 <div class="wrap">
   <h1>Penumbra lo-fi wireframes · round 2</h1>
-  <p class="muted lede">5 screens × 3 new directions, built from docs/IDEA.md, SCIENCE-SPEC.md and ARCHITECTURE.md. Same rules as <a href="../wireframes/" style="color:inherit">round 1</a>: greyscale, judge layout and flow, all numbers FAKE. Charts and headline numbers come from one shared fake model (v2.js), so a picture never disagrees with its number. Pick one letter per screen (round 1 or round 2, mixing is fine) and note it in design/DECISIONS.md. The earlier whole-app version is kept in <a href="flows/" style="color:inherit">flows/</a>.</p>
+  <p class="muted lede">6 screens × 3 new directions, built from docs/IDEA.md, SCIENCE-SPEC.md and ARCHITECTURE.md. Same rules as <a href="../wireframes/" style="color:inherit">round 1</a>: greyscale, judge layout and flow, all numbers FAKE. Charts and headline numbers come from one shared fake model (v2.js), so a picture never disagrees with its number. Pick one letter per screen (round 1 or round 2, mixing is fine) and note it in design/DECISIONS.md. The earlier whole-app version is kept in <a href="flows/" style="color:inherit">flows/</a>.</p>
 
   <h2>1 · Site: horizon panorama + timelines <span class="chip">Must</span></h2>
   <div class="row">
@@ -76,6 +76,15 @@
       <p>V1 error scatter with the 0.01° pass circle, V2 ours-vs-PGDA scatter, and the full V2 difference histogram.</p><p class="trade">+ Shows the tail, not just the median. − Needs chart literacy.</p><p class="src">from: SCIENCE-SPEC 3 · builds on round-1 Scoreboard C</p></article>
     <article class="opt"><header><b>C</b> One-line verdict<a href="scoreboard/c.html">Open ↗</a></header><div class="thumb"><iframe src="scoreboard/c.html" title="Scoreboard C" loading="lazy" tabindex="-1"></iframe></div>
       <p>A plain sentence ("3 of 4 checks pass"), a 5-box strip, the miss explained in words, and how we check.</p><p class="trade">+ Best for the public and a slide. − Detail is one click away.</p><p class="src">from: IDEA "Report misses honestly"</p></article>
+  </div>
+  <h2>6 · Compare A vs B <span class="chip">Should</span></h2>
+  <div class="row">
+    <article class="opt"><header><b>A</b> Two columns<a href="compare/a.html">Open ↗</a></header><div class="thumb"><iframe src="compare/a.html" title="Compare A" loading="lazy" tabindex="-1"></iframe></div>
+      <p>A left, B right: site, date, four clocks, operable days, lethal shadow; a B − A row; one shared timeline below.</p><p class="trade">+ Most familiar; each side reads whole. − Timeline is far from the numbers.</p><p class="src">from: DECISIONS screen 6, flows/c</p></article>
+    <article class="opt"><header><b>B</b> One timeline, two lanes<a href="compare/b.html">Open ↗</a></header><div class="thumb"><iframe src="compare/b.html" title="Compare B" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Big shared timeline with lane A over lane B; numbers in an A | B | B − A table; clocks shrink to a side stack.</p><p class="trade">+ Slip is visible at a glance. − Clocks are small, picker rows are bare.</p><p class="src">from: DECISIONS screen 6</p></article>
+    <article class="opt"><header><b>C</b> Difference first<a href="compare/c.html">Open ↗</a></header><div class="thumb"><iframe src="compare/c.html" title="Compare C" loading="lazy" tabindex="-1"></iframe></div>
+      <p>Headline sentence (landing 3 days later costs N h) with B − A, then A and B details and the shared timeline.</p><p class="trade">+ Answers the schedule-slip question first. − Details sit below the fold.</p><p class="src">from: DECISIONS screen 6, IDEA planner use case</p></article>
   </div>
 </div>
 <script>
