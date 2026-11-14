@@ -10,6 +10,9 @@ test("panorama loads the fixture (api_version checked against WASM) and shows th
   const { fake } = await res.json();
   // The horizon is the real DEM (T07 #8), so the panorama badge is off; the fixture-dates note follows `fake`.
   await expect(page.getByTestId("fake-badge")).toHaveCount(0);
+  // Survival is the WASM model (T09 #10), so its badges are off too.
+  await expect(page.getByTestId("fake-badge-survival")).toHaveCount(0);
+  await expect(page.getByTestId("fake-badge-timelines")).toHaveCount(0);
   await expect(page.getByTestId("track-dates")).toHaveCount(fake ? 1 : 0);
 });
 

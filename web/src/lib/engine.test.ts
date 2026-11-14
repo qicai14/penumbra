@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import init, { api_version } from "./wasm/penumbra_wasm.js";
+import init, { api_version, survival } from "./wasm/penumbra_wasm.js";
 import { checkApiVersion, computeScenario, parseScenario, validate } from "./engine";
 
 const raw = JSON.parse(readFileSync(new URL("../../public/fixture/scenario.json", import.meta.url), "utf8"));
@@ -138,6 +138,61 @@ test("computeScenario timelines are Engine.timeline on the real IM-2 horizon, no
     for (const i of [0, 1234, n - 1]) for (const [c, k] of names.entries()) expect(s.timeline[k][i]).toBe(flat[c * n + i]);
     for (let i = 0; i < n; i++) expect(s.timeline.visibility[i]).toBeGreaterThanOrEqual(s.timeline.illumination[i]); // P1
     expect(s.timeline.illumination).not.toEqual(parseScenario(raw, api_version()).timeline.illumination);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+// A flat 10 × n timeline (docs/API.md): every 10 min from 2026-11-14Z, Sun at az 90°, el 0°, 1 AU, contact on.
+const flatTimeline = (n: number, illum: number) => {
+  const cols = [Array.from({ length: n }, (_, i) => 1794614400 + 600 * i), Array(n).fill(90), Array(n).fill(0),
+    Array(n).fill(illum), Array(n).fill(illum > 0 ? 1 : 0), Array(n).fill(0), Array(n).fill(5), Array(n).fill(5),
+    Array(n).fill(1), Array(n).fill(149597870.7)];
+  return Float64Array.from(cols.flat());
+};
+// capacity, start, min, area, η, mode, east, north, up, load, 0, 0
+const presetArr = (mode: number, e: number, nn: number, u: number, load: number) => Float64Array.of(10000, 705, 0, 1, 1, mode, e, nn, u, load, 0, 0);
+
+test("WASM survival: T-1e-1 header, soc length = header n, NaN when no lethal shadow (T09 #10)", () => {
+  const dead = survival(flatTimeline(60, 0), presetArr(0, 0, 0, 0, 100), 1794614400);
+  expect(Math.abs(dead[1] - 7.05)).toBeLessThan(1e-9); // SCIENCE-SPEC T-1e-1
+  expect(dead[7]).toBe(43);
+  expect(dead.length).toBe(8 + 43);
+  const alive = survival(flatTimeline(60, 1), presetArr(0, 0, 0, 0, 100), 1794614400);
+  expect(Number.isNaN(alive[1])).toBe(true);
+  expect(alive[7]).toBe(60);
+});
+
+test("WASM survival reads the fixed-panel normal from slots 6–8 (T09 #10)", () => {
+  // Sun at az 90°, el 0°. Panel facing east (1, 0, 0): n̂·ŝ = 1, 1366.1 W for 1/6 h on 705 Wh, no load.
+  const east = survival(flatTimeline(2, 1), presetArr(1, 1, 0, 0, 0), 1794614400);
+  expect(east[9]).toBeCloseTo(705 + 1366.1 / 6, 9);
+  // Facing up (0, 0, 1): n̂·ŝ = sin 0° = 0, no charge.
+  expect(survival(flatTimeline(2, 1), presetArr(1, 0, 0, 1, 0), 1794614400)[9]).toBe(705);
+  expect(() => survival(flatTimeline(2, 1), presetArr(2, 0, 0, 1, 0), 1794614400)).toThrow("BAD_INPUT");
+});
+
+test("computeScenario survival maps the WASM header: tracking vs fixed, lethal_h null vs number (T09 #10)", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = servePublic;
+  try {
+    const base = parseScenario(raw, api_version());
+    const inp = { lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2, start_unix_s: 0, span_days: 30 };
+    const s = await computeScenario({ ...inp, preset: base.preset });
+    const flat = Float64Array.from(["t_unix_s", "sun_az_deg", "sun_el_deg", "illumination", "visibility", "earth_az_deg", "earth_el_deg", "earth_margin_deg", "contact", "sun_dist_km"]
+      .flatMap((k) => Array.from(s.timeline[k as keyof typeof s.timeline])));
+    const p = base.preset, t0 = s.timeline.t_unix_s[0];
+    const want = survival(flat, Float64Array.of(p.capacity_wh, p.start_wh, p.min_wh, p.panel_area_m2, p.efficiency, 0, 0, 0, 0, p.load_w, 0, 0), t0);
+    expect(s.survival.operable_h).toBe(want[0]);
+    expect(s.survival.lethal_h).toBe(want[1]); // the cited preset dies in the IM-2 span
+    expect(s.survival.soc_wh.length).toBe(want[7]);
+    const fixed = await computeScenario({ ...inp, preset: { ...p, panel: { east: 0, north: 1, up: 0 }, start_wh: 1000, load_w: 0 } });
+    const wantFixed = survival(flat, Float64Array.of(p.capacity_wh, 1000, p.min_wh, p.panel_area_m2, p.efficiency, 1, 0, 1, 0, 0, 0, 0), t0);
+    const asTracking = survival(flat, Float64Array.of(p.capacity_wh, 1000, p.min_wh, p.panel_area_m2, p.efficiency, 0, 0, 0, 0, 0, 0, 0), t0);
+    expect(wantFixed.slice(8)).not.toEqual(asTracking.slice(8)); // the layouts really differ
+    expect(fixed.survival.lethal_h).toBeNull(); // no load: no lethal shadow
+    expect(fixed.survival.soc_wh).toEqual(wantFixed.slice(8));
+    expect(fixed.survival.soc_wh.length).toBe(s.count);
   } finally {
     globalThis.fetch = realFetch;
   }

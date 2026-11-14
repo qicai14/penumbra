@@ -55,9 +55,10 @@ export type ChartData = {
 };
 const arr = (a: Float64Array) => Array.from(a);
 
-/** State of charge (Wh) from the model's `soc_wh`, with the preset's lethal charge as a flat reference line. */
-export function buildSocData(t: Float64Array, socWh: Float64Array, preset: Preset): [number[], number[], number[]] {
-  return [arr(t), arr(socWh), Array.from(t, () => preset.min_wh)];
+/** State of charge (Wh) from the model's `soc_wh`, with the preset's lethal charge as a flat reference line.
+ *  `soc_wh` stops at a lethal shadow, so it is padded with null (a uPlot gap) to the time axis. */
+export function buildSocData(t: Float64Array, socWh: Float64Array, preset: Preset): [number[], (number | null)[], number[]] {
+  return [arr(t), Array.from(t, (_, i) => (i < socWh.length ? socWh[i] : null)), Array.from(t, () => preset.min_wh)];
 }
 
 /** Unix time of the first lethal shadow, or null when none falls in the span. */

@@ -190,7 +190,7 @@ No source in the corpus prints an update equation (the rover papers define the s
 - Limitations: no charge or discharge efficiency, no separate night heater load.
 - Δt = 10 min. Explicit Euler is exact when power is held constant over a step.
 - Outputs to report beside it, with the published definitions: the longest continuous period when "no part of the Sun is visible" and the longest when any part is (E123).
-- Hours are sums over the timeline steps, each step counting Δt: sunlit hours = Σ illumination × Δt (a half-hidden Sun counts half); contact hours = Σ contact × Δt; operable hours = Σ (illumination > 0 and contact) × Δt, the glossary's operable window (ARCHITECTURE §2.5).
+- Hours are sums over the timeline steps, each step counting Δt: sunlit hours = Σ illumination × Δt (a half-hidden Sun counts half); contact hours = Σ contact × Δt; operable hours = Σ (illumination > 0 and contact) × Δt, the glossary's operable window (ARCHITECTURE §2.5). Operable hours stop at the lethal time (the lethal step counted only up to it; the full span when there is none), since a dead lander is not operable; sunlit, contact, longest-dark and longest-any-Sun hours stay full-span site statistics (E123), comparable to PGDA in V2.
 - Presets. Cited: the rover paper's 10,000 Wh battery, 1.5 m² panel at 30 %, 220 W driving load (E58a–d); cell efficiency about 15 % for silicon (E59b). Not cited: any IM-1 or IM-2 value [U10]. Show uncited values as "assumed".
 - Why darkness length is the design driver: Fincannon sizes storage from "73 to 117 hours" for the worst lunar day at a Shackleton rim site (E59).
 
@@ -606,6 +606,7 @@ Web rows (NASA documents fetched Nov 10 by a subagent with curl; not in the corp
 | W5 | https://raw.githubusercontent.com/nyx-space/anise/master/anise/src/astro/aberration.rs | `pub const LT_S: Option<Self> = Some(Self {` | ANISE has light time + stellar aberration (master branch, read Nov 10) |
 | W6 | https://lroc.im-ldi.com/images/1408 | `ended up on its side within a 20-meter diameter crater` | IM-2 crater size (from facts-grill-1.md; fetched through a summarising tool, re-read by eye) |
 | W7 | https://pgda.gsfc.nasa.gov/products/69 | `averaged over hourly timesteps spanning 18.6 years, for the south polar region.` | AVGVISIB span and step (from facts-grill-1.md) |
+| W8 | https://ssd-api.jpl.nasa.gov/doc/horizons.html (header saved in `crates/core/tests/fixtures/horizons/tracer-sun.json`, Nov 13) | `1 au= 149597870.700 km` | AU used to scale solar flux (§1e) |
 
 Negative results (looked for, not found):
 - Observer height of AVGVISIB: not in README_ILLUMINATION_2016.TXT, not in the .LBL, not on PGDA product 69.
@@ -621,4 +622,4 @@ Negative results (looked for, not found):
 - W-rows are quotes from web documents fetched by subagents or copied from `facts-grill-1.md`. They are not in the corpus and were not re-fetched by this review.
 - [D] items are derivations and are not counted.
 
-**Count: 178 claims [V] · 10 claims [W] (web, not grep-checkable) · 20 claims [U].** (E131 re-tagged [V]→[U] by the independent review.)
+**Count: 178 claims [V] · 11 claims [W] (web, not grep-checkable) · 20 claims [U].** (E131 re-tagged [V]→[U] by the independent review.)

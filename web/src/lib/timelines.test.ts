@@ -7,6 +7,11 @@ test("soc data pairs the model's trace with the lethal-charge line", () => {
   expect(d).toEqual([[0, 600], [10, 5], [1, 1]]);
 });
 
+test("a trace that stops at a lethal shadow is padded with gaps to the time axis", () => {
+  const d = buildSocData(Float64Array.from([0, 600, 1200]), Float64Array.from([10]), { min_wh: 1 } as unknown as Preset);
+  expect(d).toEqual([[0, 600, 1200], [10, null, null], [1, 1, 1]]);
+});
+
 test("lethal time is start plus lethal hours, null when none", () => {
   expect(lethalUnixS(1000, 2)).toBe(8200);
   expect(lethalUnixS(1000, null)).toBeNull();
