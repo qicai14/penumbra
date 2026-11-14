@@ -33,7 +33,7 @@ export type ScoreEntry = {
   pass: boolean | null; sample_size: number | null; notes: string; commit: string | null; date: string | null;
 };
 export type Scenario = {
-  fake: boolean; note: string; api_version: number; site: Site; start_unix_s: number; step_s: number;
+  note: string; api_version: number; site: Site; start_unix_s: number; step_s: number;
   count: number; preset: Preset; horizon: Horizon; track: Track; timeline: Timeline; survival: Survival;
   scoreboard: ScoreEntry[];
 };
@@ -201,7 +201,7 @@ export type NearMeta = {
   width: number; height: number; x0_m: number; y0_m: number; pixel_m: number;
   scale_m: number; offset_m: number; nodata: number;
 };
-export type NearTile = { fake: boolean; region: { id: string; name: string }; meta: NearMeta; data: Int16Array };
+export type NearTile = { region: { id: string; name: string }; meta: NearMeta; data: Int16Array };
 export type Inputs = { lat_deg: number; lon_deg: number; mast_m: number; start_unix_s: number; span_days: number; preset?: Preset };
 
 export type Region = { id: string; name: string };
@@ -211,7 +211,7 @@ export async function loadNearTile(regionId?: string): Promise<NearTile & { regi
   const region = regionId === undefined ? m.regions[0] : m.regions.find((r) => r.id === regionId);
   if (!region) throw new Error(`BAD_INPUT: unknown region ${regionId}`);
   const { url, ...meta } = region.near;
-  return { fake: false, region: { id: region.id, name: region.name }, regions: m.regions.map(({ id, name }) => ({ id, name })), eph: m.ephemeris, meta, data: await fetchTile(region.near) };
+  return { region: { id: region.id, name: region.name }, regions: m.regions.map(({ id, name }) => ({ id, name })), eph: m.ephemeris, meta, data: await fetchTile(region.near) };
 }
 
 let nearId: string | undefined; // region now in the Engine
@@ -225,9 +225,6 @@ async function ensureNear(engine: WasmEngine, lat: number, lon: number): Promise
   if (nearId !== r.id) { engine.load_near(data, t.width, t.height, t.x0_m, t.y0_m, t.pixel_m, t.scale_m, t.offset_m, t.nodata); engine.load_mid(midData, u.width, u.height, u.x0_m, u.y0_m, u.pixel_m, u.scale_m, u.offset_m, u.nodata); nearId = r.id; }
 }
 
-/** The panorama's horizon terrain is the real DEM since T07 (#8); the switch stays. Kept apart from `scenario.fake`,
- *  which T08/T09 turned off for the timelines and survival. */
-export const TERRAIN_FAKE = false;
 
 /** Timeline (T08) and survival (T09) for one horizon in the 1440 layout; landing is the first step. NaN lethal_h = none in span. */
 async function timelineAndSurvival(engine: WasmEngine, rawHorizon: Float64Array, site: Site, preset: Preset, t0: number, step_s: number, n: number) {
@@ -262,7 +259,7 @@ async function computeNow(inp: Inputs): Promise<Scenario> {
   if (!(n >= 1) || !Number.isFinite(t0)) throw new Error(`BAD_INPUT: span ${inp.span_days} d from ${t0} gives no time steps`);
   const track = await sunEarthTrack(site, t0, s.step_s, n);
   const { timeline, survival } = await timelineAndSurvival(engine, raw, site, preset, t0, s.step_s, n);
-  return { ...s, fake: false, note: "", start_unix_s: t0, count: n, preset, site, track, horizon, timeline, survival };
+  return { ...s, note: "", start_unix_s: t0, count: n, preset, site, track, horizon, timeline, survival };
 }
 
 // The Engine holds one near tile at a time (ensureNear swaps it), so two computes must never interleave.
