@@ -111,3 +111,36 @@ test("chart data keeps illumination and visibility as separate series, with a fl
   expect(d.margin[2]).toEqual([2, 2]);
   expect(d.contact[1]).toEqual([0, 1]);
 });
+
+// T18 (#19): band formatting and the ill-conditioned threshold.
+import { bandInterval, bandLabel, isIllConditioned, parseBands, SIGMA_Z_TEXT, UNBOUNDED_HALF_WIDTH_MIN } from "./timelines";
+
+const T = Date.UTC(2026, 10, 14, 14, 20) / 1000;
+
+test("a normal band reads ± minutes; sunrise and sunset use their own word", () => {
+  expect(bandLabel({ t_unix_s: T, kind: "sunset", half_width_min: 40.2 })).toBe("sunset 14:20 ± 40 min");
+  expect(bandLabel({ t_unix_s: T, kind: "sunrise", half_width_min: 5 }, true)).toBe("sunrise 2026-11-14 14:20 ± 5 min");
+  expect(bandLabel({ t_unix_s: T, kind: "sunset", half_width_min: 0.2 })).toBe("sunset 14:20 ± <1 min");
+});
+
+test("a band wider than 6 h is ill-conditioned, not minutes", () => {
+  expect(isIllConditioned(179)).toBe(false); // 358 min wide
+  expect(isIllConditioned(181)).toBe(true); // 362 min wide
+  expect(bandLabel({ t_unix_s: T, kind: "sunrise", half_width_min: 400 })).toBe("sunrise 14:20 ill-conditioned");
+});
+
+test("core's unbounded marker and non-finite widths are ill-conditioned", () => {
+  for (const w of [UNBOUNDED_HALF_WIDTH_MIN, Infinity, NaN]) {
+    expect(bandLabel({ t_unix_s: T, kind: "sunset", half_width_min: w })).toBe("sunset 14:20 ill-conditioned");
+    const [a, b] = bandInterval({ t_unix_s: T, kind: "sunset", half_width_min: w });
+    expect(Number.isFinite(a) && Number.isFinite(b)).toBe(true);
+  }
+});
+
+test("parseBands reads the 3 × k column-major layout; the σ_z text says assumed", () => {
+  expect(parseBands(Float64Array.from([10, 20, 1, -1, 3, 4]))).toEqual([
+    { t_unix_s: 10, kind: "sunrise", half_width_min: 3 }, { t_unix_s: 20, kind: "sunset", half_width_min: 4 },
+  ]);
+  expect(parseBands(new Float64Array(0))).toEqual([]);
+  expect(SIGMA_Z_TEXT).toBe("σ_z = 0.5 m (assumed)");
+});

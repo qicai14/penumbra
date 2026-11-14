@@ -301,3 +301,14 @@ const TINY_SUN_DEG = 1e-9;
 /** The ESA degraded-crater depth (D/2)·tan 11° (E112) from the WASM: the depth that hides a (near) point source sitting 11° up, from the floor (H = 0).
  *  shortcut: stands in for the unexported `degraded_crater_depth_m` (crates/core/src/pit.rs:29) until the WASM exports it (both-owners follow-up, api_version bump). */
 export const defaultPitDepth = (diameter_m: number) => pitDepthToHide(diameter_m, 0, DEGRADED_SLOPE_DEG, TINY_SUN_DEG);
+
+/** Sunrise and sunset ± bands (SCIENCE-SPEC 1f step 1) for a scenario's timeline against its horizon: the WASM `window_bands`, flat 3 × k. Throws BAD_INPUT. */
+export async function windowBands(s: Scenario, sigma_z_m: number): Promise<Float64Array> {
+  const wasm = await import("./wasm/penumbra_wasm.js");
+  await wasm.default();
+  const flat = new Float64Array(1440);
+  flat.set(s.horizon.el_deg); flat.set(s.horizon.dist_m, 720);
+  const tl = new Float64Array(10 * s.count);
+  TIMELINE_COLUMNS.forEach((k, i) => tl.set(s.timeline[k], i * s.count));
+  return wasm.window_bands(tl, flat, sigma_z_m);
+}

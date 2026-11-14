@@ -2,9 +2,9 @@
   import { untrack } from "svelte";
   import uPlot from "uplot";
   import "uplot/dist/uPlot.min.css";
-  import { SURVIVAL_FAKE, type Scenario } from "./engine";
+  import { SURVIVAL_FAKE, windowBands, type Scenario } from "./engine";
   import { fmtUtc } from "./panorama";
-  import { buildChartData, buildSocData, citedTag, clipRunsAt, indexAtTime, lethalUnixS, operableMask, operableRuns, thresholdLabel } from "./timelines";
+  import { type Band, bandInterval, bandLabel, parseBands, SIGMA_Z_M, SIGMA_Z_TEXT, buildChartData, buildSocData, citedTag, clipRunsAt, indexAtTime, lethalUnixS, operableMask, operableRuns, thresholdLabel } from "./timelines";
 
   let { scenario, idx = $bindable(0) }: { scenario: Scenario; idx: number } = $props();
 
@@ -15,6 +15,8 @@
   let charts: uPlot[] = [];
   let placing = false; // true while we move the cursors ourselves, so the cursor hook does not echo back
 
+  let bands = $state.raw<Band[]>([]);
+  let bandError = $state("");
   const tl = $derived(scenario.timeline);
   const label = $derived(thresholdLabel(scenario.preset));
 
@@ -40,6 +42,51 @@
             const x1 = Math.min(bbox.left + bbox.width, u.valToPos(b, "x", true));
             if (x1 > x0) ctx.fillRect(x0, bbox.top, x1 - x0, bbox.height);
           }
+          ctx.restore();
+        },
+      },
+    };
+  }
+
+  /** Sunrise and sunset ± uncertainty: a hatched interval around each crossing with its label, from the WASM window_bands. Not the operable band. */
+  function uncertaintyPlugin(getList: () => Band[], colour: string, chip: string, font: string): uPlot.Plugin {
+    let hatch: CanvasPattern | null = null;
+    return {
+      hooks: {
+        draw: (u) => {
+          const list = getList();
+          const { ctx, bbox } = u;
+          const px = uPlot.pxRatio;
+          if (!hatch) {
+            const c = document.createElement("canvas"); c.width = c.height = 6 * px;
+            const g = c.getContext("2d")!; g.strokeStyle = colour; g.lineWidth = px;
+            g.beginPath(); g.moveTo(0, c.height); g.lineTo(c.width, 0); g.stroke();
+            hatch = ctx.createPattern(c, "repeat");
+          }
+          ctx.save();
+          ctx.beginPath(); ctx.rect(bbox.left, bbox.top, bbox.width, bbox.height); ctx.clip();
+          ctx.font = font.replace(/(\d+)px/, (_, n) => `${Number(n) * px}px`);
+          ctx.textBaseline = "top";
+          const edge = [-Infinity, -Infinity]; // per row (sunrise, sunset): right edge of the last label drawn, so labels never overprint
+          list.forEach((b) => {
+            const [a, z] = bandInterval(b);
+            const x0 = u.valToPos(a, "x", true), x1 = u.valToPos(z, "x", true), xc = u.valToPos(b.t_unix_s, "x", true);
+            if (x1 < bbox.left || x0 > bbox.left + bbox.width) return;
+            ctx.fillStyle = hatch!; ctx.globalAlpha = 0.9;
+            ctx.fillRect(Math.min(x0, xc - 3 * px), bbox.top, Math.max(x1 - x0, 6 * px), bbox.height); // at least 6 px wide, so a narrow band still reads
+            ctx.globalAlpha = 1; ctx.strokeStyle = colour; ctx.lineWidth = px;
+            ctx.beginPath(); ctx.moveTo(xc, bbox.top); ctx.lineTo(xc, bbox.top + bbox.height); ctx.stroke();
+            const text = bandLabel(b), w = ctx.measureText(text).width;
+            const row = b.kind === "sunrise" ? 0 : 1;
+            const right = xc + 4 * px + w <= bbox.left + bbox.width;
+            const left = right ? xc + 4 * px : xc - 4 * px - w;
+            if (left < Math.max(edge[row], bbox.left)) return;
+            const y = bbox.top + bbox.height * (0.45 + row * 0.25);
+            ctx.fillStyle = chip; ctx.fillRect(left - 3 * px, y - 2 * px, w + 6 * px, 16 * px);
+            ctx.fillStyle = colour; ctx.textAlign = "left";
+            ctx.fillText(text, left, y);
+            edge[row] = left + w + 8 * px;
+          });
           ctx.restore();
         },
       },
@@ -125,7 +172,7 @@
       setScale: [(u, key) => { if (key === "x") placeCursors(); }],
     });
     const illum = new uPlot({
-      ...base(150, false), hooks: hooks(), plugins: band(),
+      ...base(150, false), hooks: hooks(), plugins: [...band(), uncertaintyPlugin(() => bands, k.sun, getComputedStyle(host).getPropertyValue("--surface-carbon").trim() || k.iron, k.font)],
       scales: { x: { time: true }, y: { range: [0, 1.05] } },
       series: [
         {},
@@ -191,6 +238,16 @@
     untrack(build);
     return () => { for (const u of charts) u.destroy(); charts = []; };
   });
+  $effect(() => {
+    const s = scenario;
+    let live = true;
+    bands = []; // never draw the previous scenario's bands on the new timeline
+    // the plugin reads bands at draw time, so a redraw shows them without rebuilding (and keeps the user's zoom)
+    const show = (b: Band[], err: string) => { bands = b; bandError = err; for (const u of charts) u.redraw(false, false); };
+    windowBands(s, SIGMA_Z_M).then((f) => { if (live) show(parseBands(f), ""); },
+      (e) => { if (live) show([], String(e?.message ?? e)); });
+    return () => { live = false; };
+  });
   $effect(() => { const w = width; for (const u of charts) u.setSize({ width: w, height: u.height }); });
   $effect(() => { void idx; untrack(placeCursors); });
 </script>
@@ -202,7 +259,7 @@
   </header>
 
   <div class="charts" bind:this={host} bind:clientWidth={width} data-testid="timelines" role="group"
-    aria-label="Timelines chart. Illumination, visibility, Earth margin, Earth contact; the shaded band is the operable window. Move the time slider to move the cursor. Ctrl or Command with the wheel zooms, add shift to pan, drag to zoom to a range, double-click resets.">
+    aria-label="Timelines chart. Illumination, visibility, Earth margin, Earth contact; the shaded band is the operable window; hatched intervals with a label are the plus or minus uncertainty of each sunrise and sunset. Move the time slider to move the cursor. Ctrl or Command with the wheel zooms, add shift to pan, drag to zoom to a range, double-click resets.">
     <div></div><div></div><div></div>
   </div>
   <div class="charts" bind:this={socHost} data-testid="soc-chart" role="group"
@@ -212,6 +269,12 @@
     {fmtUtc(tl.t_unix_s[idx])} · illumination {tl.illumination[idx].toFixed(2)} · visibility {tl.visibility[idx].toFixed(0)} · Earth margin {tl.earth_margin_deg[idx].toFixed(2)}° (threshold {label}) · contact {tl.contact[idx] >= 0.5 ? "yes" : "no"}
   </p>
   <p class="key"><span class="swatch"></span>Shaded band: operable window (illumination above zero and Earth contact).</p>
+  <p class="key" data-testid="band-key"><span class="swatch hatch"></span>Hatched interval: ± uncertainty of each sunrise and sunset (UTC, from DEM height error), {SIGMA_Z_TEXT}. "ill-conditioned" = wider than 6 h [est].</p>
+  {#if bandError}<p class="key" role="alert">Sunrise and sunset bands unavailable: {bandError}</p>{/if}
+  <details class="bands" data-testid="band-list">
+    <summary>Sunrise and sunset times with ± uncertainty ({bands.length})</summary>
+    <ul>{#each bands as b (b.t_unix_s + b.kind)}<li>{bandLabel(b, true)}</li>{/each}</ul>
+  </details>
 </section>
 
 <style>
@@ -227,6 +290,9 @@
   .now { color: var(--color-fog); }
   .key { color: var(--color-ash); display: flex; align-items: center; gap: var(--spacing-8); }
   .swatch { width: 16px; height: 8px; background: var(--color-fog); opacity: 0.15; border: 1px solid var(--color-slate); }
+  .swatch.hatch { opacity: 1; background: repeating-linear-gradient(135deg, var(--color-sun) 0 1px, transparent 1px 4px); }
+  .bands { margin-top: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
+  .bands ul { margin: var(--spacing-8) 0 0; padding-left: var(--spacing-16); max-height: 12em; overflow: auto; font-variant-numeric: tabular-nums; }
   .charts :global(.u-legend) { font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-fog); text-align: left; }
   .charts :global(.u-legend .u-marker) { border-radius: 0; }
   .charts :global(.u-cursor-x) { border-right: 1px dashed var(--color-fog) !important; }

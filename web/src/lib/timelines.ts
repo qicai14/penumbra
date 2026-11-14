@@ -117,3 +117,43 @@ export function buildChartData(tl: Timeline, preset: Preset): ChartData {
     contact: [t, arr(tl.contact)],
   };
 }
+
+// ---- Sunrise and sunset ± bands (T18, SCIENCE-SPEC 1f step 1). Values come from the WASM `window_bands`; this only formats them. ----
+
+/** σ_z, the DEM height error at observer and obstacle, metres: assumed, not cited. Used for the call and for the text. */
+export const SIGMA_Z_M = 0.5;
+export const SIGMA_Z_TEXT = `σ_z = ${SIGMA_Z_M} m (assumed)`;
+/** A band wider than this, hours, is written "ill-conditioned", not as minutes. [est] */
+export const ILL_CONDITIONED_BAND_H = 6;
+/** core::band::MAX_HALF_WIDTH_MIN: a half width equal to this is core's "unbounded" marker, one 29.5-day synodic month. */
+export const UNBOUNDED_HALF_WIDTH_MIN = 29.5 * 24 * 60;
+
+export type Band = { t_unix_s: number; kind: "sunrise" | "sunset"; half_width_min: number };
+
+/** The flat 3 × k column-major result of `window_bands` (t_unix_s, kind +1/−1, half_width_min) as rows. */
+export function parseBands(flat: ArrayLike<number>): Band[] {
+  const k = Math.floor(flat.length / 3);
+  return Array.from({ length: k }, (_, i) => ({
+    t_unix_s: flat[i], kind: flat[k + i] > 0 ? "sunrise" : "sunset", half_width_min: flat[2 * k + i],
+  }));
+}
+
+/** True when the band is wider than the threshold (full width, 2 × half), or core marks it unbounded or non-finite. */
+export function isIllConditioned(half_width_min: number): boolean {
+  return !Number.isFinite(half_width_min) || half_width_min >= UNBOUNDED_HALF_WIDTH_MIN || 2 * half_width_min > ILL_CONDITIONED_BAND_H * 60;
+}
+
+/** The shaded interval [start, end) in Unix s; an unbounded or non-finite band is bounded at one synodic month each side so it can be drawn. */
+export function bandInterval(b: Band): Run {
+  const half = (Number.isFinite(b.half_width_min) ? Math.min(b.half_width_min, UNBOUNDED_HALF_WIDTH_MIN) : UNBOUNDED_HALF_WIDTH_MIN) * 60;
+  return [b.t_unix_s - half, b.t_unix_s + half];
+}
+
+/** "sunset 14:20 ± 40 min" (UTC), or "sunset 14:20 ill-conditioned". `withDate` prefixes "2026-11-14 ". */
+export function bandLabel(b: Band, withDate = false): string {
+  const iso = new Date(b.t_unix_s * 1000).toISOString();
+  const when = `${withDate ? iso.slice(0, 10) + " " : ""}${iso.slice(11, 16)}`;
+  if (isIllConditioned(b.half_width_min)) return `${b.kind} ${when} ill-conditioned`;
+  const m = Math.round(b.half_width_min);
+  return `${b.kind} ${when} ± ${m < 1 ? "<1" : m} min`;
+}
