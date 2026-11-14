@@ -20,7 +20,7 @@ Method:
   - the clipped "+33d" tick;
   - the table that scrolls sideways on phones.
 
-**Open question for Qi Cai:** should the clocks follow one shared time cursor, or each side's own landing time?
+Qi Cai answered "own landing time" (2026-11-14): each column's clocks follow that side's own landing time.
 
 ## 2026-11-14 · Round-2 picks against the Resources tab, plus a screen-6 redo (Qi Cai + Claude review)
 

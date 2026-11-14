@@ -224,7 +224,7 @@ let fixtureBase: Promise<Scenario> | undefined;
  * real DEM horizon (T07), Engine.timeline (T08) and the WASM `survival` (T09). Track and timelines share one grid, so the
  * cursor stays aligned. The fixture still supplies the step and the preset defaults.
  */
-export async function computeScenario(inp: Inputs): Promise<Scenario> {
+async function computeNow(inp: Inputs): Promise<Scenario> {
   const s = await (fixtureBase ??= loadFixture());
   const engine = await loadEngine();
   await ensureNear(engine, inp.lat_deg, inp.lon_deg);
@@ -249,4 +249,13 @@ export async function computeScenario(inp: Inputs): Promise<Scenario> {
     longest_any_sun_h: sv[3], sunlit_h: sv[4], contact_h: sv[5], soc_wh: sv.slice(8, 8 + sv[7]) };
   validate(survival);
   return { ...s, fake: false, note: "", start_unix_s: t0, count: n, preset, site, track, horizon, timeline, survival };
+}
+
+// The Engine holds one near tile at a time (ensureNear swaps it), so two computes must never interleave.
+let computeChain: Promise<unknown> = Promise.resolve();
+/** computeNow, one at a time: a second call waits for the first (the compare view runs A then B, and the site view may be mid-compute). */
+export function computeScenario(inp: Inputs): Promise<Scenario> {
+  const run = computeChain.then(() => computeNow(inp));
+  computeChain = run.catch(() => {});
+  return run;
 }

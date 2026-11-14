@@ -154,3 +154,43 @@ test("survival headline, charge trace and preset form", async ({ page }) => {
   await expect(page.getByTestId("tag-load_w")).toHaveText("assumed");
   await expect(page.getByLabel(/^Load/)).toHaveValue("300");
 });
+
+test("compare view shows A and B with their own countdowns, the B - A row and sentence, and the pairs live in the URL (T27 #28)", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/?a=-84.7906,29.1957@2026-11-14&b=-84.7906,29.1957@2026-11-17&preset=load_w:300");
+  await expect(page.getByTestId("col-a")).toBeVisible();
+  await expect(page.getByTestId("col-b")).toBeVisible();
+  const el = /^[+−]\d+\.\d°$/;
+  for (const s of ["a", "b"]) {
+    await expect(page.getByTestId(`${s}-operable`)).toContainText(/days?$|h$/);
+    await expect(page.getByTestId(`${s}-lethal`)).toContainText(/days?$|h$|no lethal shadow/);
+    await expect(page.getByTestId(`${s}-cd-sun-el`)).toHaveText(el);
+    await expect(page.getByTestId(`${s}-cd-earth-el`)).toHaveText(el);
+  }
+  await expect(page.getByTestId("diff-operable")).toHaveText(/^([+−].+|no difference)$/);
+  await expect(page.getByTestId("compare-sentence")).toContainText("3 days later");
+  await expect(page.getByTestId("cmp-preset-load_w")).toHaveValue("300"); // the preset came from the URL
+  // The sentence is the last thing on the page.
+  expect(await page.locator("main > *").last().getAttribute("data-testid")).toBe("compare-sentence");
+  // Changing B's date rewrites the URL and the sentence.
+  await page.getByTestId("b-date").fill("2026-12-01");
+  await expect(page).toHaveURL(/b=-84\.7906,29\.1957@2026-12-01/);
+  await expect(page.getByTestId("compare-sentence")).toContainText("17 days later");
+  // A bad B latitude is refused.
+  await page.getByTestId("b-lat").fill("-95");
+  await page.getByTestId("b-lat").press("Enter");
+  await expect(page.getByTestId("b-refusal")).toBeVisible();
+  await expect(page.getByText(/fixture/i)).toHaveCount(0);
+  expect(errors).toEqual([]);
+});
+
+test("the Compare button opens the compare view from the site view, and a bad URL falls back", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Compare A vs B" }).click();
+  await expect(page.getByTestId("col-a")).toBeVisible();
+  await expect(page).toHaveURL(/a=-84\.7906,29\.1957@2026-11-14&b=-84\.7906,29\.1957@2026-11-14/);
+  await page.goto("/?a=garbage&b=-1,2@1999-01-01");
+  await expect(page.getByTestId("col-a")).toContainText("-84.7906");
+  await expect(page.getByTestId("col-b")).toContainText("-84.7906");
+});
