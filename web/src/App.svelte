@@ -3,6 +3,7 @@
   import uPlot from "uplot";
   import "uplot/dist/uPlot.min.css";
   import init, { add } from "./lib/wasm/penumbra_wasm.js";
+  import Tracer from "./lib/Tracer.svelte";
 
   let sum = $state<number | null>(null);
   let canvas: HTMLCanvasElement;
@@ -39,6 +40,7 @@
     <canvas bind:this={canvas} aria-label="Empty Three.js canvas"></canvas>
     <div bind:this={chart} aria-label="Empty uPlot chart"></div>
   </div>
+  <Tracer />
 </main>
 
 <style>
