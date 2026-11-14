@@ -47,7 +47,7 @@ const scenario = {
     sun_dist_km: col((i) => 1.496e8 + 2.5e6 * Math.sin((TAU * i) / 4320)),
     earth_az_deg: col((i) => ((i * 360) / 4320 + 120) % 360),
     earth_el_deg: col(earthEl),
-    earth_radius_deg: col(() => 1.9),
+    earth_radius_deg: col(() => 0.95), // angular radius: asin(6371 / 384400) ≈ 0.95°, so 1.9° across
     earth_dist_km: col((i) => 384400 + 20000 * Math.sin((TAU * i) / 3960)),
   },
   timeline: {
