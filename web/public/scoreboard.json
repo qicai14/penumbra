@@ -24,6 +24,18 @@
     "date": null
   },
   {
+    "id": "V2b",
+    "judge": "Barker 2021 Table 2 (Site 1, case A); Mazarico 2011 SP-01",
+    "metric": "Barker RoIs passing LCSP <= LCSP-99 + 1 d and LCIP >= LCIP-1 - 10 d (of 7); SP-01 2.75 d inside the pixel range",
+    "threshold": 6,
+    "value": 7,
+    "pass": false,
+    "sample_size": 7,
+    "notes": "One-sided: catches a model that is too dark, not one too bright. Fails on SP-01 only: Barker passes 7 of 7, but Mazarico's 2.75 d longest total night lies 0.21 d below our shortest pixel (2.96 d). DEMs (P12): Barker 5/80/240 m (b5251ef3:1032-1034); Mazarico 240 m (E06); ours 20 m to 7 km, then 240 m. Barker Site 1, observer 5 m above ground, hourly 2024-01-01T00Z to 2026-01-01T00Z (17 544 steps, end exclusive); per RoI the mean over 20 m pixels within sqrt(Area/pi) of the centroid of each pixel's LCIP (f > 0) and LCSP (f = 0), ours vs reference in days, LCSP pixel min..max: RoI 1 (20 px) LCIP 225.79 vs 215.79, LCSP 4.41 vs 5.29 (3.67..8.67); RoI 2 (18 px) LCIP 220.66 vs 216.28, LCSP 6.50 vs 7.31 (5.33..10.75); RoI 3 (9 px) LCIP 229.72 vs 216.89, LCSP 7.08 vs 8.41 (5.67..14.00); RoI 4 (35 px) LCIP 233.07 vs 231.20, LCSP 4.04 vs 4.00 (3.38..6.71); RoI 5 (26 px) LCIP 217.64 vs 218.98, LCSP 4.47 vs 4.52 (3.92..5.83); RoI 6 (26 px) LCIP 220.72 vs 220.98, LCSP 3.96 vs 4.16 (3.54..4.75); RoI 7 (19 px) LCIP 138.47 vs 119.07, LCSP 5.27 vs 5.42 (5.08..5.50). No longest run touches the window edge. Mazarico SP-01, one precession cycle from 2020-01-01T00Z, assumed (U20), hourly, 163 048 steps, observer 10 m above ground, 180 pixels within 150 m of (-11.31, -12.26) km: total night f = 0 2.96..16.75 d (ref 2.75, outside: fail); day f > 0 max 262.42 d (min 224.13); day f = 1 max 224.17 d (min 192.88); partial night f < 1 7.46..21.83 d (ref 7.4); edge flags: none. Caveats: our 20 m DEM is coarser than Barker's 5 m and biases bright (E71); the equal-area disc can take in darker flank pixels (risk of a false miss); Mazarico's 6 h step gives about +-0.25 d, so the 0.21 d SP-01 gap is inside his step resolution, but the agreed rule is the strict range and it is reported as a fail. Numbers from `PENUMBRA_DATA=<resource dir> cargo run --release -p penumbra-pipeline -- v2b web/public/data` (27 s single-core run).",
+    "commit": "fd1efcc",
+    "date": "2026-11-14"
+  },
+  {
     "id": "V3",
     "judge": "PGDA map-projected NACs",
     "metric": "illumination: shadow IoU gap to NASA _MODEL.TIF",

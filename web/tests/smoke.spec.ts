@@ -66,10 +66,10 @@ test("hovering the chart moves the panorama time", async ({ page }) => {
   await expect.poll(() => page.getByTestId("now").textContent()).not.toBe(before);
 });
 
-test("scoreboard lists V1-V5 and shows 'not run' for checks that have not run", async ({ page, request }) => {
+test("scoreboard lists V1-V5 plus V2b and shows 'not run' for checks that have not run", async ({ page, request }) => {
   await page.goto("/");
   const table = page.getByRole("table", { name: /One row per check/ });
-  await expect(table.getByTestId("score-row")).toHaveCount(5);
+  await expect(table.getByTestId("score-row")).toHaveCount(6);
   const rows = (await (await request.get("scoreboard.json")).json()) as { pass: boolean | null }[];
   const notRun = rows.filter((r) => r.pass === null).length;
   await expect(table.getByRole("cell", { name: "not run" })).toHaveCount(notRun);

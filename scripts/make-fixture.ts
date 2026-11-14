@@ -19,6 +19,7 @@ const hours = (f: (i: number) => number) => r(idx.reduce((s, i) => s + f(i), 0) 
 const scoreboard = [
   ["V1", "JPL Horizons", "worst az/el difference, deg", 0.002, 20],
   ["V2", "PGDA AVGVISIB_85S_060M_201608", "pooled median visibility error, points", 5, 10000],
+  ["V2b", "Barker 2021 Table 2 (Site 1, case A); Mazarico 2011 SP-01", "Barker RoIs passing LCSP <= LCSP-99 + 1 d and LCIP >= LCIP-1 - 10 d (of 7); SP-01 2.75 d inside the pixel range", 6, 7],
   ["V3", "PGDA map-projected NACs", "illumination: shadow IoU gap to NASA _MODEL.TIF", 0.05, 3],
   ["V4", "IM-1 / IM-2 published timelines", "consistent with published timeline", null, 2],
   ["V5", "Red-team edge cases", "automated tests passing", null, null],
