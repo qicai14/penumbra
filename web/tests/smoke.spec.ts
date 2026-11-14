@@ -74,7 +74,7 @@ test("scoreboard lists V1-V5 and shows 'not run' for checks that have not run", 
 test("picker refuses an edge click and an out-of-table date, and recomputes on a good change", async ({ page }) => {
   await page.goto("/");
   const refusal = page.getByTestId("refusal");
-  const canvas = page.locator("canvas").first();
+  const canvas = page.getByLabel(/^Greyscale height image/); // by label: the panorama canvas can render before the picker's
   await expect(canvas).toBeVisible();
   const box = (await canvas.boundingBox())!;
   await canvas.click({ position: { x: 4, y: box.height / 2 } }); // inside the 7 km border
