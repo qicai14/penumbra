@@ -245,4 +245,4 @@ All four checks re-run on 909a833 with the shipped near, middle and far tiles; n
 | V4 | IM-2 depth to hide, H = 0 / 1 / 1.44 / 2 m; pit 1.944 m | 0.48 / 1.48 / 1.92 / 2.48 m | 0.48 / 1.48 / 1.92 / 2.48 m (margin at 1.44 m 2.65 cm) | consistent, unchanged |
 | V5 case 3 (PSR) | 20 sites × 163 048 steps, lit steps; closest Sun limb to horizon | 0; −0.378° | 0; −0.378° (−0.3777°, same pixel 17398, 10380) | pass |
 
-V2b ran beside V2, so its 97 s is not a clean timing. The V4 note's "0.81 deg above the regional horizon" is not what the run prints: regional horizon at the Sun's azimuth is 0.83° and the Sun is at 2.46°, so the gap is 1.63°. The row's sentence does not match either number and was left unchanged; check it against the pre-#48 output before submission.
+V2b ran beside V2, so its 97 s is not a clean timing. The V4 note used to say the Sun was "0.81 deg above the regional horizon"; 0.81° was the horizon itself (main at 7a257e8 prints 0.813°). The note now reads 1.63° above a 0.84° horizon (three-tier run).
