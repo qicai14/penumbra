@@ -78,26 +78,23 @@
 
     // Terrain path: one point per 0.5 deg bin, unwrapped around the view centre.
     const start = Math.round((v.centre - 180) / BIN_DEG);
-    const terrain = new Path2D();
-    const hz = scenario.horizon;
-    for (let j = 0; j <= BINS; j++) {
-      const i = (((start + j) % BINS) + BINS) % BINS;
-      const x = v.x0 + v.w / 2 + (((start + j) * BIN_DEG - v.centre) / v.span) * v.w;
-      const y = elToY(hz.el_deg[i], v);
-      if (j === 0) terrain.moveTo(x, y); else terrain.lineTo(x, y);
-    }
+    const trace = (el_deg: Float64Array) => {
+      const path = new Path2D();
+      for (let j = 0; j <= BINS; j++) {
+        const i = (((start + j) % BINS) + BINS) % BINS;
+        const x = v.x0 + v.w / 2 + (((start + j) * BIN_DEG - v.centre) / v.span) * v.w;
+        const y = elToY(el_deg[i], v);
+        if (j === 0) path.moveTo(x, y); else path.lineTo(x, y);
+      }
+      return path;
+    };
+    const terrain = trace(scenario.horizon.el_deg);
     const xEnd = v.x0 + v.w / 2 + (((start + BINS) * BIN_DEG - v.centre) / v.span) * v.w;
     const xBeg = v.x0 + v.w / 2 + ((start * BIN_DEG - v.centre) / v.span) * v.w;
     const ridge = new Path2D(terrain);
     let pitLine: Path2D | null = null;
     if (pit) {
-      pitLine = new Path2D();
-      for (let j = 0; j <= BINS; j++) {
-        const i = (((start + j) % BINS) + BINS) % BINS;
-        const x = v.x0 + v.w / 2 + (((start + j) * BIN_DEG - v.centre) / v.span) * v.w;
-        const y = elToY(pit.horizon.el_deg[i], v);
-        if (j === 0) pitLine.moveTo(x, y); else pitLine.lineTo(x, y);
-      }
+      pitLine = trace(pit.horizon.el_deg);
       const band = new Path2D(pitLine);
       band.lineTo(xEnd, v.y0 + v.h + 2); band.lineTo(xBeg, v.y0 + v.h + 2); band.closePath();
       g.fillStyle = k.iron; g.fill(band);

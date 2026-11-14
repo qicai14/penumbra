@@ -5,6 +5,7 @@
     "The Earth margin and σ_z are assumed.",
     "No charge or discharge efficiency.",
     "Lander values are assumed unless marked cited.",
+    "The IM-2 pit depth is assumed (U9): the ESA degraded-crater model, not a measured depth.",
     "The IM-2 pit view keeps the regional far horizon: inside a pit the panel sits H below regional ground, under 2 m of observer height at kilometres of distance.",
   ];
 

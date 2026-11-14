@@ -38,6 +38,24 @@ test("parseScenario rejects null cells and short columns", () => {
   expect(() => parseScenario(short, api_version())).toThrow("count");
 });
 
+// T16: loader error paths. Run before any test that loads the Engine successfully (it is cached for the module's life).
+const eph = (reply: () => Response) => (async (u: string) => (/eph-/.test(String(u)) ? reply() : servePublic(u))) as unknown as typeof fetch;
+const inp16 = { lat_deg: -84.79, lon_deg: 29.2, mast_m: 2, start_unix_s: 1794614400, span_days: 30 };
+test("a 404 on an ephemeris segment is NO_DATA (T16)", async () => {
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = eph(() => new Response("", { status: 404 }));
+  try { await expect(computeScenario(inp16)).rejects.toThrow("NO_DATA"); } finally { globalThis.fetch = realFetch; }
+});
+test("a segment whose size is not a whole number of f64s, or has the wrong row count, is BAD_INPUT (T16)", async () => {
+  const realFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = eph(() => new Response(new Uint8Array(13)));
+    await expect(computeScenario(inp16)).rejects.toThrow("BAD_INPUT");
+    globalThis.fetch = eph(() => new Response(new Float64Array(48)));
+    await expect(computeScenario(inp16)).rejects.toThrow("BAD_INPUT");
+  } finally { globalThis.fetch = realFetch; }
+});
+
 // Must run before any test that loads the Engine successfully: the loaded Engine is cached for the module's life.
 test("a failed ephemeris load is retried on the next recompute, not cached (T03 #4)", async () => {
   const realFetch = globalThis.fetch;
@@ -228,6 +246,8 @@ test("computeScenario runs on the landing date and span, not the fixture grid (#
     const site = { lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2 };
     await expect(computeScenario({ ...site, start_unix_s: Date.UTC(2025, 0, 1) / 1000, span_days: 14 })).rejects.toThrow("OUT_OF_TABLE"); // before every segment (2025-03-06 is in the replay-im2 segment since T16)
     await expect(computeScenario({ ...site, start_unix_s: Date.UTC(2030, 11, 25) / 1000, span_days: 14 })).rejects.toThrow("OUT_OF_TABLE"); // runs past its end (P16)
+    await expect(computeScenario({ ...site, start_unix_s: Date.UTC(2025, 5, 1) / 1000, span_days: 14 })).rejects.toThrow("OUT_OF_TABLE"); // the gap between replay-im2 and main
+    await expect(computeScenario({ ...site, start_unix_s: Date.UTC(2025, 3, 5) / 1000, span_days: 14 })).rejects.toThrow("OUT_OF_TABLE"); // runs past the end of replay-im2
     for (const span_days of [0, -1, NaN]) await expect(computeScenario({ ...site, start_unix_s: start, span_days })).rejects.toThrow("BAD_INPUT");
   } finally {
     globalThis.fetch = realFetch;
@@ -277,6 +297,8 @@ test("computePit raises the horizon to the pit rim and can only lower illuminati
     // the Sun never exceeds 6.75 deg and the rim is at 11 deg: fully hidden whenever it is above terrain
     expect(Math.max(...pit.timeline.illumination)).toBe(0);
     await expect(computePit(reg, { diameter_m: 0, depth_m: 1 })).rejects.toThrow("BAD_INPUT");
+    for (const depth_m of [NaN, -1]) await expect(computePit(reg, { diameter_m: 20, depth_m })).rejects.toThrow("BAD_INPUT");
+    await expect(computePit({ ...reg, site: { ...reg.site, mast_m: -1 } }, { diameter_m: 20, depth_m: 1 })).rejects.toThrow("BAD_INPUT");
   } finally {
     globalThis.fetch = realFetch;
   }

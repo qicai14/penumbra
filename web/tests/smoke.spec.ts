@@ -222,7 +222,7 @@ test("IM-2 replay shows the regional and pit answers with their tags and refuses
   await expect(page.getByTestId("pano-pair")).toContainText("Regional terrain");
   await expect(page.getByTestId("pano-pair")).toContainText("Pit rim");
   await expect(page.getByTestId("pit-depth")).toHaveValue("1.94");
-  await expect(page.getByTestId("pit-depth-tag")).toContainText("11°");
+  await expect(page.getByTestId("pit-depth-tag")).toContainText("U9");
   await page.getByTestId("pit-depth").fill("3");
   await page.getByTestId("pit-depth").dispatchEvent("change");
   await expect(page.getByTestId("answer-pit")).toContainText("20 × 3 m");

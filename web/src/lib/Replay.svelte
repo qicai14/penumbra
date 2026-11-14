@@ -1,11 +1,12 @@
 <script lang="ts">
   // T16 (#17): the IM-2 replay. One click loads the site, the touchdown time and the lander preset, then shows two answers side by side:
   // regional terrain, and a pit of D x d around the lander (A3). Every figure is the model's; this file only words and lays them out.
+  import { tick } from "svelte";
   import { computePit, computeScenario, defaultPitDepth, loadFixture, loadManifest, pitDepthToHide, type Scenario } from "./engine";
-  import { headline, presetFields, spanDays } from "./headline";
+  import { fmtDays, headline, presetFields, spanDays } from "./headline";
   import Panorama from "./Panorama.svelte";
   import { fmtUtc } from "./panorama";
-  import { checkPit, DEFAULT_PANEL_M, DEFAULT_PIT_DIAMETER_M, IM2, pitSentence } from "./replay";
+  import { checkPit, DEFAULT_PANEL_M, DEFAULT_PIT_DIAMETER_M, IM2, num, pitSentence } from "./replay";
   import { checkDate } from "./site";
 
   type Answer = { regional: Scenario; pit: Scenario; typicalDepth: number; dStar: number };
@@ -19,6 +20,8 @@
   let depth = $state<number | null>(null); // null = follow the 11° depth for this diameter
   let panel = $state(DEFAULT_PANEL_M);
   let gen = 0;
+  let resultsHead = $state<HTMLElement | null>(null);
+  let focusResults = false; // set by the Load button only: later edits keep focus where it is
 
   async function run() {
     const mine = ++gen;
@@ -39,6 +42,7 @@
       if (mine !== gen) return;
       answer = { regional, pit, typicalDepth, dStar };
       error = null;
+      if (focusResults) { focusResults = false; await tick(); resultsHead?.focus(); }
     } catch (e: any) {
       if (mine === gen) error = String(e?.message ?? e);
     } finally {
@@ -73,7 +77,6 @@
     elSunDeg: answer.regional.track.sun_el_deg[0], clearPct: answer.regional.timeline.illumination[0] * 100, diameterM: diameter,
     panelM: panel, dStarM: answer.dStar, typicalDepthM: answer.typicalDepth,
   }));
-  const fmt = (x: number, d = 2) => String(+x.toFixed(d));
 </script>
 
 <section class="panel" aria-labelledby="rp-h">
@@ -91,36 +94,42 @@
   </ul>
 
   {#if !answer}
-    <button type="button" class="go" data-testid="replay-load" disabled={busy} onclick={run}>{busy ? "Loading…" : "Load the IM-2 replay"}</button>
+    <button type="button" class="go" data-testid="replay-load" disabled={busy} onclick={() => { focusResults = true; run(); }}>{busy ? "Loading…" : "Load the IM-2 replay"}</button>
   {/if}
   {#if error}<p class="refusal" role="alert" data-testid="replay-error">{error}</p>{/if}
 
   {#if answer && regionalHead && pitHead}
-    <div class="pair">
+    <div class="pair" aria-live="polite" aria-atomic="true">
+      {#snippet column(id: string, sc: Scenario, hd: NonNullable<typeof regionalHead>)}
+        <p class="fig"><span class="cap">Sun at touchdown</span><strong data-testid="{id}-clear">{num(sc.timeline.illumination[0] * 100, 0)} % clear</strong></p>
+        <p class="fig"><span class="cap">Sunlit</span><strong data-testid="{id}-sunlit">{fmtDays(sc.survival.sunlit_h)}</strong></p>
+        <p class="fig"><span class="cap">Operable</span><strong data-testid="{id}-operable">{hd.operable}</strong></p>
+        <p class="fig">
+          <span class="cap">{!hd.none && sc.survival.sunlit_h === 0 ? "Battery empty in" : "First lethal shadow in"}</span>
+          <strong data-testid="{id}-lethal">{#if !hd.none}<span aria-hidden="true">✕ </span>{/if}{hd.lethal}</strong>
+        </p>
+      {/snippet}
       <article class="col" data-testid="answer-regional" aria-labelledby="ar-h">
-        <h3 id="ar-h">Regional terrain says</h3>
-        <p class="fig"><span class="cap">Sun at touchdown</span><strong data-testid="regional-clear">{fmt(answer.regional.timeline.illumination[0] * 100, 0)} % clear</strong></p>
-        <p class="fig"><span class="cap">Operable</span><strong data-testid="regional-operable">{regionalHead.operable}</strong></p>
-        <p class="fig"><span class="cap">First lethal shadow in</span><strong data-testid="regional-lethal">{#if !regionalHead.none}✕ {/if}{regionalHead.lethal}</strong></p>
+        <h3 id="ar-h" tabindex="-1" bind:this={resultsHead}>Regional terrain says</h3>
+        {@render column("regional", answer.regional, regionalHead)}
       </article>
       <article class="col" data-testid="answer-pit" aria-labelledby="ap-h">
-        <h3 id="ap-h">A pit of {fmt(diameter)} × {fmt(shownDepth)} m says</h3>
-        <p class="fig"><span class="cap">Sun at touchdown</span><strong data-testid="pit-clear">{fmt(answer.pit.timeline.illumination[0] * 100, 0)} % clear</strong></p>
-        <p class="fig"><span class="cap">Operable</span><strong data-testid="pit-operable">{pitHead.operable}</strong></p>
-        <p class="fig"><span class="cap">First lethal shadow in</span><strong data-testid="pit-lethal">{#if !pitHead.none}✕ {/if}{pitHead.lethal}</strong></p>
+        <h3 id="ap-h">A pit of {num(diameter, 2)} × {num(shownDepth, 2)} m says</h3>
+        {@render column("pit", answer.pit, pitHead)}
       </article>
     </div>
+    <p class="cap">Operable = Sun above the horizon and Earth in contact. Battery time uses the assumed load.</p>
 
-    <p class="sentence" data-testid="dstar-sentence">{sentence} <span class="tag">assumed · U8, U10</span></p>
+    <p class="sentence" data-testid="dstar-sentence">{sentence} <span class="tag">assumed · U8, U9, U10</span></p>
 
     <form class="fields" onsubmit={(e) => e.preventDefault()} aria-label="Pit">
-      <label class="row"><span class="name">Pit diameter</span>
-        <input type="number" min="0.1" step="1" value={diameter} data-testid="pit-diameter" onchange={(e) => edit("diameter", e)} /><span class="unit">m</span><span class="tag">cited · W6</span></label>
-      <label class="row"><span class="name">Pit depth</span>
-        <input type="number" min="0" step="0.1" value={+shownDepth.toFixed(2)} data-testid="pit-depth" onchange={(e) => edit("depth", e)} /><span class="unit">m</span>
-        <span class="tag" data-testid="pit-depth-tag">{depth === null ? "11° degraded crater · E112" : "assumed · your value"}</span></label>
-      <label class="row"><span class="name">Panel height H</span>
-        <input type="number" min="0" step="0.5" value={panel} data-testid="pit-panel" onchange={(e) => edit("panel", e)} /><span class="unit">m</span><span class="tag">assumed · U10</span></label>
+      <div class="row"><label class="name" for="pit-d">Pit diameter</label>
+        <input id="pit-d" type="number" min="0.1" step="1" value={diameter} data-testid="pit-diameter" aria-describedby="pit-d-tag" onchange={(e) => edit("diameter", e)} /><span class="unit">m</span><span class="tag" id="pit-d-tag">cited · W6</span></div>
+      <div class="row"><label class="name" for="pit-z">Pit depth</label>
+        <input id="pit-z" type="number" min="0" step="0.1" value={+shownDepth.toFixed(2)} data-testid="pit-depth" aria-describedby="pit-z-tag" onchange={(e) => edit("depth", e)} /><span class="unit">m</span>
+        <span class="tag" id="pit-z-tag" data-testid="pit-depth-tag">{depth === null ? "assumed · U9, E112 (11° slope)" : "assumed · your value"}</span></div>
+      <div class="row"><label class="name" for="pit-h">Panel height H</label>
+        <input id="pit-h" type="number" min="0" step="0.5" value={panel} data-testid="pit-panel" aria-describedby="pit-h-tag" onchange={(e) => edit("panel", e)} /><span class="unit">m</span><span class="tag" id="pit-h-tag">assumed · U10</span></div>
       <button type="button" class="reset" onclick={reset}>Reset to 20 m and the 11° depth</button>
       {#if refused}<p class="refusal" role="alert" data-testid="pit-refusal">{refused}</p>{/if}
     </form>
@@ -128,11 +137,11 @@
     <details class="preset">
       <summary>Lander values used (all assumed, U10)</summary>
       <ul>
-        {#each fields as f (f.key)}<li>{f.label}: {fmt(f.value, 2)} {f.unit} <span class="tag">assumed</span></li>{/each}
+        {#each fields as f (f.key)}<li>{f.label}: {num(f.value, 2)} {f.unit} <span class="tag">assumed</span></li>{/each}
       </ul>
     </details>
 
-    <p class="cap">From touchdown, {fmtUtc(answer.regional.track.t_unix_s[0])} · {span} days · {fmt(IM2.lat_deg, 4)}°, {fmt(IM2.lon_deg, 4)}°E</p>
+    <p class="cap">From touchdown, {fmtUtc(answer.regional.track.t_unix_s[0])} · {span} days · {num(IM2.lat_deg, 4)}°, {num(IM2.lon_deg, 4)}°E</p>
     <Panorama scenario={answer.regional} pit={answer.pit} bind:idx />
   {/if}
 </section>

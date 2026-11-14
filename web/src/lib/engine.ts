@@ -296,7 +296,8 @@ export async function pitDepthToHide(diameter_m: number, panel_m: number, sun_el
   return wasm.pit_depth_to_hide(diameter_m, panel_m, sun_el_deg, sun_radius_deg);
 }
 
-/** The ESA degraded-crater depth (D/2)·tan 11° (E112) from the WASM: the depth that hides a (near) point source sitting 11° up, from the floor (H = 0). */
-export const defaultPitDepth = (diameter_m: number) => pitDepthToHide(diameter_m, 0, DEGRADED_SLOPE_DEG, TINY_SUN_DEG);
 // The model refuses a Sun radius of 0, so the point source has a radius far below any depth tolerance (1e-9 deg moves 10 m by 2e-10 m).
 const TINY_SUN_DEG = 1e-9;
+/** The ESA degraded-crater depth (D/2)·tan 11° (E112) from the WASM: the depth that hides a (near) point source sitting 11° up, from the floor (H = 0).
+ *  shortcut: stands in for the unexported `degraded_crater_depth_m` (crates/core/src/pit.rs:29) until the WASM exports it (both-owners follow-up, api_version bump). */
+export const defaultPitDepth = (diameter_m: number) => pitDepthToHide(diameter_m, 0, DEGRADED_SLOPE_DEG, TINY_SUN_DEG);

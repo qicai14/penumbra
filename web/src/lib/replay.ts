@@ -22,7 +22,7 @@ export function checkPit(p: PitInput): string | null {
 export type SentenceInput = {
   elSunDeg: number; clearPct: number; diameterM: number; panelM: number; dStarM: number; typicalDepthM: number;
 };
-const num = (x: number, d: number) => String(+x.toFixed(d));
+export const num = (x: number, d: number) => String(+x.toFixed(d));
 
 /** The d_c* answer in plain words (SCIENCE-SPEC V4 statement 3). It reports the depth that would hide the Sun; it never says the lander was in shadow (N10). */
 export function pitSentence(a: SentenceInput): string {
