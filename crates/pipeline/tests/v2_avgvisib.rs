@@ -282,9 +282,10 @@ fn earth_any_fraction_share_is_at_least_the_centre_and_the_margin_shares() {
         let pct = |k: usize| 100.0 * k as f64 / STEPS as f64;
         let centre_up = pct(tl.earth_margin_deg.iter().filter(|&&m| m >= 0.0).count());
         let contact = pct(tl.contact.iter().filter(|&&c| c > 0.0).count());
+        // Strict: Earth's limb crosses these horizons, so a centre-above-horizon twin would fail here.
         assert!(
-            s.earth_vis_pct >= centre_up,
-            "{} < {centre_up}",
+            s.earth_vis_pct > centre_up,
+            "{} <= {centre_up}",
             s.earth_vis_pct
         );
         assert!(centre_up >= contact);

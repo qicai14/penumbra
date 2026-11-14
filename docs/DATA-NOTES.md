@@ -114,14 +114,14 @@ So a cap at 150 km would bias the low-horizon azimuths at SP-01 downward by up t
 | 80–100 | 5 | 1.94 | 9.04 | −1.71 | 0.63 |
 | **pooled** | **6123** | **0.46** | **3.98** | **+0.75** | **0.955** |
 
-**Verdict: V2 passes** (median ≤ 5, |mean| ≤ 2, r ≥ 0.9), and the stretch target is met too (median ≤ 2, p90 ≤ 8). The pass rests on the 0–60 % bins: the two bright bins are small and biased dark (ours below theirs).
+**Verdict: V2 passes** (median ≤ 5, |mean| ≤ 2, r ≥ 0.9), and the stretch target is met too (median ≤ 2, p90 ≤ 8). The pass rests on the 0–60 % bins: the two bright bins are small and biased dark (ours below theirs). The pooled r is lifted by the spread between bins: inside every bin r is below 0.9 (0.62, 0.89, 0.84, 0.70, 0.63), and the 60–80 % bin's mean error (−2.66) would miss the |mean| ≤ 2 rule if bins were judged alone. Per-bin values are reported, not judged. The bright-tail shortfall is #75.
 
 - **Earth twin** (any fraction of the disc, P14; own 10 000-pixel draw, 2 000 per fifth; report only): median 0.21, p90 3.16, mean +0.41, r 0.990.
-- **P2** (405-pixel subsample, 100 per Sun fifth): H = 0 median 0.77, mean −0.18, r 0.981; H = 2 m median 1.70, mean +3.81, r 0.979. Raising the observer 2 m adds 3.99 points on average, so H = 0 is the height that matches.
+- **P2** (405-pixel subsample, 100 per Sun fifth [U: our choice]): H = 0 median 0.77, mean −0.18, r 0.981; H = 2 m median 1.70, mean +3.81, r 0.979. Raising the observer 2 m adds 3.99 points on average, so H = 0 is the height that matches.
 - **U2:** starting 4.65 y later (40 762 h) changes visibility by mean 0.027, p90 0.060, max 0.18 points. Under 0.5: the undocumented start date does not matter.
 - **U3:** lat ≤ −88° (in our tiles this is the Shackleton tile; Mons Mouton is all north of −88°): median 0.58, p90 5.96, mean +1.63, r 0.935 (n 2973); rest median 0.42, p90 2.42, mean −0.07, r 0.986 (n 3150). The region split and the latitude split are the same split here.
 - **N5** (critical obstacle < 180 m, among bins whose horizon lies in the band the Sun's disc crosses): median 0.72, p90 4.51, mean +0.67 (n 4123); rest median 0.25, p90 2.04, mean +0.93 (n 2000).
-- **P7:** fitted shift e ≈ a + δ·∇ref: pooled δ = (1.0, 0.7) m, patch δ = (4.0, 1.9) m, both well under 15 m. The 64 × 64 patch at (−11.0, −12.0) km has median 1.13, p90 8.13, mean +2.49, r 0.71. The map below shows scattered single-cell '+' (ours brighter by > 10 points, consistent with reference pits), very few '−', and no paired bright and dark fringes along shadow edges, so no sign of a registration shift.
+- **P7:** fitted shift e ≈ a + δ·∇ref: pooled δ = (1.0, 0.7) m, patch δ = (4.0, 1.9) m, both well under the 15 m flag [U: our choice, a quarter of a 60 m pixel]. The 64 × 64 patch at (−11.0, −12.0) km (the Shackleton tile centre, not SP-01 at (−11.31, −12.26)) has median 1.13, p90 8.13, mean +2.49, r 0.71. The map below (threshold ±10 points [U: our choice]) has 332 '+' (ours brighter, mostly single cells, consistent with reference pits) and 17 '−'. Ten of the '−' form one diagonal run from about (row 26, col 39) to (39, 27), about 1 km long, each next to a '+'. That run is the only paired bright and dark feature; reading it is visual, while the shift fit (δ ≈ 4 m) is the measurement that rules out a registration shift.
 
 P7 residual map, 64 × 64 cells of 60 m centred at (−11.0, −12.0) km; row 0 = north (largest y), col 0 = west; '+' e > 10, '-' e < −10, '.' else:
 
@@ -192,4 +192,4 @@ P7 residual map, 64 × 64 cells of 60 m centred at (−11.0, −12.0) km; row 0 
 ...+..+..........++.........-+.....+.........+..............+...
 ```
 
-Known gaps (stated, not fixed): AVGVISIB is not the Mazarico 2011 run (its max 88.44 % is below SP-01's 92.66 %, so it is not cross-checked against E16); beyond 7 km our far field is 240 m against their 60 m (up to 0.075°, T-1a-4); 163 048 steps against Barker's 165 000 (E93).
+Known gaps (stated, not fixed): AVGVISIB is not the Mazarico 2011 run (its max 88.44 % is below SP-01's 92.66 % (E16e), so it is not cross-checked against E16); beyond 7 km our far field is 240 m against their 60 m (not measured; the nearest number we have is T-1a-4's up to 0.075° for 240 m against a 20 m reference); 163 048 steps against Barker's 165 000 (E93). Measured cost is about 0.29 core-seconds per pixel (546 s × 8 threads ÷ 14 950 evaluations), about 20× the spec's 15 ms/pixel line (U18).
