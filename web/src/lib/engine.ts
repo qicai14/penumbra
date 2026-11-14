@@ -312,3 +312,29 @@ export async function windowBands(s: Scenario, sigma_z_m: number): Promise<Float
   TIMELINE_COLUMNS.forEach((k, i) => tl.set(s.timeline[k], i * s.count));
   return wasm.window_bands(tl, flat, sigma_z_m);
 }
+
+// ---- Point-Sun mask (T22): an Engine with only the ephemeris and one near tile, for the mask Web Worker ----
+const maskEngines = new Map<string, Promise<{ engine: WasmEngine; meta: NearMeta }>>();
+/** A WASM Engine holding the ephemeris and the near tile of `regionId` (no far tile: the mask marches only the near tile). One per region, cached. */
+export function loadMaskEngine(regionId: string): Promise<{ engine: WasmEngine; meta: NearMeta }> {
+  let p = maskEngines.get(regionId);
+  if (!p) {
+    p = (async () => {
+      const wasm = await import("./wasm/penumbra_wasm.js");
+      await wasm.default();
+      const m = await loadManifest();
+      const region = m.regions.find((r) => r.id === regionId);
+      if (!region) throw new Error(`BAD_INPUT: unknown region ${regionId}`);
+      const [segs, data] = await Promise.all([Promise.all(m.ephemeris.map(fetchSegment)), fetchTile(region.near)]);
+      const engine = new wasm.Engine();
+      m.ephemeris.forEach((seg, i) => engine.load_ephemeris(seg.t0_unix_s, seg.step_s, segs[i]));
+      const t = region.near;
+      engine.load_near(data, t.width, t.height, t.x0_m, t.y0_m, t.pixel_m, t.scale_m, t.offset_m, t.nodata);
+      const { url, ...meta } = t;
+      return { engine, meta };
+    })();
+    maskEngines.set(regionId, p);
+    p.catch(() => maskEngines.delete(regionId));
+  }
+  return p;
+}

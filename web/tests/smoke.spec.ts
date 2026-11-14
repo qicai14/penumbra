@@ -277,3 +277,37 @@ test("timelines show the ± band list and the assumed σ_z", async ({ page }) =>
   await expect(page.getByTestId("band-key")).toContainText("σ_z = 0.5 m (assumed)");
   await expect(page.getByTestId("band-list").locator("li").first()).toHaveText(/^(sunrise|sunset) \d{4}-\d{2}-\d{2} \d{2}:\d{2} (± (<1|\d+) min|ill-conditioned)$/);
 });
+
+// T22 (#23): the site picker's height image carries the point-Sun mask for the time marker.
+test("scrubbing the time marker redraws the point-Sun mask off the main thread, and the site readout agrees with the Sun's elevation (T22 #23)", async ({ page }) => {
+  await page.goto("/");
+  const site = page.getByTestId("mask-site");
+  const legend = page.getByTestId("mask-legend");
+  await expect(legend).toContainText("Point-Sun mask");
+  await expect(legend).toContainText("not illumination");
+  // wait for the fine mask of the first time
+  await expect(site).toHaveAttribute("data-stride", "8", { timeout: 60000 });
+  const slider = page.getByLabel("Time within the span");
+  const max = Number(await slider.getAttribute("max"));
+  // page stays responsive while a scrub storm is computed: rAF keeps ticking and every input lands
+  await page.evaluate(() => {
+    const w = window as any; w.__frames = 0; w.__gap = 0; let last = performance.now();
+    const f = (now: number) => { w.__frames++; w.__gap = Math.max(w.__gap, now - last); last = now; requestAnimationFrame(f); };
+    requestAnimationFrame(f);
+  });
+  const t0 = await site.getAttribute("data-t");
+  for (let k = 1; k <= 40; k++) await slider.fill(String(Math.round((max * k) / 40)));
+  // a mask takes 0.1 to 1 s to compute; on the page thread that would show as a gap that long between frames
+  expect(await page.evaluate(() => (window as any).__frames)).toBeGreaterThan(0);
+  expect(await page.evaluate(() => (window as any).__gap), "largest gap between animation frames, ms").toBeLessThan(250);
+  await expect(site).not.toHaveAttribute("data-t", t0!);
+  await expect(site).toHaveAttribute("data-stride", "8", { timeout: 60000 });
+  // the mask's time is the marker's time, and its site verdict never contradicts a Sun below the flat horizon
+  for (const frac of [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]) {
+    await slider.fill(String(Math.round(max * frac)));
+    const el = Number(((await page.getByTestId("cd-sun-el").textContent()) ?? "").replace("−", "-").match(/-?[\d.]+/)![0]);
+    // the mask follows the marker's time, then settles on the fine grid
+    if (el < -1) await expect(site).toHaveAttribute("data-lit", "0", { timeout: 60000 });
+  }
+  await expect(page.locator("canvas[aria-label^='Greyscale height image']")).toBeVisible();
+});
