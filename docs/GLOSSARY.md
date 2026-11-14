@@ -45,7 +45,7 @@ Whether any part of a body's disc is above the horizon; the metric the published
 _Avoid_: illumination
 
 **Operable window**:
-A continuous period when the site has both illumination above zero and Earth above the terrain mask.
+A continuous period when the site has both illumination above zero and Earth above the terrain mask. Operable hours, the sum of these, stop at the lethal shadow: a dead lander is not operable (SCIENCE-SPEC §1e).
 _Avoid_: comms window, sunlit window, uptime
 
 **Lethal shadow**:

@@ -73,7 +73,7 @@ The default threshold, 2° (E62), is the adapter's and the preset's business; `c
 - **N2 / T-1b-2.** "Exactly" means `== 0.0` and `== 1.0`. The PSR test in V5 case 3 relies on exact zeros over 163 000 steps.
 - **N8.** All azimuth arithmetic goes through `horizon_at`, which wraps. Don't index `el[]` anywhere else.
 - **P14.** `contact` uses the Earth's centre plus the margin. `earth_any_visible` uses the limb. They differ by up to 0.95° + 2°. Keep both names.
-- **D3.** The ticket's ρ band (0.261°–0.272° (Moon-centred; widened Nov 14)) was derived for the Earth's distance from the Sun. From the Moon the range is 0.26149°–0.27185° [S]. Assert 0.2614°–0.2719° and print the observed min and max in the PR.
+- **D3.** The ticket's original ρ band (0.262°–0.271°) was derived for the Earth's distance from the Sun; the ticket now reads 0.261°–0.272° (Moon-centred, widened Nov 14). From the Moon the range is 0.26149°–0.27185° [S]. Assert 0.2614°–0.2719° and print the observed min and max in the PR. As built, `crates/core/tests/timeline.rs` asserts the rounded 0.261..=0.272: the science check (checkpoint Nov 14, S1) found no plausible bug that lands only in the 0.0004° slivers, so the test was left as is.
 - **No limb darkening** (E26 is Barker's choice, not ours). f is the geometric fraction (E08). It goes on the Limitations list.
 - A sliver of disc between two strip midpoints can read f = 0 while a hair is visible. The threshold error is 0.0005·ρ, or 0.00013°. Leave it.
 - Don't test `margin ≥ 2°` with a horizon built as `el − 2°`: the subtraction can land on either side of 2.0. Row 11 uses thresholds on both sides instead.

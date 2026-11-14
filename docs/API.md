@@ -2,6 +2,8 @@
 
 The `core` → WASM boundary, frozen at Hour 0 (T00, issue #1). This file is canonical; [ARCHITECTURE.md §3.1–§3.2](ARCHITECTURE.md) mirrors it. The adapter types, manifest and fixture shapes are in [§3.5](ARCHITECTURE.md).
 
+**Approval record.** The T00 PR (#36) merged on Nov 14 with no review on GitHub; this dated line (Nov 15, #78) records that gap. Both owners have built against this file since (T01–T27); Charls adding an approving comment on #36 closes it.
+
 **Change rule.** From the merge of the T00 PR, this file changes only in a PR approved by both Qi Cai and Charls, and every change bumps `api_version` in `crates/core` (`API_VERSION`), the fixture (`web/public/fixture/scenario.json`) and the manifest together. The adapter's `validate()` refuses a mismatch.
 
 **Manifest.** `manifest.json` (written by `pipeline` from T06) carries `"api_version": 4` next to `format_version`. Each region carries a `near` (20 m) and, from #48, a `mid` (80 m) tile entry with the same eight numbers.

@@ -304,7 +304,7 @@ Per step: one table interpolation, two bodies to az/el (6 inverse-trig calls, 2 
 **Sums.** SCIENCE-SPEC doesn't say how hours are added up. Proposed, for the Hour 0 freeze: every total is a count of steps times Δt, with
 - sunlit hours = Σ illumination × Δt (so a half-hidden Sun counts half),
 - contact hours = Σ contact × Δt,
-- operable hours = Σ (illumination > 0 and contact) × Δt, matching the glossary's operable window,
+- operable hours = Σ (illumination > 0 and contact) × Δt, matching the glossary's operable window, stopping at the lethal time (SCIENCE-SPEC §1e; the other totals stay full-span),
 - longest darkness = the longest run with illumination = 0.
 
 **State of charge** (SCIENCE-SPEC §1e with fix F7). Per step:

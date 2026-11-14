@@ -1,6 +1,6 @@
 # Submission plan — NSAKL26 (Kuala Lumpur local event)
 
-Source: *NSAKL26 Project Execution Guidebook* (local copy: `D:\DownloadHDD\yogeswaran1livecom_NASASPACEAPPSKUALALUMPUR2026PROJECTEXECUTIONGUIDEBOOK1793029136.pdf`; copyrighted, not committed). Team: **Fractured Toes** = **Qi Cai** (owner, science core) and **Charls** (`ambatuCode887`; app and design). Project: **Penumbra**. Only the deploy URL is `penumbra-lunar.pages.dev`.
+Source: *NSAKL26 Project Execution Guidebook* (local copy: `D:\DownloadHDD\yogeswaran1livecom_NASASPACEAPPSKUALALUMPUR2026PROJECTEXECUTIONGUIDEBOOK1793029136.pdf`; copyrighted, not committed). Team: **Fractured Toes** = **Qi Cai** (owner, science core) and **Charls** (`ambatuCode887`; app and design). Project: **Penumbra**. Only the deploy URL is `penumbra-lunar.pages.dev`. We use the free `pages.dev` address everywhere, not a free custom domain, so no submitted link can expire after judging.
 
 ## Deliverables (all in English; uploaded via Google Drive, plus the Space Apps project page)
 | # | Deliverable | Spec from the guidebook | Owner | Tool |
