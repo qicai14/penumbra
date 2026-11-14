@@ -1,19 +1,17 @@
 import { expect, test } from "@playwright/test";
 
 // Runs against `vite preview` locally and the deployed URL in CI (BASE_URL).
-test("panorama loads the fixture (api_version checked against WASM) and shows the readout", async ({ page, request }) => {
+test("panorama loads the fixture (api_version checked against WASM) and shows the readout", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("readout")).toBeVisible();
   await expect(page.getByLabel(/^Horizon panorama/)).toBeVisible();
-  // The badge follows the data's own `fake` flag.
-  const res = await request.get("fixture/scenario.json");
-  const { fake } = await res.json();
-  // The horizon is the real DEM (T07 #8), so the panorama badge is off; the fixture-dates note follows `fake`.
+  // The horizon is the real DEM (T07 #8), so the panorama badge is off.
   await expect(page.getByTestId("fake-badge")).toHaveCount(0);
   // Survival is the WASM model (T09 #10), so its badges are off too.
   await expect(page.getByTestId("fake-badge-survival")).toHaveCount(0);
   await expect(page.getByTestId("fake-badge-timelines")).toHaveCount(0);
-  await expect(page.getByTestId("track-dates")).toHaveCount(fake ? 1 : 0);
+  // The panorama runs on the landing date (#13), so the old sample-dates note is gone.
+  await expect(page.getByTestId("track-dates")).toHaveCount(0);
 });
 
 test("keyboard focus reads the horizon elevation and obstacle distance", async ({ page }) => {
@@ -96,6 +94,21 @@ test("picker refuses an edge click and an out-of-table date, and recomputes on a
 
   await page.getByTestId("mast").fill("6");
   await expect(page.getByTestId("computed-for")).toContainText("mast 6.0 m");
+});
+
+test("a new landing date and a shorter span recompute without losing the time cursor (#13)", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto("/");
+  await page.getByTestId("date").fill("2027-03-01");
+  await page.getByTestId("date").blur();
+  await expect(page.getByTestId("computed-for")).toContainText("landing 2027-03-01 · 30 d");
+  const slider = page.getByLabel("Time within the span");
+  await slider.fill("4000"); // past the end of a 14-day grid (2016 steps)
+  await page.getByRole("button", { name: "14 d" }).click();
+  await expect(page.getByTestId("computed-for")).toContainText("· 14 d");
+  await expect(slider).toHaveValue("2015");
+  expect(errors).toEqual([]);
 });
 
 test("switching region moves the site and refreshes the lat/lon boxes", async ({ page }) => {

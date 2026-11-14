@@ -158,12 +158,6 @@
     <h2 id="pano-h">Horizon · where the Sun and Earth are</h2>
     {#if TERRAIN_FAKE}<span class="pill" data-testid="fake-badge">FAKE TERRAIN</span>{/if}
   </header>
-  {#if scenario.fake}
-    <!-- The track sits on the fixture timeline's grid so the shared cursor matches the timelines (until T08 #9). -->
-    <p class="now dates" data-testid="track-dates">
-      Sun and Earth: model output for this site, on the timelines' sample dates ({fmtUtc(tr.t_unix_s[0]).slice(0, 10)}, {Math.round((tr.t_unix_s.length * scenario.step_s) / 86400)} d), not the landing date yet.
-    </p>
-  {/if}
 
   <canvas
     bind:this={canvas}
@@ -222,7 +216,6 @@
   .readout, .now { margin: var(--spacing-8) 0 0; font: var(--text-body)/var(--leading-body) var(--font-mono); font-variant-numeric: tabular-nums; }
   .readout { color: var(--color-paper); min-height: 1.71em; }
   .now { color: var(--color-fog); font-size: var(--text-caption); line-height: var(--leading-caption); }
-  .dates { margin: 0 0 var(--spacing-8); }
   .controls { display: flex; flex-wrap: wrap; gap: var(--spacing-16); align-items: center; margin-top: var(--spacing-16); }
   .time { display: flex; align-items: center; gap: var(--spacing-8); flex: 1 1 240px; font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .time input { flex: 1; accent-color: var(--color-fog); }
