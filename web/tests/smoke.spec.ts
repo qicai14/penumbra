@@ -70,3 +70,25 @@ test("scoreboard lists V1-V5 and shows 'not run' for checks that have not run", 
   await expect(table.getByRole("cell", { name: "not run" })).toHaveCount(notRun);
   await expect(page.getByRole("heading", { name: "Limitations" })).toBeVisible();
 });
+
+test("picker refuses an edge click and an out-of-table date, and recomputes on a good change", async ({ page }) => {
+  await page.goto("/");
+  const refusal = page.getByTestId("refusal");
+  const canvas = page.locator("canvas").first();
+  await expect(canvas).toBeVisible();
+  const box = (await canvas.boundingBox())!;
+  await canvas.click({ position: { x: 4, y: box.height / 2 } }); // inside the 7 km border
+  await expect(refusal).toContainText("7 km");
+
+  await page.getByTestId("date").fill("2031-03-01");
+  await page.getByTestId("date").blur();
+  await expect(refusal).toContainText("ephemeris");
+
+  await canvas.click({ position: { x: box.width * 0.4, y: box.height * 0.4 } });
+  await expect(refusal).toHaveCount(0);
+  const lat = (await page.getByTestId("lat").inputValue());
+  await expect(page.getByTestId("computed-for")).toContainText(Number(lat).toFixed(4));
+
+  await page.getByTestId("mast").fill("6");
+  await expect(page.getByTestId("computed-for")).toContainText("mast 6.0 m");
+});

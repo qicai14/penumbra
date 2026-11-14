@@ -1,0 +1,23 @@
+{
+  "fake": true,
+  "note": "FAKE stub manifest for T11. Not a pipeline output.",
+  "format_version": 1,
+  "api_version": 1,
+  "regions": [
+    {
+      "id": "fake-region",
+      "name": "Fake region",
+      "near": {
+        "url": "fixture/near-fake.i16",
+        "width": 256,
+        "height": 256,
+        "x0_m": 61740,
+        "y0_m": 153360,
+        "pixel_m": 120,
+        "scale_m": 0.25,
+        "offset_m": 0,
+        "nodata": -32768
+      }
+    }
+  ]
+}
