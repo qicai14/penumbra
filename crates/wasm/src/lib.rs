@@ -362,3 +362,29 @@ pub fn pit_depth_to_hide(
     )
     .map_err(geo_err)
 }
+
+/// Sunrise and sunset ± bands (SCIENCE-SPEC §1f step 1): 3 × k, column-major: `t_unix_s` (Unix s
+/// UTC), `kind` (+1 sunrise, −1 sunset), `half_width_min` (capped at one 29.5-day synodic month).
+/// `timeline` is the 10 × n layout `Engine.timeline` returns; `horizon` the 1 440-value layout
+/// `Engine.horizon` returns (topocentric ENU el_deg[720], then dist_m[720]); `sigma_z_m` the DEM
+/// height error at observer and obstacle, 0.5 m "assumed". Throws BAD_INPUT rather than returning
+/// an empty array, which would read as "no sunrise or sunset".
+#[wasm_bindgen]
+pub fn window_bands(
+    timeline: &[f64],
+    horizon: &[f64],
+    sigma_z_m: f64,
+) -> Result<Vec<f64>, JsError> {
+    use penumbra_core::horizon::{Horizon, N_AZ};
+    if horizon.len() != 2 * N_AZ {
+        return Err(JsError::new("BAD_INPUT: horizon must have 1440 values"));
+    }
+    if horizon.iter().any(|v| !v.is_finite()) {
+        return Err(JsError::new("BAD_INPUT: horizon values must be finite"));
+    }
+    let h = Horizon {
+        el_rad: std::array::from_fn(|i| horizon[i].to_radians()),
+        dist_m: std::array::from_fn(|i| horizon[N_AZ + i]),
+    };
+    penumbra_core::band::window_bands(timeline, &h, sigma_z_m).map_err(js_err)
+}
