@@ -38,7 +38,7 @@
   <p>Fractured Toes: <strong>Qi Cai</strong> built the science core (horizon, ephemeris, visibility, validation); <strong>Charls</strong> (<code>ambatuCode887</code>) built the app and design.</p>
 
   <h3>Why Penumbra</h3>
-  <p>A lander planner at a south-pole site has to pick a landing date. Penumbra says how many hours of sunlight and Earth contact the lander gets, and when the first lethal shadow arrives. The case is IM-2, which landed on its side in a small crater near Mons Mouton in March 2025 and lasted about a day: replay its site and date, then look for the nearest site within 1 km, or the nearest date, with more than 5 days of operations.</p>
+  <p>A lander planner at a south-pole site has to pick a landing date. Penumbra says how many hours of sunlight and Earth contact the lander gets, and when the first lethal shadow arrives. The case is IM-2, which landed on its side in a small crater near Mons Mouton in March 2025 and reportedly lasted about a day: replay its site and date, then look for the nearest site within 1 km, or the nearest date, with more than 5 days of operations.</p>
 
   {#if videos.length}
     <h3>Videos</h3>
