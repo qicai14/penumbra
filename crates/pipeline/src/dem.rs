@@ -112,6 +112,9 @@ pub struct GeoTiff {
     pub sphere_radius_m: Option<f64>,
     /// GeoAsciiParamsTag text (datum and projection names).
     pub citation: Option<String>,
+    /// SampleFormat (339) = 3: IEEE float samples, heights in metres. False for int16 counts
+    /// (AVGVISIB), which `read_window` returns raw and the height readers refuse.
+    pub float_samples: bool,
 }
 
 impl GeoTiff {
@@ -155,6 +158,11 @@ impl GeoTiff {
                 None => None,
             })
         };
+        // absent SampleFormat means unsigned integer (TIFF 6.0)
+        let float_samples = match d.find_tag(Tag::SampleFormat)? {
+            Some(v) => v.into_u16_vec()? == [3],
+            None => false,
+        };
         let nodata = text(&mut d, Tag::GdalNodata)?;
         let citation = text(&mut d, Tag::GeoAsciiParamsTag)?;
         Ok(GeoTiff {
@@ -168,7 +176,17 @@ impl GeoTiff {
             nodata,
             sphere_radius_m,
             citation,
+            float_samples,
         })
+    }
+
+    /// Errors unless the samples are floats: int16 counts are not heights in metres (#77).
+    fn require_heights(&self) -> Result<()> {
+        if self.float_samples {
+            Ok(())
+        } else {
+            Err("source samples are integer counts, not Float32 heights in metres".into())
+        }
     }
 
     /// Pixels `col0..col0 + w` × `row0..row0 + h`, row-major, decoding only the tiles they touch.
@@ -208,7 +226,7 @@ impl GeoTiff {
 /// Crop a `size_px` square of `block_px` × `block_px` source-pixel means from `src`, centred on map
 /// point `centre` and snapped to the block grid (source pixel edges at multiples of `block_px`), and
 /// encode it with `encoder`. `block_px` = 1 keeps the source pixels; a block holding a NaN is NaN
-/// (no data). Errors if the square leaves the raster.
+/// (no data). Errors if the square leaves the raster or the source is not Float32 heights.
 pub fn build_tile(
     src: &mut GeoTiff,
     centre: penumbra_core::geometry::MapXy,
@@ -220,6 +238,7 @@ pub fn build_tile(
     if !src.pixel_is_area || src.sphere_radius_m != Some(penumbra_core::geometry::MOON_RADIUS_M) {
         return Err("source DEM is not pixel-is-area on the 1737.4 km sphere".into());
     }
+    src.require_heights()?;
     if block_px == 0 {
         return Err("block must be at least one source pixel".into());
     }
@@ -435,11 +454,13 @@ impl FloatWindow {
     }
 
     /// Read the source pixels whose centres lie within `half_m` (map metres) of `centre` in x and y.
+    /// Errors if the source is not Float32 heights.
     pub fn read(
         src: &mut GeoTiff,
         centre: penumbra_core::geometry::MapXy,
         half_m: f64,
     ) -> Result<FloatWindow> {
+        src.require_heights()?;
         let px = src.pixel_m;
         let lo_c = ((centre.x_m - half_m - src.x0_m) / px).floor();
         let lo_r = ((src.y0_m - centre.y_m - half_m) / px).floor();
