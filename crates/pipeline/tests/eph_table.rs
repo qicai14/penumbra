@@ -1,12 +1,14 @@
 //! T02 ephemeris table against native ANISE (SCIENCE-SPEC T-1c-1) and the shipped file against a rebuild.
 //! Run: PENUMBRA_DATA=/path/to/penumbra-resource cargo test -p penumbra-pipeline --release --test eph_table -- --ignored --nocapture
 
+use anise::constants::frames::{MOON_ME_DE440_ME421_FRAME, MOON_PA_DE440_FRAME};
+use anise::prelude::Aberration;
 use penumbra_core::eph::{
     Ephemeris, MAIN_ROWS, MAIN_STEP_S, MAIN_T0_UNIX_S, REPLAY_IM2_ROWS, REPLAY_IM2_STEP_S,
     REPLAY_IM2_T0_UNIX_S,
 };
 use penumbra_pipeline::eph::{
-    MAIN_FILE_PREFIX, REPLAY_IM2_FILE_PREFIX, build_table, load_almanac, moon_me_row,
+    MAIN_FILE_PREFIX, REPLAY_IM2_FILE_PREFIX, build_table, load_almanac, moon_me_row, moon_row,
     read_shipped_table,
 };
 use std::path::PathBuf;
@@ -130,4 +132,74 @@ fn shipped_replay_im2_table_matches_rebuild() {
         REPLAY_IM2_STEP_S,
         REPLAY_IM2_ROWS,
     );
+}
+
+/// (site unit × (1737.4 km + h), t_unix_s UTC) of the 20 V1 pairs in the core Horizons fixture.
+fn v1_sites_and_times() -> Vec<([f64; 3], f64)> {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../core/tests/fixtures/horizons/v1-pairs.json");
+    let v: serde_json::Value =
+        serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+    let f = |p: &serde_json::Value, k: &str| p[k].as_f64().unwrap();
+    v.as_array()
+        .unwrap()
+        .iter()
+        .map(|p| {
+            let (lat, lon) = (
+                f(p, "lat_deg").to_radians(),
+                f(p, "lon_east_deg").to_radians(),
+            );
+            let r_km = 1737.4 + f(p, "h_km");
+            let site = [lat.cos() * lon.cos(), lat.cos() * lon.sin(), lat.sin()].map(|u| u * r_km);
+            (site, f(p, "t_unix_s"))
+        })
+        .collect()
+}
+
+/// Largest and smallest angle (deg) between the topocentric Sun (b = 0) or Earth (b = 1) of the
+/// shipped choice (MOON_ME, LT_S) and of `other`, over the 20 V1 sites and times.
+fn v1_spread_deg(
+    other: impl Fn(&anise::prelude::Almanac, f64) -> [f64; 6],
+    b: usize,
+) -> (f64, f64) {
+    let almanac = load_almanac(&kernels()).unwrap();
+    let (mut lo, mut hi) = (f64::INFINITY, 0.0f64);
+    for (site, t_unix_s) in v1_sites_and_times() {
+        let (me, alt) = (
+            moon_me_row(&almanac, t_unix_s).unwrap(),
+            other(&almanac, t_unix_s),
+        );
+        let topo = |r: &[f64; 6]| [0, 1, 2].map(|i| r[3 * b + i] - site[i]);
+        let a = angle_deg(topo(&me), topo(&alt));
+        (lo, hi) = (lo.min(a), hi.max(a));
+    }
+    (lo, hi)
+}
+
+// P3: with stellar aberration off (light time only) the Sun moves by 0.005–0.006° at every V1 pair
+// (v/c ≈ 1.0e-4 rad, §1c), so the V1 fixtures can see the correction.
+#[test]
+#[ignore = "needs local kernels in PENUMBRA_DATA"]
+fn p3_turning_aberration_off_moves_the_sun_by_0_005_to_0_006_deg() {
+    let (lo, hi) = v1_spread_deg(
+        |a, t| moon_row(a, t, MOON_ME_DE440_ME421_FRAME, Aberration::LT).unwrap(),
+        0,
+    );
+    println!("P3 Sun LT vs LT_S over the V1 pairs: {lo:.5}° to {hi:.5}°");
+    assert!(lo >= 0.005 && hi <= 0.006, "Sun moves {lo}..{hi}°");
+}
+
+// P8: computed in MOON_PA instead of MOON_ME, the Sun and the Earth differ by more than 0.01° at
+// every V1 pair, so V1 would catch the wrong frame.
+#[test]
+#[ignore = "needs local kernels in PENUMBRA_DATA"]
+fn p8_moon_pa_instead_of_me_differs_by_more_than_0_01_deg() {
+    for (b, body) in [(0, "Sun"), (1, "Earth")] {
+        let (lo, hi) = v1_spread_deg(
+            |a, t| moon_row(a, t, MOON_PA_DE440_FRAME, Aberration::LT_S).unwrap(),
+            b,
+        );
+        println!("P8 {body} PA vs ME over the V1 pairs: {lo:.5}° to {hi:.5}°");
+        assert!(lo > 0.01, "{body} PA vs ME only {lo}°");
+    }
 }
