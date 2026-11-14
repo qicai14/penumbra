@@ -36,7 +36,7 @@ const SP01 = [-89.45, 222.69]; // Mazarico 2011 (E16b, E16c)
 const IM1 = [-80.1276, 1.4367]; // E72a
 const IM2 = [-84.7906, 29.1957]; // ARCHITECTURE F20 / tracer
 const FAR60 = [-60, 180], FAR85 = [-85, 180]; // T-1d-1, T-1d-1b far-side sites
-// De Rosa 2012 Table 2, "Centre of Region of Interest" (114cd0dd:1288–1331), west lon + 360
+// De Rosa 2012 Table 2, "Centre of Region of Interest" (E142, 114cd0dd:1288–1331), west lon + 360
 const CR1 = [-89.4679, 360 - 137.411], GR1 = [-88.6952, 360 - 68.2846], LP1 = [-85.4596, 31.78053];
 const MP1 = [-85.9756, 360 - 2.11241], SR1 = [-89.7755, 360 - 156.448];
 

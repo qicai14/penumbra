@@ -591,6 +591,7 @@ File key: 7b941912 Mazarico 2011 · b5251ef3 Barker 2021 · 56dae622 Barker 2023
 | E139 | 653692c5:76 | `night it is by far the dominant source of natural illumination` | earthshine lights the night side; V5 PSR = 0 is sunlight only |
 | E140 | 5c98fb8b:22 | `TOPSIS algorithm. By integrating topographic, illumination, and mineralogy data` | prior Artemis III site ranking (multi-criteria), the closest prior art to our ranking |
 | E141 | c6ab698c:53 | `DE441 is less accurate than DE440 for the current` | DE440 is the right ephemeris for 2026–2030 |
+| E142 | 114cd0dd:1288 | `Centre of Region of Interest` | V1 region-centre sites CR1, GR1, LP1, MP1, SR1 (Table 2, lines 1288–1331; west longitudes + 360°) |
 
 Web rows (NASA documents fetched Nov 10 by a subagent with curl; not in the corpus, so not grep-checkable there):
 
