@@ -92,3 +92,21 @@ test("picker refuses an edge click and an out-of-table date, and recomputes on a
   await page.getByTestId("mast").fill("6");
   await expect(page.getByTestId("computed-for")).toContainText("mast 6.0 m");
 });
+
+test("survival headline, charge trace and preset form", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("headline-operable")).toContainText(/days?$/);
+  await expect(page.getByTestId("headline-lethal")).toContainText(/days?$|no lethal shadow in \d+ days?/);
+  await expect(page.getByTestId("soc-chart").locator("canvas")).toHaveCount(1);
+  await expect(page.getByTestId("soc-chart")).toContainText("Battery charge");
+  // U10: every field says cited or assumed; an edit recomputes and the field then reads assumed.
+  const tags = page.locator('[data-testid^="tag-"]');
+  await expect(tags.first()).toBeVisible();
+  expect(await tags.count()).toBeGreaterThan(5);
+  for (const t of await tags.allTextContents()) expect(["cited", "assumed"]).toContain(t);
+  await expect(page.getByTestId("tag-load_w")).toHaveText("cited");
+  await page.getByLabel(/^Load/).fill("300");
+  await page.getByLabel(/^Load/).blur();
+  await expect(page.getByTestId("tag-load_w")).toHaveText("assumed");
+  await expect(page.getByLabel(/^Load/)).toHaveValue("300");
+});

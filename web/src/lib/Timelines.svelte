@@ -4,13 +4,14 @@
   import "uplot/dist/uPlot.min.css";
   import type { Scenario } from "./engine";
   import { fmtUtc } from "./panorama";
-  import { buildChartData, indexAtTime, operableMask, operableRuns, thresholdLabel } from "./timelines";
+  import { buildChartData, buildSocData, citedTag, indexAtTime, lethalUnixS, operableMask, operableRuns, thresholdLabel } from "./timelines";
 
   let { scenario, idx = $bindable(0) }: { scenario: Scenario; idx: number } = $props();
 
   const SYNC = "penumbra-timelines";
   let width = $state(800);
   let host: HTMLDivElement;
+  let socHost: HTMLDivElement;
   let charts: uPlot[] = [];
   let placing = false; // true while we move the cursors ourselves, so the cursor hook does not echo back
 
@@ -38,6 +39,33 @@
             const x0 = Math.max(bbox.left, u.valToPos(a, "x", true));
             const x1 = Math.min(bbox.left + bbox.width, u.valToPos(b, "x", true));
             if (x1 > x0) ctx.fillRect(x0, bbox.top, x1 - x0, bbox.height);
+          }
+          ctx.restore();
+        },
+      },
+    };
+  }
+
+  /** Marks the first lethal shadow: a vertical line on every chart, and on the charge chart a ✕ with its label. */
+  function lethalPlugin(tS: number | null, colour: string, font: string, text: boolean): uPlot.Plugin {
+    return {
+      hooks: {
+        draw: (u) => {
+          if (tS === null) return;
+          const { ctx, bbox } = u;
+          const x = u.valToPos(tS, "x", true);
+          if (x < bbox.left || x > bbox.left + bbox.width) return;
+          ctx.save();
+          ctx.strokeStyle = colour; ctx.fillStyle = colour; ctx.lineWidth = 1 * uPlot.pxRatio;
+          ctx.beginPath(); ctx.moveTo(x, bbox.top); ctx.lineTo(x, bbox.top + bbox.height); ctx.stroke();
+          if (text) {
+            ctx.font = font.replace(/(\d+)px/, (_, n) => `${Number(n) * uPlot.pxRatio}px`);
+            ctx.textBaseline = "top";
+            const label = "✕ first lethal shadow";
+            const w = ctx.measureText(label).width;
+            const left = x + 6 * uPlot.pxRatio + w < bbox.left + bbox.width;
+            ctx.textAlign = left ? "left" : "right";
+            ctx.fillText(label, x + (left ? 6 : -6) * uPlot.pxRatio, bbox.top + 4 * uPlot.pxRatio);
           }
           ctx.restore();
         },
@@ -79,7 +107,8 @@
     const t = d.illum[0];
     const full: [number, number] = [t[0], t[t.length - 1] + scenario.step_s];
     const runs = operableRuns(tl.t_unix_s, operableMask(tl), scenario.step_s);
-    const band = () => [bandPlugin(runs, k.fog + "26"), wheelPlugin(full)];
+    const lethalS = lethalUnixS(scenario.start_unix_s, scenario.survival.lethal_h);
+    const band = (text = false) => [bandPlugin(runs, k.fog + "26"), lethalPlugin(lethalS, k.paper, k.font, text), wheelPlugin(full)];
     const x = (show: boolean): uPlot.Axis => ({ show, stroke: k.ash, grid: { stroke: k.iron, width: 1 }, ticks: { stroke: k.iron }, font: k.font });
     const y = (extra: Partial<uPlot.Axis> = {}): uPlot.Axis => ({ size: 56, stroke: k.ash, grid: { stroke: k.iron, width: 1 }, ticks: { stroke: k.iron }, font: k.font, ...extra });
     const base = (height: number, show: boolean) => ({
@@ -114,15 +143,26 @@
       ],
     }, d.margin, host.children[1] as HTMLElement);
     const contact = new uPlot({
-      ...base(100, true), hooks: hooks(), plugins: band(),
+      ...base(100, false), hooks: hooks(), plugins: band(),
       scales: { x: { time: true }, y: { range: [-0.15, 1.15] } },
-      axes: [x(true), y({ splits: () => [0, 1], values: () => ["no", "yes"] })],
+      axes: [x(false), y({ splits: () => [0, 1], values: () => ["no", "yes"] })],
       series: [
         {},
         { label: "Earth contact", stroke: k.earthLine, width: 2, paths: uPlot.paths.stepped!({ align: 1 }), value: (_u, v) => (v == null ? "--" : v >= 0.5 ? "yes" : "no") },
       ],
     }, d.contact, host.children[2] as HTMLElement);
-    charts = [illum, margin, contact];
+    const cap = scenario.preset.capacity_wh;
+    const soc = new uPlot({
+      ...base(130, true), hooks: hooks(), plugins: band(true),
+      scales: { x: { time: true }, y: { range: [0, cap * 1.05] } },
+      axes: [x(true), y({ size: 56, values: (_u, v) => v.map((n) => `${n}`) })],
+      series: [
+        {},
+        { label: "Battery charge (Wh)", stroke: k.paper, width: 2, value: (_u, v) => (v == null ? "--" : `${v.toFixed(0)} Wh`) },
+        { label: `Lethal charge ${scenario.preset.min_wh} Wh (${citedTag(scenario.preset, "min_wh")})`, stroke: k.fog, width: 1, dash: [6, 4], value: (_u, v) => (v == null ? "--" : `${v} Wh`) },
+      ],
+    }, buildSocData(tl.t_unix_s, scenario.survival.soc_wh, scenario.preset), socHost);
+    charts = [illum, margin, contact, soc];
     placeCursors();
   }
 
@@ -165,6 +205,8 @@
     aria-label="Timelines chart. Illumination, visibility, Earth margin, Earth contact; the shaded band is the operable window. Move the time slider to move the cursor. Ctrl or Command with the wheel zooms, add shift to pan, drag to zoom to a range, double-click resets.">
     <div></div><div></div><div></div>
   </div>
+  <div class="charts" bind:this={socHost} data-testid="soc-chart" role="group"
+    aria-label="Battery state of charge in watt-hours over the span. A vertical line and a cross mark the first lethal shadow, when charge reaches the lethal charge."></div>
 
   <p class="now" data-testid="timelines-now">
     {fmtUtc(tl.t_unix_s[idx])} · illumination {tl.illumination[idx].toFixed(2)} · visibility {tl.visibility[idx].toFixed(0)} · Earth margin {tl.earth_margin_deg[idx].toFixed(2)}° (threshold {label}) · contact {tl.contact[idx] >= 0.5 ? "yes" : "no"}

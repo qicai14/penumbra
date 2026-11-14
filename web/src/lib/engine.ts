@@ -145,7 +145,7 @@ export type NearMeta = {
   scale_m: number; offset_m: number; nodata: number;
 };
 export type NearTile = { fake: boolean; region: { id: string; name: string }; meta: NearMeta; data: Int16Array };
-export type Inputs = { lat_deg: number; lon_deg: number; mast_m: number; start_unix_s: number; span_days: number };
+export type Inputs = { lat_deg: number; lon_deg: number; mast_m: number; start_unix_s: number; span_days: number; preset?: Preset };
 
 /** The near tile of the first region in the manifest; the int16 counts exactly as shipped. */
 export async function loadNearTile(root = import.meta.env?.BASE_URL ?? "/"): Promise<NearTile> {
@@ -162,8 +162,8 @@ export async function loadNearTile(root = import.meta.env?.BASE_URL ?? "/"): Pro
 }
 
 let fixtureBase: Promise<Scenario> | undefined;
-/** FIXTURE: returns the same fake data whatever the inputs; only `site` echoes lat, lon and mast. */
+/** FIXTURE: returns the same fake data whatever the inputs; only `site` and `preset` echo the inputs (T09 will make the survival numbers follow them). */
 export async function computeScenario(inp: Inputs): Promise<Scenario> {
   const s = await (fixtureBase ??= loadFixture());
-  return { ...s, site: { ...s.site, lat_deg: inp.lat_deg, lon_deg: inp.lon_deg, mast_m: inp.mast_m } };
+  return { ...s, preset: inp.preset ?? s.preset, site: { ...s.site, lat_deg: inp.lat_deg, lon_deg: inp.lon_deg, mast_m: inp.mast_m } };
 }

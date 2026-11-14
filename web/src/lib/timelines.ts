@@ -4,10 +4,14 @@ import type { Preset, Timeline } from "./engine";
 
 export type Run = [startS: number, endS: number];
 
+/** "cited" or "assumed" for a preset field (U10): only a field the preset marks cited is cited. */
+export function citedTag(preset: Preset, key: string): "cited" | "assumed" {
+  return preset.cited[key] === true ? "cited" : "assumed";
+}
+
 /** Label for the Earth margin threshold: "2° (assumed)" unless the preset cites it. */
 export function thresholdLabel(preset: Preset): string {
-  const cited = preset.cited.earth_margin_deg === true;
-  return `${preset.earth_margin_deg}°${cited ? "" : " (assumed)"}`;
+  return `${preset.earth_margin_deg}°${citedTag(preset, "earth_margin_deg") === "cited" ? "" : " (assumed)"}`;
 }
 
 /** Operable steps: illumination above zero and Earth contact (SCIENCE-SPEC §2.5). */
@@ -50,6 +54,16 @@ export type ChartData = {
   contact: [number[], number[]];
 };
 const arr = (a: Float64Array) => Array.from(a);
+
+/** State of charge (Wh) from the model's `soc_wh`, with the preset's lethal charge as a flat reference line. */
+export function buildSocData(t: Float64Array, socWh: Float64Array, preset: Preset): [number[], number[], number[]] {
+  return [arr(t), arr(socWh), Array.from(t, () => preset.min_wh)];
+}
+
+/** Unix time of the first lethal shadow, or null when none falls in the span. */
+export function lethalUnixS(startUnixS: number, lethalH: number | null): number | null {
+  return lethalH === null ? null : startUnixS + lethalH * 3600;
+}
 
 /** uPlot data arrays, one aligned set per chart. x is Unix seconds. */
 export function buildChartData(tl: Timeline, preset: Preset): ChartData {

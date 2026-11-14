@@ -1,6 +1,16 @@
 import { expect, test } from "bun:test";
 import type { Preset, Timeline } from "./engine";
-import { buildChartData, indexAtTime, operableMask, operableRuns, thresholdLabel } from "./timelines";
+import { buildChartData, buildSocData, indexAtTime, lethalUnixS, operableMask, operableRuns, thresholdLabel } from "./timelines";
+
+test("soc data pairs the model's trace with the lethal-charge line", () => {
+  const d = buildSocData(Float64Array.from([0, 600]), Float64Array.from([10, 5]), { min_wh: 1 } as unknown as Preset);
+  expect(d).toEqual([[0, 600], [10, 5], [1, 1]]);
+});
+
+test("lethal time is start plus lethal hours, null when none", () => {
+  expect(lethalUnixS(1000, 2)).toBe(8200);
+  expect(lethalUnixS(1000, null)).toBeNull();
+});
 
 const preset = { earth_margin_deg: 2, cited: { load_w: true } } as unknown as Preset;
 const f = (...v: number[]) => Float64Array.from(v);
