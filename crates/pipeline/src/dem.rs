@@ -148,8 +148,11 @@ impl GeoTiff {
         for trow in row0 / th..=(row0 + h - 1) / th {
             for tcol in col0 / tw..=(col0 + w - 1) / tw {
                 let index = trow * across + tcol;
-                let DecodingResult::F32(px) = self.decoder.read_chunk(index)? else {
-                    return Err("expected Float32 samples".into());
+                // Float32 DEMs, or int16 counts (AVGVISIB, T20) returned as their raw count values
+                let px: Vec<f32> = match self.decoder.read_chunk(index)? {
+                    DecodingResult::F32(px) => px,
+                    DecodingResult::I16(px) => px.into_iter().map(f32::from).collect(),
+                    _ => return Err("expected Float32 or Int16 samples".into()),
                 };
                 // edge tiles are not padded: the row stride is the tile's data width (DATA-NOTES)
                 let (dw, dh) = self.decoder.chunk_data_dimensions(index);
@@ -296,6 +299,45 @@ pub struct FloatWindow {
 }
 
 impl FloatWindow {
+    /// A window over `heights_m` (row-major, `width × height`, metres above the 1 737 400 m sphere,
+    /// NaN = no data); `(x0_m, y0_m)` is the upper-left corner of pixel (0, 0), map metres.
+    pub fn from_heights(
+        x0_m: f64,
+        y0_m: f64,
+        pixel_m: f64,
+        width: u32,
+        height: u32,
+        heights_m: Vec<f32>,
+    ) -> Result<FloatWindow> {
+        if width < 2 || height < 2 || heights_m.len() != width as usize * height as usize {
+            return Err("window needs ≥ 2 × 2 pixels and width × height heights".into());
+        }
+        if !(x0_m.is_finite() && y0_m.is_finite() && pixel_m.is_finite() && pixel_m > 0.0) {
+            return Err("window geometry must be finite with a positive pixel".into());
+        }
+        let max_m = heights_m
+            .iter()
+            .filter(|v| v.is_finite())
+            .fold(f64::NEG_INFINITY, |m, &v| m.max(f64::from(v)));
+        if !max_m.is_finite() {
+            return Err("window has no finite height".into());
+        }
+        Ok(FloatWindow {
+            width,
+            height,
+            x0_m,
+            y0_m,
+            pixel_m,
+            heights_m,
+            max_m,
+        })
+    }
+
+    /// (width, height, x0_m, y0_m, pixel_m): pixels, and the upper-left corner and pixel size in map metres.
+    pub fn grid(&self) -> (u32, u32, f64, f64, f64) {
+        (self.width, self.height, self.x0_m, self.y0_m, self.pixel_m)
+    }
+
     /// Read the source pixels whose centres lie within `half_m` (map metres) of `centre` in x and y.
     pub fn read(
         src: &mut GeoTiff,
