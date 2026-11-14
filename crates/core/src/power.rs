@@ -120,7 +120,7 @@ fn check(p: &Preset) -> Result<(), EphError> {
 }
 
 /// Longest run of consecutive steps where `pred` holds.
-fn longest_run(xs: &[f64], pred: impl Fn(f64) -> bool) -> usize {
+pub fn longest_run(xs: &[f64], pred: impl Fn(f64) -> bool) -> usize {
     let (mut best, mut cur) = (0, 0);
     for &x in xs {
         cur = if pred(x) { cur + 1 } else { 0 };
