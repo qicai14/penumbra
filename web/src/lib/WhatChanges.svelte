@@ -14,11 +14,16 @@
   $effect(() => {
     const base = computedFor, mine = ++gen, baseH = scenario.survival.operable_h;
     shifted = [{ loading: true }, { loading: true }];
-    [-DATE_SHIFT_D, DATE_SHIFT_D].forEach((s, n) =>
-      computeScenario({ ...base, start_unix_s: base.start_unix_s + s * 86400 }).then(
-        (r) => { if (mine === gen) shifted = shifted.map((s, i) => (i === n ? { d: deltaDays(r.survival.operable_h, baseH) } : s)); },
-        (e) => { if (mine === gen) shifted = shifted.map((s, i) => (i === n ? { note: String(e?.message ?? e).replace(/^[A-Z_]+: /, "") } : s)); },
-      ));
+    // One run at a time, and none once inputs move on: computeScenario is serialised, so queued extras would delay the next main run.
+    (async () => {
+      for (const [n, s] of [-DATE_SHIFT_D, DATE_SHIFT_D].entries()) {
+        if (mine !== gen) return;
+        let v: Run;
+        try { v = { d: deltaDays((await computeScenario({ ...base, start_unix_s: base.start_unix_s + s * 86400 })).survival.operable_h, baseH) }; }
+        catch (e: any) { v = { note: String(e?.message ?? e).replace(/^[A-Z_]+: /, "") }; }
+        if (mine === gen) shifted = shifted.map((x, i) => (i === n ? v : x));
+      }
+    })();
   });
 
   const near = $derived.by(() => {
