@@ -1,6 +1,6 @@
 // The only module that imports lib/wasm/ or reads the fixture (ARCHITECTURE §3.5).
 // Typed arrays use platform byte order; every browser target is little-endian, so Int16Array over a file is safe.
-// Stub: survival is still on the fixture; sun_earth_track (T02), horizon (T07) and timeline (T08) are WASM. Flip each when its science ticket merges.
+// sun_earth_track (T02), horizon (T07), timeline (T08) and survival (T09) are WASM; the fixture still supplies the time grid and preset defaults.
 export type Site = { lat_deg: number; lon_deg: number; ground_m: number; mast_m: number };
 export type Horizon = { el_deg: Float64Array; dist_m: Float64Array }; // 720 each
 export type Track = {
@@ -219,8 +219,8 @@ export const TERRAIN_FAKE = false;
 let fixtureBase: Promise<Scenario> | undefined;
 /**
  * Sun and Earth tracks (the panorama's) come from the WASM Engine for the chosen site, on the fixture timeline's own
- * time grid so the shared cursor stays aligned with the timelines. Horizon is the real DEM (T07) and the timelines are Engine.timeline (T08); survival is still fixture
- * (T09), so `fake` stays true; the panorama badge reads TERRAIN_FAKE instead.
+ * time grid so the shared cursor stays aligned with the timelines. Horizon is the real DEM (T07) and the timelines are Engine.timeline (T08) and survival is
+ * the WASM `survival` (T09). `fake` stays true while the grid is the fixture's dates; the panorama badge reads TERRAIN_FAKE instead.
  */
 export async function computeScenario(inp: Inputs): Promise<Scenario> {
   const s = await (fixtureBase ??= loadFixture());
@@ -238,5 +238,12 @@ export async function computeScenario(inp: Inputs): Promise<Scenario> {
   const names = ["t_unix_s", "sun_az_deg", "sun_el_deg", "illumination", "visibility", "earth_az_deg", "earth_el_deg", "earth_margin_deg", "contact", "sun_dist_km"];
   const timeline = Object.fromEntries(names.map((k, i) => [k, flat.slice(i * n, (i + 1) * n)])) as Timeline;
   validate(timeline);
-  return { ...s, preset, site, track, horizon, timeline };
+  // Survival from the WASM free function (T09 #10) on that timeline; landing is its first step. NaN lethal_h = none in span.
+  const wasm = await import("./wasm/penumbra_wasm.js");
+  const pn = preset.panel === "tracking" ? [0, 0, 0, 0] : [1, preset.panel.east, preset.panel.north, preset.panel.up];
+  const sv = wasm.survival(flat, Float64Array.of(preset.capacity_wh, preset.start_wh, preset.min_wh, preset.panel_area_m2, preset.efficiency, ...pn, preset.load_w, 0, 0), t0);
+  const survival: Survival = { operable_h: sv[0], lethal_h: Number.isNaN(sv[1]) ? null : sv[1], longest_dark_h: sv[2],
+    longest_any_sun_h: sv[3], sunlit_h: sv[4], contact_h: sv[5], soc_wh: sv.slice(8, 8 + sv[7]) };
+  validate(survival);
+  return { ...s, preset, site, track, horizon, timeline, survival };
 }

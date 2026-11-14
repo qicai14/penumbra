@@ -224,3 +224,82 @@ impl Engine {
         .map_err(js_err)
     }
 }
+
+/// One survival run (docs/API.md). `timeline` is the 10 × n layout `Engine.timeline` returns (Unix
+/// s UTC, topocentric ENU degrees); `preset` is the 12-value layout: capacity_wh, start_wh, min_wh,
+/// panel_area_m2, efficiency (0–1), panel_mode (0 = Sun-tracking, 1 = fixed), fixed normal east,
+/// north, up (ENU), load_w, two reserved zeros. `landing_unix_s` must be the timeline's first step.
+/// Result: operable_h, lethal_h (hours after landing; NaN = no lethal shadow in the span),
+/// longest_dark_h, longest_any_sun_h, sunlit_h, contact_h, 0, m; then soc_wh[m], where m is the
+/// number of steps simulated (fewer than n when the run stops at a lethal shadow).
+#[wasm_bindgen]
+pub fn survival(
+    timeline: &[f64],
+    preset: &[f64],
+    landing_unix_s: f64,
+) -> Result<Vec<f64>, JsError> {
+    use penumbra_core::power::{Lethal, Panel, Preset};
+    if !timeline.len().is_multiple_of(10) || preset.len() != 12 {
+        return Err(JsError::new(
+            "BAD_INPUT: timeline must be 10 × n and preset 12 values",
+        ));
+    }
+    let n = timeline.len() / 10;
+    let col = |c: usize| timeline[c * n..(c + 1) * n].to_vec();
+    let tl = penumbra_core::timeline::Timeline {
+        t_unix_s: col(0),
+        sun_az_deg: col(1),
+        sun_el_deg: col(2),
+        illumination: col(3),
+        visibility: col(4),
+        earth_az_deg: col(5),
+        earth_el_deg: col(6),
+        earth_margin_deg: col(7),
+        contact: col(8),
+        sun_dist_km: col(9),
+    };
+    #[allow(clippy::float_cmp)] // the mode and reserved slots are exact small integers
+    let panel = match preset[5] {
+        0.0 => Panel::SunTracking,
+        1.0 => Panel::Fixed {
+            east: preset[6],
+            north: preset[7],
+            up: preset[8],
+        },
+        _ => return Err(JsError::new("BAD_INPUT: panel_mode must be 0 or 1")),
+    };
+    #[allow(clippy::float_cmp)]
+    if preset[10] != 0.0 || preset[11] != 0.0 {
+        return Err(JsError::new("BAD_INPUT: preset reserved values must be 0"));
+    }
+    let p = Preset {
+        capacity_wh: preset[0],
+        start_wh: preset[1],
+        min_wh: preset[2],
+        panel_area_m2: preset[3],
+        efficiency: preset[4],
+        panel,
+        load_w: preset[9],
+    };
+    let s = penumbra_core::power::survival(&tl, &p, landing_unix_s).map_err(js_err)?;
+    let lethal_h = match s.lethal {
+        Lethal::At {
+            after_landing_h, ..
+        } => after_landing_h,
+        Lethal::NoneInSpan => f64::NAN,
+    };
+    #[allow(clippy::cast_precision_loss)] // step counts are far below 2^52
+    let m = s.soc_wh.len() as f64;
+    let mut out = vec![
+        s.operable_h,
+        lethal_h,
+        s.longest_dark_h,
+        s.longest_any_sun_h,
+        s.sunlit_h,
+        s.contact_h,
+        0.0,
+        m,
+    ];
+    out.extend(s.soc_wh);
+    Ok(out)
+}
