@@ -144,6 +144,17 @@ pub struct Site {
     pub mast_m: f64,
 }
 
+impl std::fmt::Display for EphError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EphError::BadInput(why) => write!(f, "{}: {why}", self.code()),
+            _ => f.write_str(self.code()),
+        }
+    }
+}
+
+impl std::error::Error for EphError {}
+
 impl From<GeometryError> for EphError {
     fn from(e: GeometryError) -> Self {
         match e {
