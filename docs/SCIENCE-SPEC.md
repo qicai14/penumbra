@@ -63,7 +63,7 @@ Forward from (lat φ, east lon λ), for the API edge:
 - Orientation check [D]: Mazarico's SP-01 at 222.69°E, 89.45°S (E85) maps to (x, y) = (−11.31, −12.26) km with these formulas. Barker 2021's Site 1 points on the same ridge are at X = −11.58 km, Y = −12.46 km (E129, E130). They agree, so this orientation is right for the PGDA products. The sibling illumination raster also states `CENTER_LONGITUDE = 0` (W3b). Still read the GeoTIFF tags on Nov 14 [U5].
 - Local scale factor k = 1 + t: 1.0000 at the pole, 1.0077 at 80°S [D]. Map distance is not ground distance. Working in 3D vectors removes the issue.
 - Pixel convention [U5]: GeoTIFF is normally pixel-is-area, so pixel (col, row) has its centre at x = x₀ + (col + 0.5)·Δ, y = y₀ − (row + 0.5)·Δ, where (x₀, y₀) is the upper-left corner from the tiepoint tag. Read `GTRasterTypeGeoKey`; do not assume.
-- Extent: the 20 m product covers ± 304 km (E135). A 240 m product to 60°S exists for the far field (E89), and an 80 m one if a middle tier is needed.
+- Extent: the 20 m product covers ± 304 km (E135). A 240 m product to 60°S exists for the far field (E89), and an 80 m one (E134). The shipped 80 m middle tier is built from 4 × 4 means of the 20 m product instead (#48).
 
 **Positions.**
 

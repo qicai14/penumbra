@@ -2,7 +2,7 @@
   "fake": true,
   "note": "FAKE stub manifest for T11. Not a pipeline output.",
   "format_version": 1,
-  "api_version":4,
+  "api_version": 4,
   "regions": [
     {
       "id": "fake-region",

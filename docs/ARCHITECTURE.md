@@ -108,7 +108,7 @@ What reruns on each kind of change (the adapter keeps the last horizon, keyed by
 
 ## 2. Data structures and algorithms
 
-Sizes used throughout: R = 1 737 400 m; 720 azimuths at 0.5° (SCIENCE-SPEC §1a); near field 20 m to 7 km, far field 240 m beyond; far tile ±382 km; hourly ephemeris 2026–2030; timelines at 10 min. 360 azimuths halves every horizon number below, but the spec fixes 720 and the Sun's disc (0.53°) is about one 0.5° bin wide, so 360 would undersample it.
+Sizes used throughout: R = 1 737 400 m; 720 azimuths at 0.5° (SCIENCE-SPEC §1a); near field 20 m to 7 km, middle 80 m to 31 km, far field 240 m beyond (#48); far tile ±382 km; hourly ephemeris 2026–2030; timelines at 10 min. 360 azimuths halves every horizon number below, but the spec fixes 720 and the Sun's disc (0.53°) is about one 0.5° bin wide, so 360 would undersample it.
 
 ### 2.1 DEM tiles
 
@@ -184,9 +184,10 @@ No trig and no square root inside the inner loop: about 45 flops, 1 division, 4 
 | Tier | Steps | Count |
 |---|---|---|
 | Near, 20 m tile | s = 20 m × j, j = 1…350 (the site's own pixel is skipped) | 350 |
-| Far, 240 m tile | s = 7 000 m + 240 m × j, until the early exit or the tile edge | 804 to 200 km; at most 1 562 to the edge at 382 km |
+| Mid, 80 m tile | s = 7 000 m + 80 m × j, j = 1…300 | 300 |
+| Far, 240 m tile | s = 31 000 m + 240 m × j, until the early exit or the tile edge | 704 to 200 km; at most 1 462 to the edge at 382 km |
 
-The step table is at most 1 912 entries × 3 f64 = 46 kB. The switch at exactly 7 km is deliberate: every site is at least 7 km inside its near tile, so the near march can never leave coverage. T-1a-4 decides whether 7 km is enough.
+The step table is at most 2 112 entries × 3 f64 = 51 kB. The switch at exactly 7 km is deliberate: every site is at least 7 km inside its near tile, so the near march can never leave coverage. The mid tile (±39.68 km) leaves about 350 m of margin past 31 km at a pick-area corner (test `corners_of_the_pick_area_get_a_horizon_through_the_mid_tier`). T-1a-4 showed two tiers were not enough; the mid tier brings it under 0.05° (DATA-NOTES, #48). The cost table below is still the two-tier count; add 300 − 100 = 200 samples per azimuth for the mid tier.
 
 **Curvature term.** It is the `r_t·versθ` part of `num`. The drop below the tangent plane is s²/2R: 0.74 m at 1.6 km, 720 m at 50 km, 6.5 km at 150 km, 11.5 km at 200 km. That last number is why the march can stop: beyond roughly 200 km nothing on the Moon's south polar terrain stands high enough to matter (F2: a 7 km peak at 200 km sits at −1.30°).
 

@@ -60,7 +60,7 @@ Run Nov 14: `PENUMBRA_DATA=D:\DownloadHDD\penumbra-resource target/release/penum
 | WASM release build under Bun 1.4.4 (JavaScriptCore), `performance.now()` around 20 `engine.horizon()` calls | median 9.57 ms, max 11.03 ms | median 20.88 ms, max 23.29 ms |
 | Browser: Claude desktop app pane (Chromium 152, Windows 11, same 8-logical-CPU Zen 2 machine), Vite dev server, `performance.now()` around 20 `engine.horizon()` calls / 20, 3 runs after 1 warm-up | 9.87, 10.29, 11.18 ms per call (median 10.29) | 23.48, 23.50, 27.22 ms per call (median 23.50) |
 
-The WASM and browser rows are the two-tier march; they are not re-measured with the middle tier yet (the web does not load it yet, #48). The middle tier adds 300 samples per azimuth, so native time rose by 1.5–1.8×. Every measured time, browser included, is below the 50 ms target (ARCHITECTURE §2.2) and far below the 2 s threshold that fires slip cut 3. No cut is needed. The SP-01 run takes longer because its horizon is low (−0.86° at best), so the early exit fires late and most azimuths march to about 190 km.
+The WASM and browser rows are the two-tier march; they are not re-measured with the middle tier yet (the web loads it since #48, but nobody has timed it). The middle tier adds 300 samples per azimuth, so native time rose by 1.5–1.8×. Native times with the middle tier, and the older two-tier browser times, are below the 50 ms target (ARCHITECTURE §2.2) and far below the 2 s threshold that fires slip cut 3. No cut is needed. The SP-01 run takes longer because its horizon is low (−0.86° at best), so the early exit fires late and most azimuths march to about 190 km.
 
 ### T-1a-4: tier ablation
 
