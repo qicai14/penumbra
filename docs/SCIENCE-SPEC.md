@@ -190,7 +190,7 @@ No source in the corpus prints an update equation (the rover papers define the s
 - Limitations: no charge or discharge efficiency, no separate night heater load.
 - Δt = 10 min. Explicit Euler is exact when power is held constant over a step.
 - Outputs to report beside it, with the published definitions: the longest continuous period when "no part of the Sun is visible" and the longest when any part is (E123).
-- Hours are sums over the timeline steps, each step counting Δt: sunlit hours = Σ illumination × Δt (a half-hidden Sun counts half); contact hours = Σ contact × Δt; operable hours = Σ (illumination > 0 and contact) × Δt, the glossary's operable window (ARCHITECTURE §2.5).
+- Hours are sums over the timeline steps, each step counting Δt: sunlit hours = Σ illumination × Δt (a half-hidden Sun counts half); contact hours = Σ contact × Δt; operable hours = Σ (illumination > 0 and contact) × Δt, the glossary's operable window (ARCHITECTURE §2.5). Operable hours stop at the lethal time (the lethal step counted only up to it; the full span when there is none), since a dead lander is not operable; sunlit, contact, longest-dark and longest-any-Sun hours stay full-span site statistics (E123), comparable to PGDA in V2.
 - Presets. Cited: the rover paper's 10,000 Wh battery, 1.5 m² panel at 30 %, 220 W driving load (E58a–d); cell efficiency about 15 % for silicon (E59b). Not cited: any IM-1 or IM-2 value [U10]. Show uncited values as "assumed".
 - Why darkness length is the design driver: Fincannon sizes storage from "73 to 117 hours" for the worst lunar day at a Shackleton rim site (E59).
 

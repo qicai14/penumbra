@@ -61,11 +61,13 @@ pub enum Lethal {
     NoneInSpan,
 }
 
-/// One survival run (docs/API.md `survival`). Hour totals cover the whole timeline span, each
-/// step counting Δt, whether or not the battery died first (§1e).
+/// One survival run (docs/API.md `survival`). Each step counts Δt (§1e). `operable_h` is the
+/// lander's and stops at the lethal time; the other totals are site statistics over the whole
+/// timeline span, whether or not the battery died first (E123, comparable to PGDA).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Survival {
-    /// Σ (illumination > 0 and contact) × Δt.
+    /// Σ (illumination > 0 and contact) × Δt up to the lethal time (the lethal step counted only
+    /// to t_lethal); the full span when `NoneInSpan`.
     pub operable_h: f64,
     pub lethal: Lethal,
     /// Longest run with illumination = 0: "no part of the Sun is visible" (E123).
@@ -208,13 +210,16 @@ pub fn survival(tl: &Timeline, p: &Preset, landing_unix_s: f64) -> Result<Surviv
     #[allow(clippy::cast_precision_loss)] // step counts are far below 2^52
     let hours = |steps: usize| steps as f64 * dt_h;
     Ok(Survival {
-        operable_h: hours(
-            illum
-                .iter()
-                .zip(&tl.contact)
-                .filter(|&(&f, &c)| f > 0.0 && c == 1.0)
-                .count(),
-        ),
+        operable_h: t
+            .iter()
+            .zip(illum.iter().zip(&tl.contact))
+            .filter(|&(_, (&f, &c))| f > 0.0 && c == 1.0)
+            .map(|(&t_k, _)| match lethal {
+                // the lethal step counts only up to t_lethal; later steps not at all
+                Lethal::At { t_unix_s, .. } => (t_unix_s - t_k).clamp(0.0, step_s) / 3600.0,
+                Lethal::NoneInSpan => dt_h,
+            })
+            .sum(),
         lethal,
         longest_dark_h: hours(longest_run(illum, |f| f == 0.0)),
         longest_any_sun_h: hours(longest_run(illum, |f| f > 0.0)),

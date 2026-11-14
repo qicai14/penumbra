@@ -192,3 +192,79 @@ fn a_non_unit_fixed_panel_normal_is_refused() {
     let t = tl(&[1.0; 3], &[1.0; 3], 0.0, 0.0, AU_KM);
     assert!(survival(&t, &preset(1_000.0, 1.0, 1.0, panel, 0.0), T0).is_err());
 }
+
+#[test]
+fn operable_hours_stop_at_the_lethal_time_but_site_hours_cover_the_span() {
+    // Area 0, so P_gen = 0: 705 Wh at 100 W dies at 7.05 h (T-1e-1). Sun f = 0 for 40 steps then 1
+    // for 20, contact throughout. Operable from 40/6 h to death: 7.05 − 40/6 = 0.383 333 h.
+    // Sunlit 20/6 h and contact 60/6 h stay full-span site statistics.
+    let mut f = vec![0.0; 40];
+    f.extend([1.0; 20]);
+    let t = tl(&f, &[1.0; 60], 0.0, 3.0, AU_KM);
+    let s = survival(&t, &preset(705.0, 0.0, 0.3, Panel::SunTracking, 100.0), T0).unwrap();
+    assert!(
+        (s.operable_h - (7.05 - 40.0 / 6.0)).abs() < 1e-9,
+        "{}",
+        s.operable_h
+    );
+    assert!((s.sunlit_h - 20.0 / 6.0).abs() < 1e-12);
+    assert!((s.contact_h - 10.0).abs() < 1e-12);
+    assert!((s.longest_any_sun_h - 20.0 / 6.0).abs() < 1e-12);
+    assert!((s.longest_dark_h - 40.0 / 6.0).abs() < 1e-12);
+}
+
+#[test]
+fn death_with_generation_interpolates_on_the_net_power() {
+    // Tracking 1 m² at 10 %, f = 1, 1 AU: P_gen = 136.61 W; load 236.61 W nets −100 W, so 705 Wh
+    // dies at 7.050 h as in T-1e-1.
+    let t = tl(&[1.0; 60], &[1.0; 60], 0.0, 3.0, AU_KM);
+    let s = survival(&t, &preset(705.0, 1.0, 0.1, Panel::SunTracking, 236.61), T0).unwrap();
+    let Lethal::At {
+        after_landing_h, ..
+    } = s.lethal
+    else {
+        panic!("expected a lethal shadow, got {:?}", s.lethal);
+    };
+    assert!((after_landing_h - 7.050).abs() <= 1e-9, "{after_landing_h}");
+}
+
+#[test]
+fn start_at_or_below_the_lethal_charge_dies_at_landing() {
+    let t = tl(&[1.0; 3], &[1.0; 3], 0.0, 3.0, AU_KM);
+    let s = survival(&t, &preset(0.0, 1.0, 0.3, Panel::SunTracking, 100.0), T0).unwrap();
+    assert_eq!(
+        s.lethal,
+        Lethal::At {
+            t_unix_s: T0,
+            after_landing_h: 0.0
+        }
+    );
+    assert_eq!(s.soc_wh, vec![0.0]);
+    assert_eq!(s.operable_h, 0.0);
+}
+
+#[test]
+fn bad_presets_are_refused() {
+    let t = tl(&[1.0; 3], &[1.0; 3], 0.0, 3.0, AU_KM);
+    let ok = preset(1_000.0, 1.0, 0.3, Panel::SunTracking, 100.0);
+    for p in [
+        Preset {
+            start_wh: 10_001.0,
+            ..ok
+        },
+        Preset {
+            min_wh: 10_001.0,
+            ..ok
+        },
+        Preset {
+            load_w: f64::NAN,
+            ..ok
+        },
+        Preset {
+            capacity_wh: f64::INFINITY,
+            ..ok
+        },
+    ] {
+        assert!(survival(&t, &p, T0).is_err(), "{p:?}");
+    }
+}
