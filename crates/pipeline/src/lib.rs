@@ -2,6 +2,7 @@
 
 pub mod dem;
 pub mod eph;
+pub mod psr;
 pub mod v4;
 
 use std::path::Path;
