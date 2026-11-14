@@ -44,6 +44,7 @@ pub fn disc_fraction(
             "disc radius must be in (0, 90°) and elevation finite",
         ));
     }
+    // shortcut: one step with the disc at the zenith fails the whole timeline; fine at the south pole (Sun el < 7°), handle per step before any low-latitude site.
     if centre.el_rad.abs() + radius_rad >= FRAC_PI_2 {
         return Err(GeometryError::BadInput("disc reaches the zenith"));
     }

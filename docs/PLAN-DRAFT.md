@@ -306,7 +306,7 @@ Hours check. Qi Cai Must: 0.5 + 1 + 1.5 + 1 + 1.5 + 1.75 + 1.25 + 1.5 + 1 = 11.0
 - **Acceptance criteria**
   - [ ] T-1b-1: a flat horizon at u·ρ gives f = (acos u − u·√(1 − u²)) / π within 2e-3 using 32 midpoint strips; u = 0 gives 0.5.
   - [ ] T-1b-2: a hidden disc gives exactly 0. N2: a clear disc gives exactly 1 (normalised by Σ 2w).
-  - [ ] ρ is recomputed at each step from the Sun's distance and stays within 0.262°–0.271°.
+  - [ ] ρ is recomputed at each step from the Sun's distance and stays within 0.261°–0.272° (Moon-centred; widened Nov 14).
   - [ ] P1: visibility ≥ illumination at every step, and the two outputs have those names.
   - [ ] N8: the margin is continuous as the Sun crosses azimuth 0/360.
   - [ ] Earth: margin = el_earth − el_hor(az_earth); contact = margin ≥ 2° by default, labelled "assumed". "Any fraction of the Earth visible" is a separate, differently named function (P14).

@@ -367,3 +367,53 @@ fn sun_radius_stays_in_range_over_the_30_day_timeline() {
         "ρ is constant"
     );
 }
+
+// Review Should 1 (brief rows 9–10): a tilted straight horizon y = b + s·x across the disc, centred
+// on the 0/360 seam at el 60°, matches the flat oracle at the line's distance u = b / √(1 + s²).
+// Catches a missing 1/cos(el) in the strip azimuth and a broken wrap. (A mirrored ξ sign cannot be
+// seen: the disc is symmetric, so the fraction of a reflected horizon is the same.)
+#[test]
+fn tilted_horizon_across_the_seam_matches_the_closed_form() {
+    let (az_c, el_c) = (0.1_f64, 60.0_f64);
+    let (b, s) = (0.3 * RHO_RAD, 1.0);
+    let h: [f64; N_AZ] = std::array::from_fn(|i| {
+        #[allow(clippy::cast_precision_loss)] // i < 720, exact
+        let d = (i as f64 * 0.5 - az_c + 180.0).rem_euclid(360.0) - 180.0;
+        el_c.to_radians() + b + s * el_c.to_radians().cos() * d.to_radians()
+    });
+    let f = disc_fraction(&h, sun(az_c, el_c), RHO_RAD).unwrap();
+    let want = flat_oracle(0.3 / (1.0 + s * s).sqrt());
+    assert!((f - want).abs() < 2e-3, "f = {f}, closed form {want}");
+}
+
+// Review Should 2 (brief row 13): the timeline uses this step's ρ = asin(R_sun / d_sun), not a
+// constant: each step equals disc_fraction at that step's own radius.
+#[test]
+fn timeline_uses_the_per_step_sun_radius() {
+    let h = rolling_horizon();
+    let tl = timeline(
+        &shipped_ephemeris(),
+        &h,
+        &im2(),
+        T0_UNIX_S,
+        600.0,
+        4320,
+        DEFAULT_EARTH_MARGIN_DEG.to_radians(),
+    )
+    .unwrap();
+    let mut differs = 0;
+    for i in 0..tl.illumination.len() {
+        let c = sun(tl.sun_az_deg[i], tl.sun_el_deg[i]);
+        let rho = (penumbra_core::eph::R_SUN_KM / tl.sun_dist_km[i]).asin();
+        let own = disc_fraction(&h, c, rho).unwrap();
+        assert!(
+            (tl.illumination[i] - own).abs() < 1e-9,
+            "step {i}: {} vs {own}",
+            tl.illumination[i]
+        );
+        if (disc_fraction(&h, c, RHO_RAD).unwrap() - own).abs() > 1e-6 {
+            differs += 1;
+        }
+    }
+    assert!(differs > 0, "no step where ρ matters; the test is vacuous");
+}

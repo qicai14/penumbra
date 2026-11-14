@@ -8,7 +8,7 @@ The 30-day, 10-minute timeline for the picked site from real data: illumination,
 
 - [ ] T-1b-1: a flat horizon at u·ρ gives f = (acos u − u·√(1 − u²)) / π within 2e-3 using 32 midpoint strips; u = 0 gives 0.5.
 - [ ] T-1b-2: a hidden disc gives exactly 0. N2: a clear disc gives exactly 1 (normalised by Σ 2w).
-- [ ] ρ is recomputed at each step from the Sun's distance and stays within 0.262°–0.271°. **(See decision D3: assert 0.2614°–0.2719°.)**
+- [ ] ρ is recomputed at each step from the Sun's distance and stays within 0.261°–0.272° (Moon-centred; widened Nov 14). **(See decision D3: assert 0.2614°–0.2719°.)**
 - [ ] P1: visibility ≥ illumination at every step, and the two outputs have those names.
 - [ ] N8: the margin is continuous as the Sun crosses azimuth 0/360.
 - [ ] Earth: margin = el_earth − el_hor(az_earth); contact = margin ≥ 2° by default, labelled "assumed". "Any fraction of the Earth visible" is a separate, differently named function (P14).
@@ -73,7 +73,7 @@ The default threshold, 2° (E62), is the adapter's and the preset's business; `c
 - **N2 / T-1b-2.** "Exactly" means `== 0.0` and `== 1.0`. The PSR test in V5 case 3 relies on exact zeros over 163 000 steps.
 - **N8.** All azimuth arithmetic goes through `horizon_at`, which wraps. Don't index `el[]` anywhere else.
 - **P14.** `contact` uses the Earth's centre plus the margin. `earth_any_visible` uses the limb. They differ by up to 0.95° + 2°. Keep both names.
-- **D3.** The ticket's ρ band (0.262°–0.271°) was derived for the Earth's distance from the Sun. From the Moon the range is 0.26149°–0.27185° [S]. Assert 0.2614°–0.2719° and print the observed min and max in the PR.
+- **D3.** The ticket's ρ band (0.261°–0.272° (Moon-centred; widened Nov 14)) was derived for the Earth's distance from the Sun. From the Moon the range is 0.26149°–0.27185° [S]. Assert 0.2614°–0.2719° and print the observed min and max in the PR.
 - **No limb darkening** (E26 is Barker's choice, not ours). f is the geometric fraction (E08). It goes on the Limitations list.
 - A sliver of disc between two strip midpoints can read f = 0 while a hair is visible. The threshold error is 0.0005·ρ, or 0.00013°. Leave it.
 - Don't test `margin ≥ 2°` with a horizon built as `el − 2°`: the subtraction can land on either side of 2.0. Row 11 uses thresholds on both sides instead.
