@@ -20,6 +20,8 @@ Penumbra tells a lunar landing planner how many hours of sunlight and Earth cont
 
 NASA Space Apps Challenge 2026 · Team **Fractured Toes**: Charls Pua Vui Hau and Lim Qi Cai.
 
+NASA Space Apps Challenge 2026 · The Next Frontier · Lunar Landing Site Navigator (https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/)
+
 ## Who it is for
 
 You plan a landing for a CLPS lander or an Artemis crew. You have a few candidate sites near the south pole and a few possible dates. At that latitude the Sun skims the horizon, so a distant ridge decides whether your solar panels charge and a crater rim can cut your line to Earth. For each site and date you need to know how long the lander will have power, how long it can talk home, and when the first shadow it cannot survive arrives.
