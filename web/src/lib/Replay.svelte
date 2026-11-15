@@ -107,7 +107,7 @@
         <p class="fig"><span class="cap">Operable</span><strong data-testid="{id}-operable">{hd.operable}</strong></p>
         <p class="fig">
           <span class="cap">{!hd.none && sc.survival.sunlit_h === 0 ? "Battery empty in" : "First lethal shadow in"}</span>
-          <strong data-testid="{id}-lethal">{#if !hd.none}<span aria-hidden="true">✕ </span>{/if}{hd.lethal}</strong>
+          <strong data-testid="{id}-lethal">{hd.lethal}</strong>
         </p>
       {/snippet}
       <article class="col" data-testid="answer-regional" aria-labelledby="ar-h">

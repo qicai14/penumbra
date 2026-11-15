@@ -152,7 +152,7 @@
     {#if cmp}<Compare {controls} pairs={cmp.pairs} base={cmp.base} metas={cmp.metas} eph={cmp.eph} why={cmp.why} />{:else if !cmpError}<p class="msg">Loading…</p>{/if}
   {:else}
   <p class="tag">~/{view}</p>
-  {#if view === "site" && tile}<SitePicker {controls} {tile} {onregion} feed={maskFeed} {grid} {gridK} {grids} />{/if}
+  {#if view === "site" && tile}<SitePicker {scenario} {controls} {tile} {onregion} feed={maskFeed} {grid} {gridK} {grids} />{/if}
   {#if tileError}<p class="msg" role="alert">{tileError}</p>{/if}
   {#if error}<p class="msg" role="alert">{error}</p>{/if}
   {#if scenario && computedFor}
