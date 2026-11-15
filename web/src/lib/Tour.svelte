@@ -23,7 +23,7 @@
     // The target mounts once the scenario has loaded, so look again until it exists.
     let el: HTMLElement | null = null;
     const find = () => {
-      if (el) return;
+      if (el?.isConnected) return;
       el = document.querySelector<HTMLElement>(STEPS[step].sel);
       if (!el) return;
       el.setAttribute("data-tour-on", "");
@@ -33,17 +33,23 @@
     const timer = setInterval(find, 250);
     return () => { clearInterval(timer); el?.removeAttribute("data-tour-on"); };
   });
+
+  // The card sits after main in the DOM, so give it focus or keyboard users never reach it.
+  let nextBtn = $state<HTMLButtonElement>();
+  $effect(() => { if (open) nextBtn?.focus(); });
 </script>
 
-<svelte:window onkeydown={(e) => { if (open && e.key === "Escape") close(); }} />
+<svelte:window onkeydown={(e) => { if (open && e.key === "Escape" && !e.defaultPrevented) close(); }} />
 
 {#if open}
   <div class="tour" role="dialog" aria-label="Quick tour" aria-modal="false" data-testid="tour">
-    <h2>{STEPS[step].title}</h2>
-    <p>{STEPS[step].text}</p>
+    <div aria-live="polite">
+      <h2>{STEPS[step].title}</h2>
+      <p>{STEPS[step].text}</p>
+    </div>
     <div class="row">
       <span class="n">{step + 1} / {STEPS.length}</span>
-      <button type="button" onclick={() => (step === STEPS.length - 1 ? close() : step++)} data-testid="tour-next">{step === STEPS.length - 1 ? "Done" : "Next"}</button>
+      <button type="button" bind:this={nextBtn} onclick={() => (step === STEPS.length - 1 ? close() : step++)} data-testid="tour-next">{step === STEPS.length - 1 ? "Done" : "Next"}</button>
       <button type="button" onclick={close} aria-label="Close tour" data-testid="tour-close">✕</button>
     </div>
   </div>
