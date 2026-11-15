@@ -62,6 +62,10 @@ _Length: about 1 950 characters._
 > - Bun for scripts and tests, and Playwright for browser tests.
 > - Typst for the project document.
 > - Deployed on Cloudflare Pages.
+>
+> **Team and contributions.** Team Fractured Toes. Counts from the git history on `main`, as of 2026-11-15.
+> - Lim Qi Cai (team lead; 107 commits, 49 merged PRs): idea and research, planning, repo scaffolding, CI and Cloudflare deploy, the science model and data pipeline (`crates/core`, `crates/pipeline`, WASM), validation (V1–V5), web app features, the D1 paper and submission docs.
+> - Charls Pua Vui Hau (60 commits, 21 merged PRs): web app UI and tests (`web/src`, `web/tests`), design and v2 wireframes (`design/`), screenshots, the D2 poster and the D3/D4 videos.
 
 ## 5. NASA data and partner data (with citations)
 

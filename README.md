@@ -18,7 +18,7 @@
 
 Penumbra tells a lunar landing planner how many hours of sunlight and Earth contact a lander gets at a south-pole site and date, and when the first lethal shadow arrives. One Rust model runs natively for validation and as WASM in the browser, checked against JPL Horizons and NASA LOLA illumination maps.
 
-NASA Space Apps Challenge 2026 · Team **Fractured Toes**: Charls Pua Vui Hau and Lim Qi Cai.
+NASA Space Apps Challenge 2026 · Team **Fractured Toes**: Lim Qi Cai and Charls Pua Vui Hau.
 
 NASA Space Apps Challenge 2026 · The Next Frontier · Lunar Landing Site Navigator (https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/)
 
@@ -72,8 +72,6 @@ Where the other tools are better:
 - **Moon Trek** covers the whole Moon in one portal, with lighting, slope, Sun-angle and line-of-sight tools [T1][T3]. Penumbra covers ten south-pole regions.
 - **QuickMap** carries the full LROC data catalogue, a Sun+Earth terrain-shadow tool over any time range, and CSV export [Q2]. Penumbra ships only the layers its model needs.
 - **Horizons** is the ephemeris authority (DE441). It's free and scriptable through an API [H1][H2]. Penumbra's V1 test uses Horizons as its judge.
-
-[SUNLOCK](https://github.com/nasa/spaceapps/discussions/2170) and [Lunar Window](https://github.com/nasa/spaceapps/discussions/2092) are other teams on this challenge; we did not compare features.
 
 <sub>
 [T1] https://trek.nasa.gov/moon/ ·
@@ -226,7 +224,14 @@ The terrain and ephemeris files the app needs are already in `web/public/data`. 
 - The NSAKL26 organisers, for running NASA Space Apps Challenge 2026.
 - The open-source libraries we build on: Rust and wasm-bindgen, Svelte, Vite, Three.js, uPlot, Bun, Playwright and Typst, and the IBM Plex Mono and Archivo typefaces.
 
-Team **Fractured Toes**: Charls Pua Vui Hau and Lim Qi Cai.
+Team **Fractured Toes**: Lim Qi Cai and Charls Pua Vui Hau.
+
+## Team and contributions
+
+Counts from the git history on `main`, as of 2026-11-15.
+
+- **Lim Qi Cai** (team lead; 107 commits, 49 merged PRs): idea and research, planning, repo scaffolding, CI and Cloudflare deploy, the science model and data pipeline (`crates/core`, `crates/pipeline`, WASM), validation (V1–V5), web app features, the D1 paper and submission docs.
+- **Charls Pua Vui Hau** (60 commits, 21 merged PRs): web app UI and tests (`web/src`, `web/tests`), design and v2 wireframes (`design/`), screenshots, the D2 poster and the D3/D4 videos.
 
 ## References
 
