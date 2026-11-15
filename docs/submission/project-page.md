@@ -10,7 +10,7 @@ Draft text for each field on the Space Apps project page, to paste in after "Edi
 
 _Length: about 1 150 characters._
 
-> Penumbra is a survival planner for lunar south-pole landers, built for the "Lunar Landing Site Navigator" challenge in "The Next Frontier". Near the pole the Sun never climbs more than a few degrees above the horizon, so a small hill can cast a shadow hundreds of metres long. Moving a landing site by 100 m, or the date by 2 days, can decide whether a mission survives. IM-1 and IM-2 both landed near the pole and ended early.
+> Penumbra is a survival planner for lunar south-pole landers, built for the "Lunar Landing Site Navigator" challenge in "The Next Frontier". Near the pole the Sun never climbs more than a few degrees above the horizon, so "the interaction of grazing sunlight and large local topography variations leads to extreme illumination conditions" (Gläser et al. 2018, doi 10.1016/j.pss.2017.07.006). The challenge says "Small changes in landing location or date can dramatically affect both power generation potential and communication windows." In our own model output, landing at IM-2's site 2 days early (2026-11-12 instead of 2026-11-14) takes operable time from 15.9 days to 0 h. IM-1 and IM-2 both landed near the pole and ended early.
 >
 > For any site and landing date, Penumbra tells a planner how many hours of sunlight and Earth contact the lander gets, and when the first shadow arrives that would drain its battery. It builds a 360° terrain horizon from NASA LOLA elevation maps and computes Sun and Earth positions from JPL's DE440 ephemeris. A battery model then turns those into an operable window and a time to first lethal shadow.
 >
@@ -94,12 +94,12 @@ _The form has a checkbox confirming this list is complete. Tick it only after ch
   - ANISE 0.10.6 (https://github.com/nyx-space/anise)
   - wasm-bindgen 0.2.130
   - tiff 0.11.3
-  - serde_json
+  - serde_json 1.0.154
 - **JavaScript libraries:**
-  - Svelte 5
-  - Vite
-  - Three.js
-  - uPlot
+  - Svelte 5.57.3
+  - Vite 8.3.7
+  - Three.js 0.187.0
+  - uPlot 1.6.32
   - Playwright (tests)
   - TypeScript
   - svelte-check
