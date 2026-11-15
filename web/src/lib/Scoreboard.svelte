@@ -1,6 +1,6 @@
 <script lang="ts">
   import Explain from "./Explain.svelte";
-  import { headline, loadScoreboard, rowStatus, tally, type Row } from "./scoreboard";
+  import { headline, isRecon, loadScoreboard, rowStatus, tally, type Row } from "./scoreboard";
 
   let rows = $state.raw<Row[] | null>(null);
   let error = $state<string | null>(null);
@@ -11,7 +11,7 @@
   // Display only. V2b: all 7 Barker RoIs pass; the miss is Mazarico SP-01.
   const note: Record<string, string> = { V2b: "7 of 7 Barker RoIs pass. The miss is Mazarico SP-01: our shortest night is 2.96 d vs his 2.75 d." };
   // A pass with no threshold is a reconstruction, not a validation (V4).
-  const recon = (r: Row) => r.pass === true && r.threshold === null;
+  const recon = isRecon;
   const num =(v: number | null) => (v === null ? "—" : String(v));
 </script>
 
