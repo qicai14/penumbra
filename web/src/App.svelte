@@ -46,6 +46,14 @@
   loadManifest().then((m) => Promise.all((m.grids ?? []).map(fetchGrid))).then((g) => (grids = g), (e) => (tileError = `Heatmap not loaded: ${e?.message ?? e}`));
   const grid = $derived(grids.find((g) => g.meta.region === tile?.region.id) ?? null);
   const gridK = $derived(grid ? dateIndex(grid, controls.date) : -1);
+  const betterAt = $derived.by((): [number, number] | null => {
+    if (!grid || gridK < 0 || controls.preset || controls.mastM !== grid.meta.mast_m || controls.spanDays !== grid.meta.span_days) return null;
+    const b = nearestBetter(grid, gridK, ...latlonToXy(controls.lat, controls.lon));
+    if (b?.kind !== "better") return null;
+    const [lat, lon] = xyToLatlon(b.x, b.y);
+    return [+lat.toFixed(4), +lon.toFixed(4)];
+  });
+  const movePin = () => { if (betterAt) [controls.lat, controls.lon] = betterAt; };
   const nearby = $derived.by(() => {
     if (!grid || gridK < 0) return null;
     // The grid is built for the default preset, mast and span; once the planner changes any, its numbers no longer match the headline.
@@ -146,7 +154,7 @@
     </p>
     <div class="toprow">
       <Countdown {scenario} {idx} sticky={false} />
-      <Headline {scenario} {nearby} />
+      <Headline {scenario} {nearby} onmove={betterAt ? movePin : undefined} />
     </div>
     <WhatChanges {scenario} {computedFor} {grid} {gridK} gridUsable={!controls.preset && controls.mastM === grid?.meta.mast_m && controls.spanDays === grid?.meta.span_days} />
     <Survival {scenario} {controls} />

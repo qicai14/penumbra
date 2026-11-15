@@ -470,3 +470,29 @@ test("ten regions: each shows its tier and label, and the ranking is numbered an
   expect([...days].sort((a, b) => b - a)).toEqual(days);
   await expect(page.getByTestId("best-cells").locator(".who").first()).toContainText("1. ");
 });
+
+test("off-grid date: one message and three chips, a chip restores the ranking; move pin matches the readout (#111)", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("best-cells")).toBeVisible();
+  await page.getByTestId("date").fill("2026-12-20");
+  await page.getByTestId("date").blur();
+  await expect(page.getByTestId("no-grid-msg")).toHaveCount(1);
+  await expect(page.getByTestId("best-cells")).not.toContainText("No grid for");
+  await expect(page.getByTestId("date-chip")).toHaveCount(3);
+  await expect(page.getByTestId("date-note")).toBeVisible();
+  await page.getByTestId("date-chip").filter({ hasText: "2026-11-14" }).click();
+  await expect(page.getByTestId("no-grid-msg")).toHaveCount(0);
+  await expect(page.getByTestId("ranking-title")).toContainText("Region ranking for 2026-11-14");
+  expect(await page.getByTestId("best-cells").locator(".days").count()).toBe(10);
+  // Move pin there: the headline then shows the readout's gain over the old figure.
+  const days = async () => parseFloat((await page.getByTestId("headline-operable").textContent())!);
+  const before = await days();
+  const move = page.getByTestId("move-pin");
+  await expect(move).toHaveCount(1);
+  {
+    const gain = parseFloat((await page.getByTestId("nearest-better").textContent())!.match(/\+(\d+\.\d) d/)![1]);
+    expect((await move.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await move.click();
+    await expect.poll(async () => Math.abs((await days()) - (before + gain))).toBeLessThan(0.15);
+  }
+});
