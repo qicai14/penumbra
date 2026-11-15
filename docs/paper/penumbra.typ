@@ -11,6 +11,8 @@
 #show table: set text(size: 8.5pt)
 #show figure.caption: set text(size: 9pt)
 #show figure.where(kind: table): set block(breakable: true)
+#show figure.where(kind: table): set figure.caption(position: top)
+#set table.cell(breakable: false)
 #show link: set text(fill: rgb("#9a4a00"))
 
 // A tagged display equation: the tag is the SCIENCE-SPEC section id (1a to 1e).
@@ -111,7 +113,7 @@ The LOLA DEMs and the Horizons lunar sites are both defined in the Moon's mean-E
 
 == Equations
 
-The model has five parts, each taken from SCIENCE-SPEC section 1 (tags 1a to 1e). Angles are in radians inside `core`. $R = 1737.4$ km is the DEM reference sphere, $h$ the terrain height and $H$ the mast or panel height above the ground.
+The model has six parts and a local-pit option, each taken from `docs/SCIENCE-SPEC.md` section 1 (tags 1a to 1f). Angles are in radians inside `core`. $R = 1737.4$ km is the DEM reference sphere, $h$ the terrain height and $H$ the mast or panel height above the ground.
 
 *1a. Horizon with curvature.* A DEM point $(x, y)$ in the south-polar stereographic map becomes a unit vector $hat(u)$ in `MOON_ME`:
 
@@ -142,6 +144,18 @@ The model keeps two outputs apart. _Illumination_ is $f$ and drives power. _Visi
 #eq("1e", $ P_("gen") = S_0 (1 "AU" slash d_("sun"))^2 thin A thin eta thin max(0, hat(n) dot hat(s)) thin f, quad E_(k+1) = "clamp"(E_k + (P_("gen") - P_("load")) Delta t, 0, E_("max")) $)
 
 Here $A$ is the panel area, $eta$ the cell efficiency, $hat(n)$ the panel normal and $hat(s)$ the unit vector to the Sun. *Lethal shadow* is the first moment in a scenario when stored energy $E$ falls to the preset's minimum $E_("min")$; the survival run stops there. Time to first lethal shadow is that moment minus the landing time. The operable window is the set of steps with $f > 0$ and Earth contact.
+
+*1f. Uncertainty from DEM error.* LOLA heights carry an error $sigma_z$, and an error on a near obstacle moves the horizon more than one far away. For azimuth bin $i$ with the obstacle at distance $D_i$, the first-order propagation (SCIENCE-SPEC 1f, step 1) is
+
+#eq("1f", $ sigma_("el", i) = frac(sqrt(sigma_(z, "obstacle")^2 + sigma_(z, "observer")^2), D_i), quad sigma_t = frac(sigma_("el"), |d("el"_("sun") - "el"_("hor")) slash d t|) $)
+
+evaluated at each sunrise and sunset. The timelines draw this as a ± band. Where the Sun skims a flat horizon the rate in the denominator is near zero and the band runs to hours, so the app writes "ill-conditioned" instead of a time (`ILL_CONDITIONED_BAND_H` in `web/src/lib/timelines.ts`).
+
+*Local pit.* IM-2 ended in a crater about one DEM pixel wide @lroc-im2, and terrain that small is not in the DEM. For a lander at the centre of a crater of diameter $D_c$ and depth $d_c$, with the panel at height $H$ above the floor, the pit raises the horizon floor at every azimuth (SCIENCE-SPEC 1f, "Local pit"):
+
+#eq("pit", $ "el"_("pit") = arctan frac(d_c - H, D_c slash 2), quad "el"'_("hor", i) = max("el"_("hor", i), "el"_("pit")), quad d_c^* = H + frac(D_c, 2) tan("el"_("sun") + rho) $)
+
+The default depth follows ESA's degraded-crater model, an 11° slope from floor to rim (SCIENCE-SPEC E112), so $d_c = (D_c slash 2) tan 11 degree$. This depth is assumed, not measured. The model reports $d_c^*$, the depth that would hide the whole Sun disc, and leaves the reader to compare it with the assumed depth.
 
 == The application
 
@@ -187,6 +201,49 @@ All validation values come from `web/public/scoreboard.json`, read on 2026-11-15
 ) <tab-score>
 
 *V1* runs through the shipped hourly table and its linear interpolation, so it tests what the browser uses. *V2* passes on the pooled data, and the pooled figure needs care: per-bin correlation is below 0.9 in every fifth (0.62 to 0.89), and the pooled pass rests on the 0–60 % bins, because the brightest rims are under-sampled. *V2b* is one-sided. It catches a model that is too dark and misses one that is too bright. The SP-01 gap points the way our finer 20 m near field predicts, and nothing was tuned to close it. *V3* needs LROC NAC images. None were downloaded, so the shadow check has no input and no V3 result is claimed. *V4* rests on an assumed touchdown time and an assumed pit depth, so it shows the model is consistent with the IM-2 reports and proves nothing more.
+
+#figure(
+  {
+    let rows = (
+      ("0 to 20 %", "2000", 0.43, "6.76", "+1.95", "0.62"),
+      ("20 to 40 %", "2000", 0.47, "3.39", "+0.28", "0.89"),
+      ("40 to 60 %", "2000", 0.48, "2.83", "+0.15", "0.83"),
+      ("60 to 80 %", "118", 3.12, "9.46", "-2.74", "0.70"),
+      ("80 to 100 %", "5", 1.86, "9.17", "-1.95", "0.63"),
+    )
+    table(
+      columns: (2.2cm, 1.4cm, 1.5cm, 1.4cm, 1.4cm, 1.2cm, 1fr),
+      align: (left, right, right, right, right, right, left),
+      stroke: 0.5pt + luma(150),
+      table.header([*Reference bin*], [*Pixels*], [*Median*], [*p90*], [*Mean*], [*r*], [*Median against the limit of 5*]),
+      ..rows.map(r => (
+        r.at(0), r.at(1), str(r.at(2)), r.at(3), r.at(4), r.at(5),
+        box(width: 100%, height: 0.32cm, stroke: 0.4pt + luma(170),
+          align(left, rect(width: r.at(2) / 5 * 100%, height: 100%, fill: rgb("#d97706"), stroke: none))),
+      )).flatten(),
+    )
+  },
+  caption: [V2 per fifth of the PGDA map (errors in points, ours minus reference). Source: `web/public/scoreboard.json`, V2 `notes`, "Per fifth (n, median, p90, mean, r)". The two brightest bins hold only 118 and 5 pixels in our tiles (\#75).],
+) <tab-v2>
+
+#figure(
+  table(
+    columns: (1cm, 1.3cm, 2.3cm, 2.3cm, 2.3cm, 2.3cm, 1fr),
+    align: (left, right, right, right, right, right, right),
+    stroke: 0.5pt + luma(150),
+    table.header([*RoI*], [*Pixels*], [*Longest day, ours (d)*], [*Longest day, Barker (d)*], [*Longest night, ours (d)*], [*Longest night, Barker (d)*], [*Our night, pixel min to max (d)*]),
+    [1], [20], [225.80], [215.79], [4.43], [5.29], [3.71 to 8.63],
+    [2], [18], [222.20], [216.28], [6.63], [7.31], [5.33 to 10.79],
+    [3], [9], [229.75], [216.89], [7.07], [8.41], [5.63 to 13.88],
+    [4], [35], [233.07], [231.20], [4.11], [4.00], [3.46 to 6.29],
+    [5], [26], [217.63], [218.98], [4.46], [4.52], [3.92 to 5.83],
+    [6], [26], [220.72], [220.98], [3.95], [4.16], [3.54 to 4.71],
+    [7], [19], [138.47], [119.07], [5.26], [5.42], [5.08 to 5.54],
+  ),
+  caption: [V2b, Barker 2021 Site 1 @barker2021: mean over the 20 m pixels near each RoI centroid, observer 5 m above ground, hourly 2024 and 2025. Source: `web/public/scoreboard.json`, V2b `notes` (LCIP = longest day, LCSP = longest night). Our 20 m DEM is coarser than Barker's 5 m and biases bright.],
+) <tab-v2b>
+
+In @tab-v2b our mean longest night is shorter than Barker's at six of the seven RoIs, which is the bright bias the caption names. Barker's value still falls inside our pixel range at every RoI, so all seven pass.
 
 == Speed, first load and hosting
 
@@ -240,6 +297,7 @@ The other tools are better in several ways. Moon Trek covers the whole Moon in o
 
 Each limitation in @tab-future has a concrete next step.
 
+#show figure: set block(breakable: false)
 #figure(
   table(
     columns: (4.4cm, 1fr),
