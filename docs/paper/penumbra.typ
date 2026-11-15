@@ -29,7 +29,7 @@
 #let arr = align(center + horizon, text(size: 16pt, fill: luma(90))[→])
 
 #align(center)[
-  #text(size: 22pt, weight: "bold")[Penumbra] \
+  #text(size: 22pt, weight: "bold")[PENUMBRA] \
   #text(size: 12pt)[Sunlight, Earth contact and the first lethal shadow at lunar south-pole landing sites] \
   #v(4pt)
   Team Fractured Toes: Lim Qi Cai, Charls Pua Vui Hau · NASA Space Apps Challenge 2026, Kuala Lumpur \
