@@ -608,6 +608,15 @@ Web rows (NASA documents fetched Nov 10 by a subagent with curl; not in the corp
 | W6 | https://lroc.im-ldi.com/images/1408 | `ended up on its side within a 20-meter diameter crater` | IM-2 crater size (from facts-grill-1.md; fetched through a summarising tool, re-read by eye) |
 | W7 | https://pgda.gsfc.nasa.gov/products/69 | `averaged over hourly timesteps spanning 18.6 years, for the south polar region.` | AVGVISIB span and step (from facts-grill-1.md) |
 | W8 | https://ssd-api.jpl.nasa.gov/doc/horizons.html (header saved in `crates/core/tests/fixtures/horizons/tracer-sun.json`, Nov 13) | `1 au= 149597870.700 km` | AU used to scale solar flux (§1e) |
+| W9 | https://lroc.im-ldi.com/images/1408 | `( 84.7906° S, 29.1957° E )` | IM-2 Athena landing coordinates (curated site list, #82) |
+| W10 | https://www.apollojournals.org/alsj/alsjcoords.html | `Apollo 11` Lunar Module row, Apollo-era columns: `0.6875` (lat °N), `23.4333` (lon °E); `These values agree with those given in the various Mission Reports` | Apollo 11 landing site (curated site list, #82); signs as the table prints them |
+| W11 | https://www.apollojournals.org/alsj/alsjcoords.html | `Apollo 12` Lunar Module row, Apollo-era columns: `-3.1975` (lat °N), `-23.3856` (lon °E); `These values agree with those given in the various Mission Reports` | Apollo 12 landing site (curated site list, #82); signs as the table prints them |
+| W12 | https://www.apollojournals.org/alsj/alsjcoords.html | `Apollo 14` Lunar Module row, Apollo-era columns: `-3.6733` (lat °N), `-17.4653` (lon °E); `These values agree with those given in the various Mission Reports` | Apollo 14 landing site (curated site list, #82); signs as the table prints them |
+| W13 | https://www.apollojournals.org/alsj/alsjcoords.html | `Apollo 15` Lunar Module row, Apollo-era columns: `26.1008` (lat °N), `3.6527` (lon °E); `These values agree with those given in the various Mission Reports` | Apollo 15 landing site (curated site list, #82); signs as the table prints them |
+| W14 | https://www.apollojournals.org/alsj/alsjcoords.html | `Apollo 16` Lunar Module row, Apollo-era columns: `-8.9913` (lat °N), `15.5144` (lon °E); `These values agree with those given in the various Mission Reports` | Apollo 16 landing site (curated site list, #82); signs as the table prints them |
+| W15 | https://www.apollojournals.org/alsj/alsjcoords.html | `Apollo 17` Lunar Module row, Apollo-era columns: `20.1653` (lat °N), `30.7658` (lon °E); `These values agree with those given in the various Mission Reports` | Apollo 17 landing site (curated site list, #82); signs as the table prints them |
+
+Derived [D] (curated site list, #82): Barker 2021 Site 1 = RoI 1 centroid (E129, E130) = (−11.5825, −12.4625) km through the §1 inverse = (−89.4389°, 222.904°E). Recomputed in `web/src/lib/sites.test.ts` with `xyToLatlon` and held within 0.001°.
 
 Negative results (looked for, not found):
 - Observer height of AVGVISIB: not in README_ILLUMINATION_2016.TXT, not in the .LBL, not on PGDA product 69.

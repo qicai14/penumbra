@@ -382,6 +382,26 @@ test("four views, a keyboard-reachable GitHub link, and a verdict strip built fr
   await expect(page.getByRole("table", { name: /One row per check/ })).toBeVisible();
 });
 
+test("a curated site outside the tiles shows OUT_OF_COVERAGE, not an error; both tool links are present (#82)", async ({ page }) => {
+  await page.goto("/");
+  const curated = page.getByTestId("curated");
+  await expect(curated).toBeEnabled();
+  await curated.selectOption("a11");
+  await expect(page.getByTestId("out-of-coverage")).toContainText("OUT_OF_COVERAGE");
+  await expect(page.getByTestId("refusal")).toHaveCount(0);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByTestId("latlon-text")).toHaveText("0.6875, 23.4333");
+  const qm = page.getByRole("link", { name: "Open in QuickMap (opens in a new tab)" });
+  await expect(qm).toHaveAttribute("href", "https://quickmap.lroc.im-ldi.com");
+  await expect(qm).toHaveAttribute("target", "_blank");
+  await expect(qm).toHaveAttribute("rel", /noopener/);
+  await expect(page.getByRole("link", { name: "Open in Moon Trek (opens in a new tab)" })).toHaveAttribute("href", "https://trek.nasa.gov/moon/");
+  // a covered site moves the site and clears the state
+  await curated.selectOption("sp01");
+  await expect(page.getByTestId("out-of-coverage")).toHaveCount(0);
+  await expect(page.getByTestId("lat")).toHaveValue("-89.45");
+});
+
 test("what changes what: four labelled signed bars, and the 300 m bars say so when the grid cannot answer (T83 #83)", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("what-changes")).toBeVisible();
