@@ -149,7 +149,6 @@
 <section class="panel" aria-labelledby="t3-h">
   <header>
     <h2 id="t3-h">3D terrain · the near tile at the time marker</h2>
-    {#if tile.fake}<span class="pill">FAKE TILE</span>{/if}
   </header>
 
   <figure data-testid="terrain-3d" data-t={shown?.t_unix_s ?? ""} data-stride={shown?.stride ?? ""} data-lit={litCount} data-vertices={shown ? shown.cols * shown.rows : ""} data-exaggeration={exaggeration} data-gl={glError ? "off" : "on"}>
@@ -192,10 +191,6 @@
   .panel { background: var(--surface-carbon); border-radius: var(--radius-sm); padding: var(--spacing-16); margin-bottom: var(--spacing-16); }
   header { display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-16); margin-bottom: var(--spacing-16); }
   h2 { margin: 0; font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
-  .pill {
-    border: 1px solid var(--color-slate); border-radius: var(--radius-full); padding: 0 var(--spacing-8);
-    font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); text-transform: uppercase; white-space: nowrap;
-  }
   figure { margin: 0; }
   .stage { position: relative; width: 100%; height: clamp(280px, 52vw, 520px); border-radius: var(--radius-sm); overflow: hidden; background: var(--color-carbon); }
   canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: pan-y; }

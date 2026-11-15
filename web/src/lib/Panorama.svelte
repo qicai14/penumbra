@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { TERRAIN_FAKE, type Scenario } from "./engine";
+  import type { Scenario } from "./engine";
   import {
     azToX, elToY, fmtDist, fmtEl, fmtUtc, horizonAt, pxPerDegX, pxPerDegY, ticks, trackSegments,
     wrap360, xToAz, BIN_DEG, BINS, type View,
@@ -172,7 +172,6 @@
 <section class="panel" aria-labelledby="pano-h">
   <header>
     <h2 id="pano-h">Horizon · where the Sun and Earth are</h2>
-    {#if TERRAIN_FAKE}<span class="pill" data-testid="fake-badge">FAKE TERRAIN</span>{/if}
   </header>
 
   <canvas
@@ -229,10 +228,6 @@
   .panel { background: var(--surface-carbon); border-radius: var(--radius-sm); padding: var(--spacing-16); position: relative; }
   header { display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-16); margin-bottom: var(--spacing-16); }
   h2 { margin: 0; font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
-  .pill {
-    border: 1px solid var(--color-slate); border-radius: var(--radius-full); padding: 0 var(--spacing-8);
-    font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); text-transform: uppercase; white-space: nowrap;
-  }
   canvas { display: block; border-radius: var(--radius-sm); outline-offset: 2px; touch-action: pan-y; }
   canvas:focus-visible { outline: 1px solid var(--color-paper); }
   .measure { height: 0; width: 100%; }

@@ -164,7 +164,6 @@
 <section class="panel" aria-labelledby="site-h">
   <header>
     <h2 id="site-h">Site and date · where and when you land</h2>
-    {#if tile.fake}<span class="pill" data-testid="tile-fake">FAKE TILE</span>{/if}
   </header>
 
   <div class="body">
@@ -261,10 +260,6 @@
   .panel { background: var(--surface-carbon); border-radius: var(--radius-sm); padding: var(--spacing-16); margin-bottom: var(--spacing-16); }
   header { display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-16); margin-bottom: var(--spacing-16); }
   h2 { margin: 0; font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
-  .pill {
-    border: 1px solid var(--color-slate); border-radius: var(--radius-full); padding: 0 var(--spacing-8);
-    font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); text-transform: uppercase; white-space: nowrap;
-  }
   .body { display: flex; flex-wrap: wrap; gap: var(--spacing-24); align-items: flex-start; }
   figure { margin: 0; flex: 0 1 384px; min-width: 240px; }
   canvas { display: block; width: 100%; aspect-ratio: 1; border-radius: var(--radius-sm); cursor: crosshair; image-rendering: pixelated; }

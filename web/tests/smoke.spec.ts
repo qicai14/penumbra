@@ -57,6 +57,25 @@ test("timelines render labelled series and follow the panorama time slider", asy
   expect(await page.getByTestId("timelines-now").textContent()).not.toBe(textA);
 });
 
+test("zoom buttons: + narrows, - widens, Reset shows the full span, and the time cursor stays put (T81 #81)", async ({ page }) => {
+  await page.goto("/");
+  const zoom = page.getByTestId("zoom");
+  await expect(page.getByTestId("timelines").locator("canvas")).toHaveCount(3);
+  const span = async () => Number(await zoom.getAttribute("data-span"));
+  const full = await span();
+  await page.getByTestId("zoom-in").click();
+  const half = await span();
+  expect(half).toBeCloseTo(full / 2, -1);
+  await page.getByTestId("zoom-in").click();
+  const quarter = await span();
+  expect(quarter).toBeLessThan(half);
+  await page.getByTestId("zoom-out").click();
+  expect(await span()).toBeGreaterThan(quarter);
+  await page.getByTestId("zoom-reset").click();
+  expect(await span()).toBe(full);
+  await expect(page.getByTestId("timelines-now")).toBeVisible();
+});
+
 test("hovering the chart moves the panorama time", async ({ page }) => {
   await page.goto("/");
   const before = await page.getByTestId("now").textContent();
