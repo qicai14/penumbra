@@ -16,9 +16,9 @@
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue"></a>
 </p>
 
-Penumbra tells a lunar landing planner how many hours of sunlight and Earth contact a lander gets at a south-pole site and date, and when the first lethal shadow arrives. One Rust model runs natively for validation and as WebAssembly in the browser, and it is checked against JPL Horizons and NASA LOLA illumination maps.
+Penumbra tells a lunar landing planner how many hours of sunlight and Earth contact a lander gets at a south-pole site and date, and when the first lethal shadow arrives. One Rust model runs natively for validation and as WASM in the browser, checked against JPL Horizons and NASA LOLA illumination maps.
 
-NASA Space Apps Challenge 2026 · Team **Fractured Toes**: Qi Cai and Charls.
+NASA Space Apps Challenge 2026 · Team **Fractured Toes**: Charls Pua Vui Hau and Lim Qi Cai.
 
 ## Who it is for
 
@@ -63,7 +63,7 @@ Cells read yes, partial, no (server-based), or "not found in docs" where the too
 | Slope at a point | yes, from the 20 m DEM (#112) | partial: Slope tool, registered account needed [T1][T3] | partial: elevation at a point and along a path; slope not found in docs [Q2] | not offered (ephemeris service) |
 | Validated against Horizons and LOLA | yes: V1 and V2 below | not found in docs [T2] | not found in docs | it is the reference: Horizons serves DE441 [H1] |
 | Runs with no backend | yes: static files only | no (server-based) [T2] | no (server-based) [Q1] | no (server-based) [H1] |
-| Cost | $0, no account | free to browse; lighting and slope need a registered account [T1] | price not found in docs; "Contact ACT" for Terrain Shadows [Q1] | free; "No account or password is required." [H1] |
+| Cost | $0, no account (see [Load, hosting and runtime calls](#load-hosting-and-runtime-calls)) | free to browse; lighting and slope need a registered account [T1] | price not found in docs; "Contact ACT" for Terrain Shadows [Q1] | free; "No account or password is required." [H1] |
 
 Where the other tools are better:
 
@@ -224,7 +224,7 @@ The terrain and ephemeris files the app needs are already in `web/public/data`. 
 - The NSAKL26 organisers, for running NASA Space Apps Challenge 2026.
 - The open-source libraries we build on: Rust and wasm-bindgen, Svelte, Vite, Three.js, uPlot, Bun, Playwright and Typst, and the IBM Plex Mono and Archivo typefaces.
 
-Team **Fractured Toes**: Qi Cai and Charls.
+Team **Fractured Toes**: Charls Pua Vui Hau and Lim Qi Cai.
 
 ## References
 

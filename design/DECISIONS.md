@@ -237,7 +237,7 @@ Round-2 table below is filled from this entry.
 | **Brand set** | **A · Low Sun** (Nov 11) | Charls liked A but not the disc beside the name. The mark moves to the right of the wordmark with a long line back over it (reference: a Lockheed Martin-style lockup). Three mark options are in `design/brand/low-sun-marks.html`: 1 Grazing Sun, 2 First Light (star glint), 3 Long Shadow. **Mark: 1 Grazing Sun** (Charls, Nov 11): a half-risen starburst Sun over the "B" and "R" and a hairline horizon over the tops of the letters, with a wide italic Archivo wordmark. Ground is pure black `#000000`; supporting text is Montserrat Medium (500), numbers IBM Plex Mono. On light grounds the amber darkens to `#b0600a`. |
 
 ### Open questions
-- The wordmark is still stretched to a fixed width with `textLength`, which distorts the letters. Fix in `/design-pass 3`: measure it on the loaded Archivo font (as v2 did), or outline it to SVG paths.
+- ~~The wordmark is still stretched to a fixed width with `textLength`, which distorts the letters. Fix in `/design-pass 3`.~~ **Resolved (Nov 15, PR #132):** the README banner `brand/assets/wordmark.svg` and `wordmark-light.svg` outline "PENUMBRA" to SVG paths at real letter widths; the app header already measures the loaded Archivo.
 - Sun and Earth tracks: separate them by colour only, or also by dash pattern as in the wireframes? (Recommended: both, for colour-blind users.)
 - Set B needs a dark mode for terrain views, which means two full themes. Is that worth it for a two-person team?
 - Lethal colour plus text label everywhere; never colour alone.
