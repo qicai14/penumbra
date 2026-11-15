@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { latlonToXy, TIER_TEXT, xyToLatlon, type EphSegment, type NearTile, type Region } from "./engine";
+  import { latlonToXy, TIER_EVIDENCE, TIER_TEXT, xyToLatlon, type EphSegment, type Scenario, type NearTile, type Region } from "./engine";
   import { checkDate, checkPick, dateRange, edgeDistanceM, isoDay, parseDate, pickBorderM, slopeText, SPANS_DAYS } from "./site";
   import type { Controls } from "./state.svelte";
   import { maskAt, maskGrid, maskPixels, MASK_STRIDE, MASK_LIT_ALPHA, MASK_DARK_ALPHA } from "./mask";
@@ -13,7 +13,7 @@
   import { bestCell, contour, CONTOUR_H, dateIndex, NODATA, NO_LETHAL, type Grid } from "./grid";
 
   // `feed` is the shared point-Sun mask for the time marker; the 3D terrain paints the same one.
-  let { controls, tile, onregion, feed, grid = null, gridK = -1, grids = [] }: { controls: Controls; tile: NearTile & { regions: Region[]; eph: EphSegment[] }; onregion: (id: string, at?: [number, number]) => void; feed: MaskFeed; grid?: Grid | null; gridK?: number; grids?: Grid[] } = $props();
+  let { controls, tile, onregion, feed, grid = null, gridK = -1, grids = [], scenario = null }: { scenario?: Scenario | null; controls: Controls; tile: NearTile & { regions: Region[]; eph: EphSegment[] }; onregion: (id: string, at?: [number, number]) => void; feed: MaskFeed; grid?: Grid | null; gridK?: number; grids?: Grid[] } = $props();
 
   let canvas: HTMLCanvasElement;
   // svelte-ignore state_referenced_locally -- drafts start from the current value, then follow typing
@@ -203,13 +203,14 @@
   const ondate = () => { if (tryDate(dateDraft, controls.spanDays)) controls.date = dateDraft; else dateDraft = controls.date; };
   const onspan = (s: number) => { if (tryDate(controls.date, s)) controls.spanDays = s; };
   // Hero scenarios: only the picker's own setters. IM-2 comes from the curated list; best region is the top of `bests`.
+  const stale = $derived(!!scenario && (Math.abs(scenario.site.lat_deg - controls.lat) > 1e-6 || Math.abs(scenario.site.lon_deg - controls.lon) > 1e-6 || Math.abs(scenario.track.t_unix_s[0] - (parseDate(controls.date) ?? 0)) >= 86400));
   const HERO_DATE = "2026-11-14"; // the IM-2 landing date the first scenario uses
   const heroIm2 = (date: string) => { onsite("im2"); setDate(date); };
   const heroSlip = () => heroIm2(isoDay(parseDate(HERO_DATE)! - 2 * 86400));
   function heroBest() { const t = bests[0]; if (t?.b) goBest(t.g.meta.region, t.lat, t.lon); }
 </script>
 
-<Hero onim2={() => heroIm2(HERO_DATE)} onbest={heroBest} onslip={heroSlip} ready={regionMetas.length > 0} bestReady={!!bests[0]?.b} rankedDates={gridDateList} />
+<Hero {scenario} {stale} onim2={() => heroIm2(HERO_DATE)} onbest={heroBest} onslip={heroSlip} ready={regionMetas.length > 0} bestReady={!!bests[0]?.b} rankedDates={gridDateList} />
 
 <section class="panel" aria-labelledby="site-h">
   <h2 id="site-h">Site and date</h2>
@@ -222,7 +223,7 @@
         aria-label="Greyscale height image of the {tile.region.name} near tile, overlaid with the point-Sun mask at the time marker. Click to pick a site, or type latitude and longitude."
       ></canvas>
       <div class="legend" data-testid="mask-legend" data-t={shown?.t_unix_s ?? ""}>
-        <p class="what"><strong>Point-Sun mask</strong>, not illumination{#if shown}{" · "}{fmtUtc(shown.t_unix_s)}{/if}{#if feed.busy}{" · updating"}{/if}</p>
+        <p class="what"><strong title="Point-Sun mask: lit means the Sun's centre clears the terrain">Sun-centre map</strong>, not illumination{#if shown}{" · "}{fmtUtc(shown.t_unix_s)}{/if}{#if feed.busy}{" · updating"}{/if}</p>
         <p><i class="sw lit" aria-hidden="true"></i>Sun's centre above the terrain <i class="sw dark" aria-hidden="true"></i>Sun's centre below it</p>
         <details class="more" data-testid="map-notes">
           <summary>How to read the map</summary>
@@ -252,7 +253,7 @@
         </select>
       </label>
       {#if tile.region.tier || tile.region.label}
-        <p class="now region-note" data-testid="region-label">{#if tile.region.tier}Tier {tile.region.tier}, {TIER_TEXT[tile.region.tier]}.{/if} {tile.region.label ?? ""}</p>
+        <p class="now region-note" data-testid="region-label">{#if tile.region.tier}<span title={TIER_EVIDENCE[tile.region.tier]}>Tier {tile.region.tier}, {TIER_TEXT[tile.region.tier]}.</span>{/if} {tile.region.label ?? ""}</p>
       {/if}
 
       <label class="row"><span>Curated site</span>
@@ -277,7 +278,7 @@
       </p>
       {#if slopeLine}<p class="now" data-testid="slope">{slopeLine}</p>{/if}
       <p class="now" role="status" aria-live="polite" aria-atomic="true" data-testid="mask-site" data-lit={siteLit ?? ""} data-t={shown?.t_unix_s ?? ""} data-stride={shown?.stride ?? ""}>
-        Nearest mask point (within {((shown?.stride ?? MASK_STRIDE) * m.pixel_m) / 2} m of the site), point Sun: {siteLit === null ? "computing" : siteLit ? "lit" : "in shadow"}
+        Nearest map point (within {((shown?.stride ?? MASK_STRIDE) * m.pixel_m) / 2} m of the site), point Sun: {siteLit === null ? "computing" : siteLit ? "lit" : "in shadow"}
       </p>
 
       <div class="tools" data-testid="tool-links">
