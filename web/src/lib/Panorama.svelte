@@ -1,5 +1,6 @@
 <script lang="ts">
   import Explain from "./Explain.svelte";
+  import PlayButton from "./PlayButton.svelte";
   import type { Scenario } from "./engine";
   import {
     azToX, elToY, fmtDist, fmtEl, fmtUtc, horizonAt, pxPerDegX, pxPerDegY, ticks, trackSegments,
@@ -213,6 +214,7 @@
   {/if}
 
   <div class="controls">
+    <PlayButton bind:idx t={tr.t_unix_s} />
     <label class="time">
       <span>Time</span>
       <input type="range" min="0" max={tr.t_unix_s.length - 1} step="1" bind:value={idx} aria-label="Time within the span" />

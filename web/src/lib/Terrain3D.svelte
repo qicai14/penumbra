@@ -1,5 +1,6 @@
 <script lang="ts">
   import Explain from "./Explain.svelte";
+  import PlayButton from "./PlayButton.svelte";
   import * as THREE from "three";
   import { OrbitControls } from "three/addons/controls/OrbitControls.js";
   import { latlonToXy, type EphSegment, type NearTile, type Region } from "./engine";
@@ -12,10 +13,10 @@
 
   // The same point-Sun mask the site picker paints (`feed`), at the same time marker `t`, with the Sun's azimuth and elevation
   // read from the model's track at that marker. Nothing here computes light: a vertex is ember where the mask says lit.
-  let { controls, tile, feed, t, sunAz, sunEl, sunLon, idx = $bindable(0), count }: {
+  let { controls, tile, feed, t, sunAz, sunEl, sunLon, idx = $bindable(0), count, times }: {
     controls: Controls; tile: NearTile & { regions: Region[]; eph: EphSegment[] }; feed: MaskFeed;
     t: number | null; sunAz: number | null; sunEl: number | null; sunLon: number | null; // sunLon: the longitude the track was computed for
-    idx?: number; count: number; // the shared time marker: dragging here also moves the Site view
+    idx?: number; count: number; times: ArrayLike<number>; // the shared time marker: dragging here also moves the Site view
   } = $props();
 
   const PIN_H_M = 700, SUN_LEN_M = 4000, VIEW_DIST_M = 14000;
@@ -171,6 +172,7 @@
         aria-label="3D height mesh of the {tile.region.name} near tile at {shown ? fmtUtc(shown.t_unix_s) : t === null ? 'the time marker' : fmtUtc(t)}. Each mesh point is ember where the Sun's centre is above the terrain and dark where it is below. The pin is the site; the ember arrow points to the Sun. Drag to orbit, scroll to zoom, arrow keys to pan."
       ></canvas>
     </div>
+    <PlayButton bind:idx t={times} />
     <label class="time">
       <span>Time</span>
       <input data-testid="t3-time" type="range" min="0" max={count - 1} step="1" bind:value={idx} aria-label="Time within the span" />

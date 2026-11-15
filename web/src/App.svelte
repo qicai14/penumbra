@@ -172,7 +172,7 @@
       {#if tile}<LandingWindow {computedFor} eph={tile.eph} date={controls.date} onpick={(d) => (controls.date = d)} />{/if}
     {:else if tile}
       <Countdown {scenario} {idx} sticky={false} />
-      <Terrain3D {controls} {tile} feed={maskFeed} t={markerT} bind:idx count={scenario.count} sunAz={scenario.track.sun_az_deg[idx]} sunEl={scenario.track.sun_el_deg[idx]} sunLon={computedFor.lon_deg} />
+      <Terrain3D {controls} {tile} feed={maskFeed} t={markerT} bind:idx count={scenario.count} times={scenario.track.t_unix_s} sunAz={scenario.track.sun_az_deg[idx]} sunEl={scenario.track.sun_el_deg[idx]} sunLon={computedFor.lon_deg} />
     {/if}
   {:else if !error}
     <p class="msg">Loading…</p>
