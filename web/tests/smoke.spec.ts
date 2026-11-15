@@ -179,9 +179,14 @@ test("Sun and Earth elevation and the sunset and Earthset countdown follow the t
   const el = /^[+−]\d+\.\d°$/; // one decimal
   await expect(page.getByTestId("cd-sun-el")).toHaveText(el);
   await expect(page.getByTestId("cd-earth-el")).toHaveText(el);
-  const when = /^(Sunset|Earthset) in (\d+d \d+h|\d+m)$|^no (sunset|Earthset|sunrise|Earthrise) (in [\d.]+ (h|days?)|before the span ends)$/;
+  const dh = String.raw`(\d+d \d+h|\d+m)`;
+  const none = String.raw`no (sunset|Earthset|sunrise|Earthrise) (in [\d.]+ (h|days?)|before the span ends)`;
+  const when = new RegExp(`^((Sunrise|Earth contact) in ${dh} · then )?((Sunset|Earthset|sunset) in ${dh}|${none})$`);
   await expect(page.getByTestId("sunset")).toHaveText(when);
   await expect(page.getByTestId("earthset")).toHaveText(when);
+  // IM-2 from 2026-11-14 00:00 UTC starts in shadow: the next event is the sunrise on the 15th (first limb at ~03:00,
+  // band list 06:11 for the centre), not the sunset 17 days out (#107).
+  await expect(page.getByTestId("sunset")).toHaveText(/^Sunrise in 1d \d+h · then sunset in 17d /);
   const before = await cd.textContent();
   const slider = page.getByLabel("Time within the span");
   await slider.fill(String(Math.round(Number(await slider.getAttribute("max")) * 0.6)));
