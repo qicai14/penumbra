@@ -20,6 +20,7 @@
 
 <section>
   <h2>IM-2 tracer, 2026-11-14T00:00Z (computed in the browser)</h2>
+  <p class="cap">V1’s live demo: Sun and Earth positions from the model that is checked against JPL Horizons.</p>
   {#if error}
     <p role="alert" data-testid="tracer-error">{error}</p>
   {:else if !rows}
@@ -39,6 +40,7 @@
 </section>
 
 <style>
+  .cap { margin: 0 0 var(--spacing-8); color: var(--color-ash); font-size: var(--text-caption); }
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; }
   dt { margin: 0; }
   dd { margin: 0; font-variant-numeric: tabular-nums; }
