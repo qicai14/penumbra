@@ -1,8 +1,8 @@
 // D1 project document (docs/SUBMISSION.md). Build: bun run paper -> docs/paper/penumbra.pdf
-// Every number in this file is copied word-identical from docs/submission/facts.md. The equations are
-// docs/SCIENCE-SPEC.md section 1. If a number changes, change facts.md first, then this file.
+// Every number has a source in docs/submission/facts.md (copied word-identical), web/public/scoreboard.json,
+// docs/DATA-NOTES.md, docs/EVIDENCE.md or refs.yml. The equations are docs/SCIENCE-SPEC.md section 1.
 
-#set document(title: "Penumbra", author: ("Qi Cai", "Charls"))
+#set document(title: "Penumbra", author: ("Charls Pua Vui Hau", "Lim Qi Cai"))
 #set page(paper: "a4", margin: 2cm, numbering: "1")
 #set text(size: 10.5pt)
 #set par(justify: false, leading: 0.62em)
@@ -10,7 +10,6 @@
 #set math.equation(numbering: none)
 #show table: set text(size: 8.5pt)
 #show figure.caption: set text(size: 9pt)
-#show figure.where(kind: table): set block(breakable: true)
 #show figure.where(kind: table): set figure.caption(position: top)
 #set table.cell(breakable: false)
 #show link: set text(fill: rgb("#9a4a00"))
@@ -33,14 +32,17 @@
   #text(size: 22pt, weight: "bold")[Penumbra] \
   #text(size: 12pt)[Sunlight, Earth contact and the first lethal shadow at lunar south-pole landing sites] \
   #v(4pt)
-  Team Fractured Toes: Qi Cai, Charls · NASA Space Apps Challenge 2026, Kuala Lumpur \
+  Team Fractured Toes: Charls Pua Vui Hau, Lim Qi Cai · NASA Space Apps Challenge 2026, Kuala Lumpur \
   Live app: #link("https://penumbra-lunar.pages.dev") · Code: #link("https://github.com/qicai14/penumbra")
 ]
 
 #v(4pt)
-// Team poster (guidebook outline item 1). When docs/paper/poster.png is committed, replace the note below with:
-// #figure(image("poster.png", width: 100%), caption: [Penumbra, by team Fractured Toes.])
-#align(center, text(size: 9pt, fill: luma(80))[_Team poster: not yet in the repository (`docs/paper/poster.png`); it is submitted as deliverable D2._])
+// Team poster (guidebook outline item 1).
+#figure(
+  image("poster.png", height: 19.5cm),
+  caption: [Team poster: Penumbra by Team Fractured Toes (Charls Pua Vui Hau, Lim Qi Cai). Challenge: Lunar Landing Site Navigator.],
+)
+#pagebreak()
 
 = Introduction
 
@@ -48,7 +50,7 @@ The theme of this challenge is "The Next Frontier", and for landers the next fro
 
 Intuitive Machines' Odysseus (IM-1) landed on 2024-02-22 at 80.1276° S, 1.4367° E @nasa-lro-im1 on a 12° slope and came to rest about 30° off the surface. It ran 144 hours and ended "as the sun moved out of view of the one illuminated solar panel" @spacenews-im1. Athena (IM-2) reached Mons Mouton on 2025-03-06 at 84.7906° S, 29.1957° E. It "ended up on its side within a 20-meter diameter crater" @lroc-im2, and NASA got "some data" before its batteries were depleted @nasa-im2-end. A low Sun angle and the panels' orientation stopped charging.
 
-Both landers tipped, and no planning tool can fix a lander lying on its side. Penumbra answers a narrower question: what the site and the date gave an upright lander. That part a planner controls before launch. The demand is growing. NASA cut its Artemis III candidate list from thirteen to nine south-pole regions @artemis-nine, and the first crewed south-pole landing is now Artemis IV in 2028 @nasa-artemis-iv @nasa-artemis-arch. Blue Moon MK1 lands on the Shackleton connecting ridge in 2027 @nasa-blue-moon, and NASA lists south-pole deliveries for Intuitive Machines, Firefly and Astrobotic @nasa-clps-deliveries.
+Both landers tipped, and no planning tool can fix a lander lying on its side. Penumbra answers a narrower question: what the site and the date gave an upright lander. That part a planner controls before launch. The demand is growing. NASA cut its Artemis III candidate list from thirteen to nine south-pole regions @artemis-nine, and the first crewed south-pole landing is now Artemis IV in 2028 @nasa-artemis-iv. Blue Moon MK1 lands on the Shackleton connecting ridge in 2027 @nasa-blue-moon, and NASA lists south-pole deliveries for Intuitive Machines, Firefly and Astrobotic @nasa-clps-deliveries.
 
 For a site, a landing date and a mast height, Penumbra answers three questions (@tab-questions). It ships all nine Artemis III regions plus the Shackleton ridge.
 
@@ -143,7 +145,7 @@ The model keeps two outputs apart. _Illumination_ is $f$ and drives power. _Visi
 
 #eq("1e", $ P_("gen") = S_0 (1 "AU" slash d_("sun"))^2 thin A thin eta thin max(0, hat(n) dot hat(s)) thin f, quad E_(k+1) = "clamp"(E_k + (P_("gen") - P_("load")) Delta t, 0, E_("max")) $)
 
-Here $A$ is the panel area, $eta$ the cell efficiency, $hat(n)$ the panel normal and $hat(s)$ the unit vector to the Sun. *Lethal shadow* is the first moment in a scenario when stored energy $E$ falls to the preset's minimum $E_("min")$; the survival run stops there. Time to first lethal shadow is that moment minus the landing time. The operable window is the set of steps with $f > 0$ and Earth contact.
+Here $A$ is the panel area, $eta$ the cell efficiency, $hat(n)$ the panel normal and $hat(s)$ the unit vector to the Sun. *Lethal shadow* is the first moment in a scenario when stored energy $E$ falls to the preset's minimum $E_("min")$; the survival run stops there. Time to first lethal shadow is that moment minus the landing time. The operable window is the set of steps with $f > 0$ and Earth contact, counted up to the lethal time.
 
 *1f. Uncertainty from DEM error.* LOLA heights carry an error $sigma_z$, and an error on a near obstacle moves the horizon more than one far away. For azimuth bin $i$ with the obstacle at distance $D_i$, the first-order propagation (SCIENCE-SPEC 1f, step 1) is
 
@@ -159,26 +161,18 @@ The default depth follows ESA's degraded-crater model, an 11° slope from floor 
 
 == The application
 
-#grid(
-  columns: (7cm, 1fr),
-  column-gutter: 14pt,
-  [#figure(
-    rect(inset: 0pt, stroke: 0.5pt + luma(150), image("/docs/screenshots/critique-after/site-1440.png", width: 100%)),
-    caption: [The Site view at the IM-2 site (84.7906° S, 29.1957° E), mast 2 m, 30-day span.],
-  ) <fig-site>],
-  [
-    The app is one page at #link("https://penumbra-lunar.pages.dev"). A planner picks a region, a point, a landing date, a span and a mast height. @fig-site shows the Site view from the top down:
+The app is one page at #link("https://penumbra-lunar.pages.dev"). A planner picks a region, a point, a landing date, a span and a mast height. The Site view then shows where the Sun and Earth are at the chosen moment, the horizon panorama (the skyline the lander sees all the way round, with the Sun and Earth tracks across it), and timelines of illumination, Earth margin, Earth contact and battery charge, with the first lethal shadow marked where the battery reaches its minimum (@fig-site). The page also gives operable days for the next 30 landing dates (\#108), the slope at the pin from the 20 m DEM (\#112), and a 3D terrain view coloured by the model. Other views compare two sites or dates side by side, replay IM-2, and show the validation scoreboard with its misses. Every number on the page comes from the WASM build of `crates/core`, the same code that produced the scoreboard in @tab-score.
 
-    - the site and date panel, with the region map and the controls;
-    - where the Sun and Earth are at the chosen moment, and how long until each sets;
-    - the horizon panorama, the skyline the lander sees all the way round, with the Sun and Earth tracks across it;
-    - the timelines of illumination, Earth margin, Earth contact and battery charge, with the first lethal shadow marked where the battery reaches its minimum.
-
-    The page also gives operable days for the next 30 landing dates (\#108) and the slope at the pin from the 20 m DEM (\#112), and a 3D terrain view coloured by the model. Other views compare two sites or dates side by side, replay IM-2, and show the validation scoreboard with its misses.
-
-    Every number on the page comes from the WASM build of `crates/core`, the same code that produced the scoreboard in @tab-score.
-  ],
-)
+// Two crops of docs/screenshots/critique-after/site-1440.png, made with
+// ffmpeg -vf crop=1440:621:0:1123 (horizon) and crop=1440:777:0:1771 (timelines).
+#figure(
+  stack(
+    spacing: 4pt,
+    rect(inset: 0pt, stroke: 0.5pt + luma(150), image("/docs/screenshots/paper/site-horizon.png", width: 16cm)),
+    rect(inset: 0pt, stroke: 0.5pt + luma(150), image("/docs/screenshots/paper/site-timelines.png", width: 16cm)),
+  ),
+  caption: [The Site view at the IM-2 site (84.7906° S, 29.1957° E), mast 2 m, 30-day span from 2026-11-14. Top: the horizon panorama with the Sun (orange) and Earth (blue) tracks. Bottom: the timelines of illumination, Earth margin, Earth contact and battery charge, with the first lethal shadow marked.],
+) <fig-site>
 
 = Results
 
@@ -194,13 +188,13 @@ All validation values come from `web/public/scoreboard.json`, read on 2026-11-15
     [V2, LOLA AVGVISIB], [`value: 0.48`, `threshold: 5`, `pass: true`, `sample_size: 6123`], [Pooled median visibility error 0.48 points against NASA's 18.6-year average-visibility map @pgda-illumination, over 6 123 pixels; mean signed error +0.72, Pearson r 0.955. Earth twin: median 0.18, r 0.990.],
     [V2b, published sites], [`value: 7`, `threshold: 6`, `pass: false`, `sample_size: 7`], [*Reported as a fail.* Barker 2021 Site 1 @barker2021: 7 of 7 regions pass, above the threshold of 6. The fail comes from the second check, the SP-01 range check: Mazarico 2011's @mazarico2011 2.75-day longest night is 0.21 days below our shortest pixel (2.96 days). That gap is inside Mazarico's 6-hour step (about ±0.25 days), but the agreed rule is the strict range, so `pass` is false.],
     [V3, LROC NAC images], [`value: null`, `pass: null`, `notes: "not run"`], [*Not run.* See Future work.],
-    [V4, IM-2 replay], [`pass: true`], [*A reconstruction, not a validation:* at the assumed touchdown the Sun stands 2.46° up, and a 1.94 m-deep pit hides it from panels at 0–1.44 m.],
+    [V4, IM-2 replay], [`pass: true`], [*A reconstruction, not a validation:* at the assumed touchdown the Sun stands 2.46° up, and a 1.94 m-deep pit hides it from panels at 0–1.44 m. Fragile: at H = 1.44 m the margin is only 2.7 cm, a panel at H = 2 m is not hidden ($d_c^*$ = 2.48 m), and a few minutes of error in the assumed touchdown time can flip the result.],
     [V5, red team], [`value: 7`, `threshold: 7`, `pass: true`, `sample_size: 7`], [All 7 edge cases pass (pole singularity, flat-pole bounds, 20 permanently shadowed sites that stay dark for 18.6 years).],
   ),
   caption: [The validation scoreboard. Each test has an outside judge; V3 has no result and claims none.],
 ) <tab-score>
 
-*V1* runs through the shipped hourly table and its linear interpolation, so it tests what the browser uses. *V2* passes on the pooled data, and the pooled figure needs care: per-bin correlation is below 0.9 in every fifth (0.62 to 0.89), and the pooled pass rests on the 0–60 % bins, because the brightest rims are under-sampled. *V2b* is one-sided. It catches a model that is too dark and misses one that is too bright. The SP-01 gap points the way our finer 20 m near field predicts, and nothing was tuned to close it. *V3* needs LROC NAC images. None were downloaded, so the shadow check has no input and no V3 result is claimed. *V4* rests on an assumed touchdown time and an assumed pit depth, so it shows the model is consistent with the IM-2 reports and proves nothing more.
+*V1* runs through the shipped hourly table and its linear interpolation, so it tests what the browser uses. *V2* passes on the pooled data, and the pooled figure needs care: per-bin correlation is below 0.9 in every fifth (0.62 to 0.89), and the pooled pass rests on the 0–60 % bins, because the brightest rims are under-sampled. *V2b* is one-sided. It catches a model that is too dark and misses one that is too bright. It has two parts. The Barker part uses the threshold rule: 7 of 7 regions pass against a threshold of 6. The SP-01 part uses the strict range rule, and there our longest night is too long, which is the too-dark direction. Two caveats from the V2b `notes` apply: the equal-area disc around each centre can take in darker flank pixels, which risks a false miss, and Mazarico's 6-hour step gives about ±0.25 d, so the 0.21 d gap is inside his step resolution. *V3* needs LROC NAC images. None were downloaded, so the shadow check has no input and no V3 result is claimed. *V4* rests on an assumed touchdown time (2025-03-06T17:28Z) and an assumed pit depth. At a panel height of 1.44 m the pit clears the Sun by only 2.7 cm, a panel at 2 m is not hidden ($d_c^*$ = 2.48 m), and the Sun moves about 0.5° per hour, so a few minutes of error in the touchdown time can flip the result (scoreboard.json V4 `notes`). It shows the model is consistent with the IM-2 reports and proves nothing more.
 
 #figure(
   {
@@ -243,7 +237,7 @@ All validation values come from `web/public/scoreboard.json`, read on 2026-11-15
   caption: [V2b, Barker 2021 Site 1 @barker2021: mean over the 20 m pixels near each RoI centroid, observer 5 m above ground, hourly 2024 and 2025. Source: `web/public/scoreboard.json`, V2b `notes` (LCIP = longest day, LCSP = longest night). Our 20 m DEM is coarser than Barker's 5 m and biases bright.],
 ) <tab-v2b>
 
-In @tab-v2b our mean longest night is shorter than Barker's at six of the seven RoIs, which is the bright bias the caption names. Barker's value still falls inside our pixel range at every RoI, so all seven pass.
+In @tab-v2b our mean longest night is shorter than Barker's at six of the seven RoIs: against Barker's 5 m DEM our model leans bright. At SP-01 it leans the other way, because Mazarico's DEM is 240 m and ours is finer near the site.
 
 == Speed, first load and hosting
 
@@ -297,14 +291,13 @@ The other tools are better in several ways. Moon Trek covers the whole Moon in o
 
 Each limitation in @tab-future has a concrete next step.
 
-#show figure: set block(breakable: false)
 #figure(
   table(
     columns: (4.4cm, 1fr),
     align: left,
     stroke: 0.5pt + luma(150),
     table.header([*Limitation*], [*Future work, with its path*]),
-    [Runtime data uses 94.2 of the 100 MB budget], [\#104: ten regions at 7.02 MB each plus the 21.78 MB far tile leave 5.8 MB. Before an eleventh region, state the rule in ARCHITECTURE §2.1: raise the budget, drop the mid tile where \#48 allows, or shrink tiles.],
+    [Runtime data uses 94.2 of the 100 MB budget], [\#104: ten regions at 7.02 MB each plus the 21.78 MB far tile, plus the 2.1 MB ephemeris and manifest, leave 5.8 MB. Before an eleventh region, state the rule in ARCHITECTURE §2.1: raise the budget, drop the mid tile where \#48 allows, or shrink tiles.],
     [The landing-window heatmap has only 3 grid dates (2025-03-06, 2026-05-31, 2026-11-14)], [Each grid costs 0.33 MB and about 3 minutes to build. Add dates with `penumbra-pipeline grid <data_dir> <region>` inside the \#104 budget. The per-site 30-date window (\#108) is computed live for any date.],
     [V3 (LROC NAC shadow check) not run], [Read START_TIME from each NAC's PDS label, threshold the NAC and NASA's `_MODEL.TIF` with Otsu, compare IoU; pass if within 0.05 of NASA's own model.],
     [Sites work only inside the ten shipped tiles], [\#103: a design note sizing on-demand tiles, a tile server, or a coarser any-site mode with its error stated. Building a tile takes seconds; shipping it is the limit.],

@@ -1,5 +1,5 @@
-# Hayagriva bibliography for docs/paper/penumbra.typ. Sources: docs/research/lunar-landing/sources.md,
-# docs/research/lunar-landing/facts-grill-1.md, docs/SCIENCE-SPEC.md §6. Add an entry only when the text cites it.
+# Hayagriva bibliography for docs/paper/penumbra.typ. Sources: docs/submission/facts.md, docs/SCIENCE-SPEC.md §6.
+# Add an entry only when the text cites it.
 
 mazarico2011:
   type: article
