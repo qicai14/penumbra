@@ -44,6 +44,11 @@
 )
 #pagebreak()
 
+// Abstract (problem, method, V1/V2 numbers, result).
+#block(inset: (x: 1cm), below: 1.2em)[
+  #text(weight: "bold")[Abstract.] Near the lunar south pole the Sun stays low, so a small hill can shade a landing site for days, and IM-1 and IM-2 both ended early. Penumbra builds a 360° terrain horizon from NASA LOLA elevation maps, takes Sun and Earth positions from JPL's DE440 ephemeris and runs a battery model, all in one Rust model that runs natively and as WASM in the browser. Against JPL Horizons the worst Sun or Earth azimuth/elevation difference is 0.00011°, 18 times inside the 0.002° threshold (V1); against NASA's LOLA average-visibility map the pooled median visibility error is 0.48 points over 6 123 pixels (V2). The result is a free, static planner that gives the hours of sunlight and Earth contact at a south-pole site and date, and when the first lethal shadow arrives.
+]
+
 = Introduction
 
 The theme of this challenge is "The Next Frontier", and for landers the next frontier is the lunar south pole. The Sun sits low there, so a small hill can shade a site for days, and the date matters as much as the place. Two private landers have already met this problem.
@@ -178,6 +183,8 @@ The app is one page at #link("https://penumbra-lunar.pages.dev"). A planner pick
 
 All validation values come from `web/public/scoreboard.json`, read on 2026-11-15. We report the miss and the check we did not run beside the passes.
 
+// Let the scoreboard table break across pages so the Results heading is not stranded.
+#show figure: set block(breakable: true)
 #figure(
   table(
     columns: (1.6cm, 3.3cm, 1fr),
@@ -315,7 +322,7 @@ The model also leaves out some physics on purpose. It has no limb darkening and 
 
 A lander that loses power early loses its mission, and these missions are expensive. CLPS task orders (as of Feb 2024) were \$122.0 M for IM-1, \$50.0 M for IM-2 and \$322.8 M for Astrobotic Griffin; the VIPER rover was \$505.4 M @oig-clps. CLPS is capped at \$2.6 B through November 2028 @nasa-clps.
 
-The buyers are CLPS lander vendors choosing sites and dates, NASA and partner landing-site teams for the crewed south-pole landing, rover and ISRU teams sizing power and comms at a stop, and universities teaching mission design. The model is open core. The app and the Rust model stay free and Apache-2.0, so anyone can rerun V1 and V2. Paid work covers custom sites and dates, finer DEMs and a signed sign-off report.
+The buyers are CLPS lander vendors choosing sites and dates, NASA and partner landing-site teams for the crewed south-pole landing, rover and ISRU teams sizing power and comms at a stop, and universities teaching mission design. The model is open core. The app and the Rust model stay free and Apache-2.0, so anyone can rerun V1 and V2. Paid work covers custom sites and dates, finer DEMs and a signed sign-off report. *Our plan, not a sourced figure:* a vendor buys a study by contacting us through the GitHub repository, and we deliver it as a signed report; running it costs us \$0/month in hosting (Cloudflare Pages, static assets only) plus team-hours.
 
 As a price anchor we use *our own illustrative number, not a sourced figure*: \$25 000 per site-and-date study, which is 0.05 % of a \$50 M task order @oig-clps. It is not a market price. The timing is now: Artemis IV lands in 2028 @nasa-artemis-iv @nasa-artemis-arch, Blue Moon MK1 in 2027 @nasa-blue-moon, four more south-pole deliveries are listed @nasa-clps-deliveries, and China's Chang'e-7 is planned for the second half of 2026 @change7.
 
