@@ -2,7 +2,7 @@
   import { computeScenario, DEFAULT_PRESET, latlonToXy, loadManifest, loadNearTile, xyToLatlon, type EphSegment, type Inputs, type NearMeta, type NearTile, type Preset, type Region, type Scenario } from "./lib/engine";
   import Compare from "./lib/Compare.svelte";
   import Replay from "./lib/Replay.svelte";
-  import { applyPresetEdits, decodeCompare, type Pair } from "./lib/compare";
+  import { applyPresetEdits, decodeCompare, defaultB, type Pair } from "./lib/compare";
   import Panorama from "./lib/Panorama.svelte";
   import Timelines from "./lib/Timelines.svelte";
   import Survival from "./lib/Survival.svelte";
@@ -69,7 +69,7 @@
   const VIEWS = [["site", "Site"], ["planner", "Planner"], ["terrain", "Terrain"], ["compare", "Compare"], ["replay", "IM-2 replay"], ["validation", "Validation"], ["about", "About"]] as const;
   type View = (typeof VIEWS)[number][0];
   let view = $state<View>("site");
-  let cmp = $state<{ pairs: { a: Pair; b: Pair }; base: Preset; metas: NearMeta[]; eph: EphSegment[] } | null>(null); // deep state: Compare edits the pairs in place, so they survive a trip to the site view
+  let cmp = $state<{ pairs: { a: Pair; b: Pair }; base: Preset; metas: NearMeta[]; eph: EphSegment[]; why: { pair: Pair; text: string } | null } | null>(null); // deep state: Compare edits the pairs in place, so they survive a trip to the site view
   let cmpError = $state<string | null>(null);
   async function openCompare(search: string) {
     view = "compare";
@@ -80,7 +80,14 @@
       const init = decodeCompare(search, { fallback: { lat: controls.lat, lon: controls.lon, date: controls.date }, spanDays: controls.spanDays, mastM: controls.mastM, metas, eph: m.ephemeris });
       if (init.presetEdits.length) controls.preset = applyPresetEdits(DEFAULT_PRESET, init.presetEdits);
       controls.mastM = init.mastM; controls.spanDays = init.spanDays;
-      cmp = { pairs: { a: init.a, b: init.b }, base: DEFAULT_PRESET, metas, eph: m.ephemeris }; cmpError = null;
+      // No b in the URL: B defaults to the nearest better cell, else the same site 2 days later, and says why. A shared b wins.
+      let why: { pair: Pair; text: string } | null = null;
+      if (!new URLSearchParams(search).has("b")) {
+        const gs = grids.length ? grids : await Promise.all((m.grids ?? []).map(fetchGrid)).catch(() => []);
+        const d = defaultB(init.a, gs, { mastM: init.mastM, spanDays: init.spanDays, hasPreset: init.presetEdits.length > 0, eph: m.ephemeris });
+        init.b = d.pair; why = { pair: d.pair, text: d.note };
+      }
+      cmp = { pairs: { a: init.a, b: init.b }, base: DEFAULT_PRESET, metas, eph: m.ephemeris, why }; cmpError = null;
     } catch (e: any) { cmpError = String(e?.message ?? e); }
   }
   function open(v: View) {
@@ -142,7 +149,7 @@
   {:else if view === "compare"}
     <p class="tag">~/compare</p>
     {#if cmpError}<p class="msg" role="alert">{cmpError}</p>{/if}
-    {#if cmp}<Compare {controls} pairs={cmp.pairs} base={cmp.base} metas={cmp.metas} eph={cmp.eph} />{:else if !cmpError}<p class="msg">Loading…</p>{/if}
+    {#if cmp}<Compare {controls} pairs={cmp.pairs} base={cmp.base} metas={cmp.metas} eph={cmp.eph} why={cmp.why} />{:else if !cmpError}<p class="msg">Loading…</p>{/if}
   {:else}
   <p class="tag">~/{view}</p>
   {#if view === "site" && tile}<SitePicker {controls} {tile} {onregion} feed={maskFeed} {grid} {gridK} {grids} />{/if}

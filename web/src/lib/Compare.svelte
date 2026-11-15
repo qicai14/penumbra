@@ -9,7 +9,7 @@
   import { checkDate, checkPick } from "./site";
   import type { Controls } from "./state.svelte";
 
-  let { controls, pairs, base, metas, eph }: { controls: Controls; pairs: Record<"a" | "b", Pair>; base: Preset; metas: NearMeta[]; eph: EphSegment[] } = $props();
+  let { controls, pairs, base, metas, eph, why = null }: { controls: Controls; pairs: Record<"a" | "b", Pair>; base: Preset; metas: NearMeta[]; eph: EphSegment[]; why?: { pair: Pair; text: string } | null } = $props();
 
   type Side = "a" | "b";
   const SIDES: Side[] = ["a", "b"];
@@ -148,6 +148,8 @@
   <span class="cap">Operable days, B − A</span>
   <strong data-testid="diff-operable">{sa && sb ? diffDays(sa.survival.operable_h, sb.survival.operable_h) : "—"}</strong>
 </section>
+
+{#if why && why.pair.lat === pairs.b.lat && why.pair.lon === pairs.b.lon && why.pair.date === pairs.b.date}<p class="note" data-testid="compare-why">{why.text}</p>{/if}
 
 <p class="sentence" data-testid="compare-sentence">{sentence ?? "B − A needs both sides computed; see the messages above."}</p>
 
