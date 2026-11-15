@@ -50,7 +50,7 @@ The theme of this challenge is "The Next Frontier", and for landers the next fro
 
 Intuitive Machines' Odysseus (IM-1) landed on 2024-02-22 at 80.1276° S, 1.4367° E @nasa-lro-im1 on a 12° slope and came to rest about 30° off the surface. It ran 144 hours and ended "as the sun moved out of view of the one illuminated solar panel" @spacenews-im1. Athena (IM-2) reached Mons Mouton on 2025-03-06 at 84.7906° S, 29.1957° E. It "ended up on its side within a 20-meter diameter crater" @lroc-im2, and NASA got "some data" before its batteries were depleted @nasa-im2-end. A low Sun angle and the panels' orientation stopped charging.
 
-Both landers tipped, and no planning tool can fix a lander lying on its side. Penumbra answers a narrower question: what the site and the date gave an upright lander. That part a planner controls before launch. The demand is growing. NASA cut its Artemis III candidate list from thirteen to nine south-pole regions @artemis-nine, and the first crewed south-pole landing is now Artemis IV in 2028 @nasa-artemis-iv. Blue Moon MK1 lands on the Shackleton connecting ridge in 2027 @nasa-blue-moon, and NASA lists south-pole deliveries for Intuitive Machines, Firefly and Astrobotic @nasa-clps-deliveries.
+Both landers tipped, and no planning tool can fix a lander lying on its side. Penumbra answers a narrower question: what the site and the date gave an upright lander. That part a planner controls before launch. The demand is growing. NASA cut its Artemis III candidate list from thirteen to nine south-pole regions @artemis-nine, and the first crewed south-pole landing is now Artemis IV in 2028 @nasa-artemis-iv @nasa-artemis-arch. Blue Moon MK1 lands on the Shackleton connecting ridge in 2027 @nasa-blue-moon, and NASA lists south-pole deliveries for Intuitive Machines, Firefly and Astrobotic @nasa-clps-deliveries.
 
 For a site, a landing date and a mast height, Penumbra answers three questions (@tab-questions). It ships all nine Artemis III regions plus the Shackleton ridge.
 
@@ -297,7 +297,7 @@ Each limitation in @tab-future has a concrete next step.
     align: left,
     stroke: 0.5pt + luma(150),
     table.header([*Limitation*], [*Future work, with its path*]),
-    [Runtime data uses 94.2 of the 100 MB budget], [\#104: ten regions at 7.02 MB each plus the 21.78 MB far tile, plus the 2.1 MB ephemeris and manifest, leave 5.8 MB. Before an eleventh region, state the rule in ARCHITECTURE §2.1: raise the budget, drop the mid tile where \#48 allows, or shrink tiles.],
+    [Runtime data uses 94.2 of the 100 MB budget], [\#104: ten regions at 7.02 MB each plus the 21.78 MB far tile, plus about 2.2 MB of ephemeris table and manifest (\#104), leave 5.8 MB. Before an eleventh region, state the rule in ARCHITECTURE §2.1: raise the budget, drop the mid tile where \#48 allows, or shrink tiles.],
     [The landing-window heatmap has only 3 grid dates (2025-03-06, 2026-05-31, 2026-11-14)], [Each grid costs 0.33 MB and about 3 minutes to build. Add dates with `penumbra-pipeline grid <data_dir> <region>` inside the \#104 budget. The per-site 30-date window (\#108) is computed live for any date.],
     [V3 (LROC NAC shadow check) not run], [Read START_TIME from each NAC's PDS label, threshold the NAC and NASA's `_MODEL.TIF` with Otsu, compare IoU; pass if within 0.05 of NASA's own model.],
     [Sites work only inside the ten shipped tiles], [\#103: a design note sizing on-demand tiles, a tile server, or a coarser any-site mode with its error stated. Building a tile takes seconds; shipping it is the limit.],
@@ -317,7 +317,7 @@ A lander that loses power early loses its mission, and these missions are expens
 
 The buyers are CLPS lander vendors choosing sites and dates, NASA and partner landing-site teams for the crewed south-pole landing, rover and ISRU teams sizing power and comms at a stop, and universities teaching mission design. The model is open core. The app and the Rust model stay free and Apache-2.0, so anyone can rerun V1 and V2. Paid work covers custom sites and dates, finer DEMs and a signed sign-off report.
 
-As a price anchor we use *our own illustrative number, not a sourced figure*: \$25 000 per site-and-date study, which is 0.05 % of a \$50 M task order @oig-clps. It is not a market price. The timing is now: Artemis IV lands in 2028 @nasa-artemis-iv, Blue Moon MK1 in 2027 @nasa-blue-moon, four more south-pole deliveries are listed @nasa-clps-deliveries, and China's Chang'e-7 is planned for the second half of 2026 @change7.
+As a price anchor we use *our own illustrative number, not a sourced figure*: \$25 000 per site-and-date study, which is 0.05 % of a \$50 M task order @oig-clps. It is not a market price. The timing is now: Artemis IV lands in 2028 @nasa-artemis-iv @nasa-artemis-arch, Blue Moon MK1 in 2027 @nasa-blue-moon, four more south-pole deliveries are listed @nasa-clps-deliveries, and China's Chang'e-7 is planned for the second half of 2026 @change7.
 
 = Conclusion
 
