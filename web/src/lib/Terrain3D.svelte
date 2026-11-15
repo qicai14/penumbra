@@ -58,6 +58,8 @@
     ctl.listenToKeyEvents(canvas);
     ctl.touches = { ONE: null as unknown as THREE.TOUCH, TWO: THREE.TOUCH.DOLLY_ROTATE }; // one finger scrolls the page; two rotate and zoom
     canvas.style.touchAction = "pan-y"; // OrbitControls sets "none", which traps the page scroll under one finger
+    const keepTwoFinger = (e: TouchEvent) => { if (e.touches.length >= 2) e.preventDefault(); }; // pan-y would let a vertical two-finger drag (tilt) scroll the page
+    canvas.addEventListener("touchmove", keepTwoFinger, { passive: false });
 
     // Unlit: the vertex colour is the whole shading, so no GPU light or shadow map can add a shadow the model did not compute.
     const mesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ vertexColors: true }));
@@ -86,7 +88,7 @@
 
     gl = { renderer, scene, camera, controls: ctl, mesh, pin, sun, sunRgb: rgb(c("--color-sun")), geoms: new Map(), key: "", render, at: null };
     return () => {
-      cancelAnimationFrame(raf); ro.disconnect(); ctl.dispose();
+      cancelAnimationFrame(raf); ro.disconnect(); ctl.dispose(); canvas.removeEventListener("touchmove", keepTwoFinger);
       if (gl) freeGeoms(gl);
       disposeTree(scene);
       renderer.dispose(); renderer.forceContextLoss();
