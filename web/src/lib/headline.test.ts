@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { Preset, Survival } from "./engine";
-import { fmtDays, headline, presetFields, setPresetField, spanDays } from "./headline";
+import { fmtDays, hourFigures, headline, presetFields, setPresetField, spanDays } from "./headline";
 
 const preset: Preset = {
   capacity_wh: 10000, start_wh: 10000, min_wh: 0, panel_area_m2: 1.5, efficiency: 0.3, panel: "tracking",
@@ -89,4 +89,9 @@ test("the load shows its caveat while cited, and not once the planner edits it",
   expect(load(preset).tag).toBe("cited");
   expect(load(preset).note).toContain("E58d");
   expect(load(setPresetField(preset, "load_w", 100) as Preset).note).toBeUndefined();
+});
+
+test("sunlight and Earth contact read as whole hours from the model's survival sums", () => {
+  expect(hourFigures(surv({ sunlit_h: 411.6, contact_h: 330.2 }))).toEqual({ sun: "412 h", earth: "330 h" });
+  expect(hourFigures(surv({ sunlit_h: 0, contact_h: 0 }))).toEqual({ sun: "0 h", earth: "0 h" });
 });

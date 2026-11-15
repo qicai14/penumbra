@@ -244,7 +244,7 @@ const GRID_DATES: [(&str, f64); 3] = [
 ];
 /// Span from landing, days: the site view's default (DEFAULT_SPAN_DAYS) and within replay-im2.
 const GRID_SPAN_DAYS: u32 = 30;
-/// Timeline step, s: the browser's fixture step (web/public/fixture/scenario.json `step_s`).
+/// Timeline step, s: the browser's step (web/src/lib/engine.ts `STEP_S`).
 const GRID_STEP_S: u32 = 600;
 /// Mast above ground, m: the site view's default (DEFAULT_MAST_M) and the IM-2 tracer's.
 const GRID_MAST_M: f64 = 2.0;
@@ -277,7 +277,7 @@ fn grid(data_dir: &Path, region: &str) -> Result<()> {
         step_s: f64::from(GRID_STEP_S),
         count: GRID_SPAN_DAYS * 86_400 / GRID_STEP_S,
         earth_margin_deg: DEFAULT_EARTH_MARGIN_DEG,
-        // the lander preset the web loads (fixture `preset`, E58a–d)
+        // the lander preset the web loads (engine.ts `DEFAULT_PRESET`, E58a–d)
         preset: penumbra_core::power::ROVER_PRESET,
     };
     let landings: Vec<f64> = GRID_DATES.iter().map(|d| d.1).collect();

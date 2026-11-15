@@ -68,9 +68,9 @@ const WIND = ["up", "upper right", "right", "lower right", "down", "lower left",
 export const mapDirection = (deg: number) => WIND[Math.round(deg / 45) % 8];
 
 export function readout(b: Better | null): string {
-  if (!b) return "Nearest site within 1 km with more operable days: no grid data at this site.";
-  if (b.kind === "none") return `Nearest site within 1 km with more operable days: none gains a full day${b.partial ? " (the grid covers only part of the 1 km disc here)" : ""}.`;
-  return `Nearest site within 1 km with more operable days: +${b.plusDays.toFixed(1)} d, ${Math.round(b.distM)} m away (${Math.round(b.bearingDeg)}° from map up, ${mapDirection(b.bearingDeg)} on the map)`;
+  if (!b) return "Better site within 1 km: no grid data here.";
+  if (b.kind === "none") return `Better site within 1 km: none${b.partial ? " (grid covers only part of the 1 km disc)" : ""}.`;
+  return `Better site within 1 km: +${b.plusDays.toFixed(1)} d, ${Math.round(b.distM)} m, ${mapDirection(b.bearingDeg)} on the map.`;
 }
 
 /** Marching squares at `level` hours over cell centres; segments in map metres. Squares touching a no-data cell are skipped. */

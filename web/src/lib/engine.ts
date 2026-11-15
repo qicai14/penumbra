@@ -1,6 +1,7 @@
-// The only module that imports lib/wasm/ or reads the fixture (ARCHITECTURE §3.5).
+// The only module that imports lib/wasm/ (ARCHITECTURE §3.5).
 // Typed arrays use platform byte order; every browser target is little-endian, so Int16Array over a file is safe.
-// sun_earth_track (T02), horizon (T07), timeline (T08) and survival (T09) are WASM; the fixture still supplies the time step and preset defaults.
+// sun_earth_track (T02), horizon (T07), timeline (T08) and survival (T09) are WASM. The app never loads the FAKE layout fixture
+// (web/tests/fixture/scenario.json): the step and the preset below are the real values the pipeline uses.
 export type Site = { lat_deg: number; lon_deg: number; ground_m: number; mast_m: number };
 export type Horizon = { el_deg: Float64Array; dist_m: Float64Array }; // 720 each
 export type Track = {
@@ -28,17 +29,21 @@ export type EngineError = {
   code: "NOT_LOADED" | "OUT_OF_COVERAGE" | "NO_DATA" | "OUT_OF_TABLE" | "BAD_INPUT";
   message: string;
 };
-export type ScoreEntry = {
-  id: string; judge: string; metric: string; threshold: number | null; value: number | null;
-  pass: boolean | null; sample_size: number | null; notes: string; commit: string | null; date: string | null;
-};
 export type Scenario = {
-  note: string; api_version: number; site: Site; start_unix_s: number; step_s: number;
+  api_version: number; site: Site; start_unix_s: number; step_s: number;
   count: number; preset: Preset; horizon: Horizon; track: Track; timeline: Timeline; survival: Survival;
-  scoreboard: ScoreEntry[];
 };
 
-/** Throws when a fixture or manifest was built for a different API than this engine. */
+/** Timeline step, s: the same as the pipeline's GRID_STEP_S (crates/pipeline/src/main.rs), so the heatmap and the headline agree. */
+export const STEP_S = 600;
+/** The lander preset: penumbra_core::power::ROVER_PRESET (E58a–d) and ROVER_CITED_FIELDS; engine.test.ts checks they match. */
+export const DEFAULT_PRESET: Preset = {
+  capacity_wh: 10000, start_wh: 10000, min_wh: 0, panel_area_m2: 1.5, efficiency: 0.3, panel: "tracking",
+  load_w: 220, earth_margin_deg: 2, mast_m: 2,
+  cited: { capacity_wh: true, panel_area_m2: true, efficiency: true, load_w: true },
+};
+
+/** Throws when a manifest (or the test fixture) was built for a different API than this engine. */
 export function checkApiVersion(found: number, expected: number): void {
   if (found !== expected) throw new Error(`BAD_INPUT: api_version ${found} does not match engine ${expected}`);
 }
@@ -55,7 +60,8 @@ const f64 = (v: unknown) => Float64Array.from(v as unknown[], (x) => (typeof x =
 const arrays = <T extends object>(o: Record<string, unknown>): T =>
   Object.fromEntries(Object.entries(o).map(([k, v]) => [k, f64(v)])) as T;
 
-/** Turns parsed scenario JSON into typed arrays and checks it. `engineVersion` is what api_version() returns. */
+/** Turns parsed scenario JSON into typed arrays and checks it. `engineVersion` is what api_version() returns.
+ *  Only the tests call it now (web/tests/fixture/scenario.json); the app computes every scenario in WASM. */
 export function parseScenario(raw: any, engineVersion: number): Scenario {
   checkApiVersion(raw.api_version, engineVersion);
   const s: Scenario = {
@@ -71,11 +77,6 @@ export function parseScenario(raw: any, engineVersion: number): Scenario {
   return s;
 }
 
-export async function loadFixture(url = `${import.meta.env?.BASE_URL ?? "/"}fixture/scenario.json`): Promise<Scenario> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`NO_DATA: ${url} returned ${res.status}`);
-  return parseScenario(await res.json(), await engineApiVersion());
-}
 
 /** Cheap guard against a units or ordering slip: lengths, monotonic time, az, el, illumination. Throws on the first fault. */
 export function validate(result: Horizon | Track | Timeline | Survival): void {
@@ -247,26 +248,24 @@ async function timelineAndSurvival(engine: WasmEngine, rawHorizon: Float64Array,
   return { timeline, survival };
 }
 
-let fixtureBase: Promise<Scenario> | undefined;
 /**
- * Everything is the WASM Engine on the landing date and span at the fixture's 10-minute step: the panorama track, the
+ * Everything is the WASM Engine on the landing date and span at a 10-minute step: the panorama track, the
  * real DEM horizon (T07), Engine.timeline (T08) and the WASM `survival` (T09). Track and timelines share one grid, so the
- * cursor stays aligned. The fixture still supplies the step and the preset defaults.
+ * cursor stays aligned.
  */
 async function computeNow(inp: Inputs): Promise<Scenario> {
-  const s = await (fixtureBase ??= loadFixture());
   const engine = await loadEngine();
   await ensureNear(engine, inp.lat_deg, inp.lon_deg, inp.region);
   const ground_m = engine.ground_height(inp.lat_deg, inp.lon_deg);
-  const site = { ...s.site, lat_deg: inp.lat_deg, lon_deg: inp.lon_deg, ground_m, mast_m: inp.mast_m };
+  const site: Site = { lat_deg: inp.lat_deg, lon_deg: inp.lon_deg, ground_m, mast_m: inp.mast_m };
   const raw = engine.horizon(inp.lat_deg, inp.lon_deg, inp.mast_m);
   const horizon: Horizon = { el_deg: raw.slice(0, 720), dist_m: raw.slice(720, 1440) };
   validate(horizon);
-  const preset = inp.preset ?? s.preset, t0 = inp.start_unix_s, n = Math.round((inp.span_days * 86400) / s.step_s);
+  const preset = inp.preset ?? DEFAULT_PRESET, t0 = inp.start_unix_s, n = Math.round((inp.span_days * 86400) / STEP_S);
   if (!(n >= 1) || !Number.isFinite(t0)) throw new Error(`BAD_INPUT: span ${inp.span_days} d from ${t0} gives no time steps`);
-  const track = await sunEarthTrack(site, t0, s.step_s, n);
-  const { timeline, survival } = await timelineAndSurvival(engine, raw, site, preset, t0, s.step_s, n);
-  return { api_version: s.api_version, step_s: s.step_s, scoreboard: s.scoreboard, note: "", start_unix_s: t0, count: n, preset, site, track, horizon, timeline, survival };
+  const track = await sunEarthTrack(site, t0, STEP_S, n);
+  const { timeline, survival } = await timelineAndSurvival(engine, raw, site, preset, t0, STEP_S, n);
+  return { api_version: await engineApiVersion(), step_s: STEP_S, start_unix_s: t0, count: n, preset, site, track, horizon, timeline, survival };
 }
 
 // The Engine holds one near tile at a time (ensureNear swaps it), so two computes must never interleave.
@@ -329,13 +328,11 @@ export function loadMaskEngine(regionId: string): Promise<{ engine: WasmEngine; 
       const m = await loadManifest();
       const region = m.regions.find((r) => r.id === regionId);
       if (!region) throw new Error(`BAD_INPUT: unknown region ${regionId}`);
-      const [segs, data, midData] = await Promise.all([Promise.all(m.ephemeris.map(fetchSegment)), fetchTile(region.near), fetchTile(region.mid)]);
+      const [segs, data] = await Promise.all([Promise.all(m.ephemeris.map(fetchSegment)), fetchTile(region.near)]);
       const engine = new wasm.Engine();
       m.ephemeris.forEach((seg, i) => engine.load_ephemeris(seg.t0_unix_s, seg.step_s, segs[i]));
       const t = region.near;
       engine.load_near(data, t.width, t.height, t.x0_m, t.y0_m, t.pixel_m, t.scale_m, t.offset_m, t.nodata);
-      const u = region.mid;
-      engine.load_mid(midData, u.width, u.height, u.x0_m, u.y0_m, u.pixel_m, u.scale_m, u.offset_m, u.nodata);
       const { url, ...meta } = t;
       return { engine, meta };
     })();

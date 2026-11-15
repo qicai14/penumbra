@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Explain from "./Explain.svelte";
   import { untrack } from "svelte";
   import uPlot from "uplot";
   import "uplot/dist/uPlot.min.css";
@@ -165,7 +166,7 @@
       tzDate: (ts: number) => uPlot.tzDate(new Date(ts * 1000), "Etc/UTC"),
       scales: { x: { time: true } },
       cursor: { sync: { key: SYNC, scales: ["x", null] as [string, null] }, y: false, points: { show: false }, drag: { x: true, y: false, setScale: true } },
-      legend: { live: true },
+      legend: { show: false },
       padding: [8, 12, 0, 0] as [number, number, number, number],
       axes: [x(show), y()],
     });
@@ -267,7 +268,7 @@
 
 <section class="panel" aria-labelledby="tl-h">
   <header>
-    <h2 id="tl-h">Timelines · sunlight and Earth over the span</h2>
+    <h2 id="tl-h">Timelines</h2>
     <div class="zoom" role="group" aria-label="Zoom the timelines" data-testid="zoom" data-span={vis[1] - vis[0]}>
       <button type="button" onclick={() => zoom(2)} aria-label="Zoom out" data-testid="zoom-out">−</button>
       <button type="button" onclick={() => zoom(0.5)} aria-label="Zoom in" data-testid="zoom-in">+</button>
@@ -285,8 +286,13 @@
   <p class="now" data-testid="timelines-now">
     {fmtUtc(tl.t_unix_s[idx])} · illumination {tl.illumination[idx].toFixed(2)} · visibility {tl.visibility[idx].toFixed(0)} · Earth margin {tl.earth_margin_deg[idx].toFixed(2)}° (threshold {label}) · contact {tl.contact[idx] >= 0.5 ? "yes" : "no"}
   </p>
-  <p class="key"><span class="swatch"></span>Shaded band: operable window (illumination above zero and Earth contact).</p>
-  <p class="key" data-testid="band-key"><span class="swatch hatch"></span>Hatched: ± uncertainty from DEM height error, {SIGMA_Z_TEXT}. "ill-conditioned" = wider than 6 h [est].</p>
+  <!-- The uPlot legend is off, so this line names each series by its stroke, chart by chart (top to bottom). -->
+  <p class="key" data-testid="series-key"><i class="ln sun"></i>Illumination <i class="ln paper dash"></i>Visibility · <i class="ln earth"></i>Earth margin <i class="ln paper dash"></i>threshold · <i class="ln earth"></i>Earth contact · <i class="ln paper"></i>Battery <i class="ln fog dash"></i>Lethal charge</p>
+  <p class="key"><span class="swatch"></span>Shaded: the lander can work · <span class="swatch hatch"></span>Hatched: ± uncertainty</p>
+  <Explain id="tl" topic="Timelines" plain="Hour by hour over the span: when the lander has sunlight, can talk to Earth, and can work.">
+    <p>Each row tracks one thing over the whole span. The <strong>shaded band</strong> marks when the lander can work: Sun on its panels and Earth in view. The <strong>hatched edges</strong> show how sure we are of each sunrise and sunset.</p>
+    <p data-testid="band-key">Shaded: operable window (illumination above zero and Earth contact). Hatched: ± uncertainty from DEM height error, {SIGMA_Z_TEXT}. "ill-conditioned" = wider than 6 h [est].</p>
+  </Explain>
   {#if bandError}<p class="key" role="alert">Sunrise and sunset bands unavailable: {bandError}</p>{/if}
   <details class="bands" data-testid="band-list">
     <summary>Sunrise and sunset times with ± uncertainty ({bands.length})</summary>
@@ -310,13 +316,17 @@
   .charts { width: 100%; }
   .now, .key { margin: var(--spacing-8) 0 0; font: var(--text-caption)/var(--leading-caption) var(--font-mono); font-variant-numeric: tabular-nums; }
   .now { color: var(--color-fog); }
-  .key { color: var(--color-ash); display: flex; align-items: center; gap: var(--spacing-8); }
+  .key { color: var(--color-ash); display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-8); }
+  .ln { display: inline-block; width: 16px; border-top: 2px solid; }
+  .ln.sun { border-color: var(--color-sun); }
+  .ln.earth { border-color: var(--color-earth-line); }
+  .ln.paper { border-color: var(--color-paper); }
+  .ln.fog { border-color: var(--color-fog); }
+  .ln.dash { border-top-style: dashed; border-top-width: 1px; }
   .swatch { width: 16px; height: 8px; background: var(--color-fog); opacity: 0.15; border: 1px solid var(--color-slate); }
   .swatch.hatch { opacity: 1; background: repeating-linear-gradient(135deg, var(--color-sun) 0 1px, transparent 1px 4px); }
   .bands { margin-top: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .bands ul { margin: var(--spacing-8) 0 0; padding-left: var(--spacing-16); max-height: 12em; overflow: auto; font-variant-numeric: tabular-nums; }
-  .charts :global(.u-legend) { font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-fog); text-align: left; }
-  .charts :global(.u-legend .u-marker) { border-radius: 0; }
   .charts :global(.u-cursor-x) { border-right: 1px dashed var(--color-fog) !important; }
   .charts :global(.u-select) { background: var(--color-fog); opacity: 0.12; }
 </style>

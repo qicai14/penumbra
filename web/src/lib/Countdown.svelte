@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Explain from "./Explain.svelte";
   // T26 (#27): Sun and Earth elevation at the time marker and the countdown to the next sunset and Earthset.
   // Everything is read from the T08 timeline columns; no new model call.
   import type { Scenario } from "./engine";
@@ -6,7 +7,7 @@
   import { countdown } from "./timelines";
 
   // `prefix` keeps element ids and test ids unique when two countdowns share a page (compare view: "a-", "b-").
-  let { scenario, idx, prefix = "", title = "At the time marker", sticky = true }: { scenario: Scenario; idx: number; prefix?: string; title?: string; sticky?: boolean } = $props();
+  let { scenario, idx, prefix = "", title = "Time marker", sticky = true }: { scenario: Scenario; idx: number; prefix?: string; title?: string; sticky?: boolean } = $props();
 
   const tl = $derived(scenario.timeline);
   const i = $derived(Math.min(idx, tl.t_unix_s.length - 1));
@@ -16,6 +17,14 @@
 
 <section class="panel" class:sticky aria-labelledby="{prefix}cd-h" aria-live="off" data-testid="{prefix}countdown">
   <h2 id="{prefix}cd-h">{title}</h2>
+  {#if !prefix}
+    <Explain id="cd" topic="Time marker" plain="Where the Sun and Earth are at the chosen moment, and how long until each one sets.">
+      <p><strong>Elevation</strong> is how high the Sun or Earth sits above a flat horizon, in degrees. Below 0° it has set.</p>
+      <p><strong>In shadow</strong>: hills or crater walls block the Sun even though it is up.</p>
+      <p><strong>No&nbsp;contact</strong>: Earth is hidden, so the lander cannot radio home.</p>
+      <p>Move the time slider to pick a different moment.</p>
+    </Explain>
+  {/if}
   <div class="figs">
     <p class="fig">
       <span class="cap">Sun elevation{#if !sunUp(tl.illumination[i])}{" · in shadow"}{/if}</span>
