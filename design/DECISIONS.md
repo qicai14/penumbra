@@ -2,6 +2,12 @@
 
 For Qi Cai's review on Nov 13. Newest first.
 
+## 2026-11-15 · C5 README banner and submission screenshots
+- **Outlined wordmark.** `brand/assets/wordmark.svg` (paper `#eeeeee` ink, for dark grounds) and `brand/assets/wordmark-light.svg` (carbon `#111111` ink, for light grounds). Same lockup as the app header (`web/src/App.svelte`): Grazing Sun from `sun-mark.svg` in ember `#da5c2c`, the hairline horizon, and "PENUMBRA" in Archivo ExtraBold Italic. GitHub does not load web fonts in README SVGs, so the text is outlined to paths (opentype.js on Google Fonts' static semi-expanded instance, 112.5 % width against the app's 112 %, not visible at banner size). The README switches the two with `<picture>` and `prefers-color-scheme`. This also closes the `textLength` stretching question below for the banner: the outlined file keeps the real letter widths.
+- **Contrast.** `#eeeeee` on GitHub dark `#0d1117` and `#111111` on white are both above 15:1. The ember Sun is a graphic, not text: about 3.6:1 on white and 5.0:1 on `#0d1117`, above the 3:1 non-text minimum.
+- **Screenshots.** `docs/screenshots/submission/<view>-<width>.png` at 1440×900 and 390×844, dark scheme, live app, viewport crops: hero (first screen), site (horizon panorama), why-moon (card), compare, landing-window (on Planner). All real data; no FAKE labels needed.
+- Open: the light-ground variant keeps ember, per DESIGN.md's one-orange rule. The older `#b0600a` light-ground amber in the Nov 11 brand-set row predates the Axiom migration and is not used.
+
 ## 2026-11-14 · Screen 6 lo-fi pick: Compare A vs B (Charls + Claude review)
 
 Method:
@@ -231,7 +237,7 @@ Round-2 table below is filled from this entry.
 | **Brand set** | **A · Low Sun** (Nov 11) | Charls liked A but not the disc beside the name. The mark moves to the right of the wordmark with a long line back over it (reference: a Lockheed Martin-style lockup). Three mark options are in `design/brand/low-sun-marks.html`: 1 Grazing Sun, 2 First Light (star glint), 3 Long Shadow. **Mark: 1 Grazing Sun** (Charls, Nov 11): a half-risen starburst Sun over the "B" and "R" and a hairline horizon over the tops of the letters, with a wide italic Archivo wordmark. Ground is pure black `#000000`; supporting text is Montserrat Medium (500), numbers IBM Plex Mono. On light grounds the amber darkens to `#b0600a`. |
 
 ### Open questions
-- The wordmark is still stretched to a fixed width with `textLength`, which distorts the letters. Fix in `/design-pass 3`: measure it on the loaded Archivo font (as v2 did), or outline it to SVG paths.
+- ~~The wordmark is still stretched to a fixed width with `textLength`, which distorts the letters. Fix in `/design-pass 3`.~~ **Resolved (Nov 15, PR #132):** the README banner `brand/assets/wordmark.svg` and `wordmark-light.svg` outline "PENUMBRA" to SVG paths at real letter widths; the app header already measures the loaded Archivo.
 - Sun and Earth tracks: separate them by colour only, or also by dash pattern as in the wireframes? (Recommended: both, for colour-blind users.)
 - Set B needs a dark mode for terrain views, which means two full themes. Is that worth it for a two-person team?
 - Lethal colour plus text label everywhere; never colour alone.
