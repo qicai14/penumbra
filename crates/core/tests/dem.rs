@@ -108,3 +108,78 @@ fn all_nodata_tile_is_refused() {
         Err(DemError::BadInput(_))
     ));
 }
+
+// #112 slope at the pin: Horn gradient over the 3 × 3 pixels (60 m at 20 m) around the pin.
+
+/// 5 × 5 tile of 20 m pixels, counts from `count(col, row)`, metres per count `scale_m`.
+fn slope_tile(scale_m: f64, count: impl Fn(i16, i16) -> i16) -> DemTile {
+    let meta = TileMeta {
+        width: 5,
+        height: 5,
+        x0_m: 1000.0,
+        y0_m: 2000.0,
+        pixel_m: 20.0,
+        scale_m,
+        offset_m: 100.0,
+        nodata: i16::MIN,
+    };
+    let counts = (0..5i16)
+        .flat_map(|row| (0..5i16).map(move |col| (row, col)))
+        .map(|(row, col)| count(col, row))
+        .collect();
+    DemTile::new(meta, counts).unwrap()
+}
+
+// Centre pixel (2, 2) is (1050, 1950).
+const PIN: MapXy = MapXy {
+    x_m: 1050.0,
+    y_m: 1950.0,
+};
+
+// A plane rising 20 m · tan 12° per pixel eastward is a 12° slope by construction (IM-1's
+// landing slope, E75a, chosen only as a realistic value).
+#[test]
+fn slope_of_a_plane_tilted_east_is_its_tilt() {
+    let t = slope_tile(20.0 * 12f64.to_radians().tan(), |col, _| col);
+    let s = t.slope_deg(PIN).unwrap();
+    assert!((s - 12.0).abs() < 0.1, "got {s}");
+}
+
+// Rising along both axes, 20 m · tan 30° / √2 per pixel on each: the steepest direction is the
+// diagonal and its slope is 30°. Rows run south (row 0 = largest y), so this also checks y.
+#[test]
+fn slope_of_a_diagonal_plane_is_its_tilt() {
+    let t = slope_tile(20.0 * 30f64.to_radians().tan() / 2f64.sqrt(), |col, row| {
+        col + row
+    });
+    let s = t.slope_deg(PIN).unwrap();
+    assert!((s - 30.0).abs() < 0.1, "got {s}");
+}
+
+#[test]
+fn slope_of_a_flat_plane_is_zero() {
+    let s = slope_tile(0.25, |_, _| 7).slope_deg(PIN).unwrap();
+    assert!(s.abs() < 1e-12, "got {s}");
+}
+
+// P5: a pin whose 3 × 3 window leaves the tile has no slope, never 0°. (1010, 1950) is the
+// edge pixel (0, 2); (1050, 1990) is (2, 0); the last is off the tile entirely.
+#[test]
+fn slope_refuses_a_window_outside_coverage() {
+    let t = slope_tile(0.25, |_, _| 7);
+    for p in [xy(1010.0, 1950.0), xy(1050.0, 1990.0), xy(-5.0e5, 0.0)] {
+        assert_eq!(t.slope_deg(p), Err(DemError::OutOfCoverage), "{p:?}");
+    }
+    // (1030, 1970) is pixel (1, 1): its window (0..2, 0..2) is inside.
+    assert!(t.slope_deg(xy(1030.0, 1970.0)).is_ok());
+}
+
+// P5: a no-data pixel in the window is an error, never a partial gradient.
+#[test]
+fn slope_refuses_a_window_touching_nodata() {
+    let t = slope_tile(
+        0.25,
+        |col, row| if (col, row) == (3, 3) { i16::MIN } else { 7 },
+    );
+    assert_eq!(t.slope_deg(PIN), Err(DemError::NoData));
+}

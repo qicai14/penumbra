@@ -83,3 +83,7 @@ export function pickRegion<R extends { id: string; near: NearMeta }>(regions: R[
   const sel = regions.find((r) => r.id === preferId);
   return (sel && ok(sel) ? sel : undefined) ?? regions.find(ok) ?? regions.find((r) => edgeDistanceM(x, y, r.near) >= 0);
 }
+
+/** The slope line for the pin; no line at all (never "0°") when the engine had no slope there. */
+export const slopeText = (deg: number | undefined): string | null =>
+  deg === undefined || !Number.isFinite(deg) ? null : `Slope ${deg.toFixed(1)}° (20 m DEM, 60 m window)`;

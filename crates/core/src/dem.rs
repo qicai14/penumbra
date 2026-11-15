@@ -152,6 +152,42 @@ impl DemTile {
         let bottom = v10 + a * (v11 - v10);
         Ok(m.offset_m + m.scale_m * (top + b * (bottom - top)))
     }
+
+    /// Ground slope in degrees from horizontal at map point `xy` (#112): Horn's gradient over the
+    /// 3 × 3 pixels centred on the pixel holding `xy` (60 m window on the 20 m near tile). Map
+    /// metres are used as ground metres: the polar stereographic scale k = 2/(1 + sin|φ|) is at
+    /// most 1.0077 at 80°S, so the slope reads up to ~0.1° low at 12°. `OutOfCoverage` when the window leaves the tile and
+    /// `NoData` when any of its nine pixels is no-data, never 0° (P5).
+    pub fn slope_deg(&self, xy: MapXy) -> Result<f64, DemError> {
+        if !xy.x_m.is_finite() || !xy.y_m.is_finite() {
+            return Err(DemError::BadInput("map x/y must be finite"));
+        }
+        let m = &self.meta;
+        let ic = ((xy.x_m - m.x0_m) / m.pixel_m).floor();
+        let ir = ((m.y0_m - xy.y_m) / m.pixel_m).floor();
+        if ic < 1.0 || ir < 1.0 || ic > f64::from(m.width - 2) || ir > f64::from(m.height - 2) {
+            return Err(DemError::OutOfCoverage);
+        }
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        // range checked above: 1 ≤ ic ≤ width − 2 and 1 ≤ ir ≤ height − 2, whole numbers
+        let (i, j) = (ic as usize, ir as usize);
+        let w = m.width as usize;
+        // z[r][c]: window row r (0 = north, larger y), column c (0 = west), metres
+        let mut z = [[0.0; 3]; 3];
+        for (r, row) in z.iter_mut().enumerate() {
+            for (c, v) in row.iter_mut().enumerate() {
+                let k = self.counts[(j + r - 1) * w + (i + c - 1)];
+                if k == m.nodata {
+                    return Err(DemError::NoData);
+                }
+                *v = m.scale_m * f64::from(k);
+            }
+        }
+        let d = 8.0 * m.pixel_m;
+        let dz_dx = ((z[0][2] + 2.0 * z[1][2] + z[2][2]) - (z[0][0] + 2.0 * z[1][0] + z[2][0])) / d;
+        let dz_dy = ((z[0][0] + 2.0 * z[0][1] + z[0][2]) - (z[2][0] + 2.0 * z[2][1] + z[2][2])) / d;
+        Ok(dz_dx.hypot(dz_dy).atan().to_degrees())
+    }
 }
 
 impl Terrain for DemTile {

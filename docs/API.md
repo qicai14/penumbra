@@ -15,14 +15,14 @@ The `core` → WASM boundary, frozen at Hour 0 (T00, issue #1). This file is can
 - **Heights**: `ground_m` is metres above the 1 737 400 m sphere; `mast_m` is the mast height H above the ground.
 - Every number crossing the boundary is f64. There is no f32 anywhere in the API (N7).
 - **Errors** are thrown as a JS `Error` whose message starts with a code and a colon: `NOT_LOADED`, `OUT_OF_COVERAGE`, `NO_DATA`, `OUT_OF_TABLE`, `BAD_INPUT`. A function never returns a default in place of an error (P5, P16).
-- `api_version()` returns 4 (2 from T15, when the pit functions began to throw BAD_INPUT; 3 from #58, which dropped `latlon_to_xy` and `xy_to_latlon`: the web projects in TS, held to `core::geometry` within 1 mm by `web/src/lib/projection.test.ts`; 4 from #48, which added `load_mid` and made `horizon` march the 80 m middle tier). The fixture and the manifest carry the same number; the adapter refuses a mismatch.
+- `api_version()` returns 5 (2 from T15, when the pit functions began to throw BAD_INPUT; 3 from #58, which dropped `latlon_to_xy` and `xy_to_latlon`: the web projects in TS, held to `core::geometry` within 1 mm by `web/src/lib/projection.test.ts`; 4 from #48, which added `load_mid` and made `horizon` march the 80 m middle tier; 5 from #112, which added `slope`). The fixture and the manifest carry the same number; the adapter refuses a mismatch.
 
 ## Functions and array layouts
 
 Rust signatures in `crates/wasm`. wasm-bindgen generates the `.d.ts` from them.
 
 ```rust
-#[wasm_bindgen] pub fn api_version() -> u32;                                   // 4
+#[wasm_bindgen] pub fn api_version() -> u32;                                   // 5
 
 #[wasm_bindgen] pub struct Engine { /* ephemeris segments, near tile, mid tile, far tile */ }
 
@@ -42,6 +42,9 @@ impl Engine {
 
     // Model. Arguments are scalars or small arrays; results are new arrays owned by JS.
     pub fn ground_height(&self, lat_deg: f64, lon_deg: f64) -> Result<f64, JsError>;
+    // Slope at the site, degrees from horizontal: Horn gradient over the near tile's 3 × 3 pixels
+    // (60 m window, #112). None (undefined in JS) when the window leaves the tile or touches no-data.
+    pub fn slope(&self, lat_deg: f64, lon_deg: f64) -> Result<Option<f64>, JsError>;
     pub fn sun_earth_track(&self, lat_deg: f64, lon_deg: f64, ground_m: f64, mast_m: f64,
                            start_unix_s: f64, step_s: f64, count: u32) -> Result<Vec<f64>, JsError>;
     pub fn horizon(&self, lat_deg: f64, lon_deg: f64, mast_m: f64) -> Result<Vec<f64>, JsError>;

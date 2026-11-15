@@ -614,3 +614,8 @@ test("play advances the time marker (C4-7 #113)", async ({ page }) => {
   await page.waitForTimeout(300);
   expect(await slider.inputValue()).toBe(held);
 });
+
+test("the pin shows its slope from the 20 m DEM (C4-6 #112)", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("slope")).toHaveText(/^Slope \d+\.\d° \(20 m DEM, 60 m window\)$/);
+});

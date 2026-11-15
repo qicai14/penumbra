@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import type { NearMeta } from "./engine";
-import { checkDate, checkPick, dateRange, edgeDistanceM, parseDate, pickBorderM } from "./site";
+import { checkDate, checkPick, dateRange, edgeDistanceM, parseDate, pickBorderM, slopeText } from "./site";
 import { latlonToXy, xyToLatlon } from "./projection";
 
 // 30.72 km square, upper-left (61740, 153360), as in the manifest example.
@@ -117,4 +117,11 @@ test("pickBorderM for the shipped peak-near-cabeus-b near tile matches the Rust 
   const R = 1_737_400; // independent restatement: 7 km * (1 + r^2 / 4R^2) + half a pixel at the farthest corner
   expect(Math.abs(pickBorderM(t) - (7000 * (1 + (x * x + y * y) / (4 * R * R)) + t.pixel_m / 2))).toBeLessThan(1e-6);
   expect(pickBorderM(t)).toBeGreaterThan(7010); // about 7.1 km this far from the pole
+});
+
+test("slope line: one decimal, and no line at all when the engine has none (never 0°)", () => {
+  expect(slopeText(7.26)).toBe("Slope 7.3° (20 m DEM, 60 m window)");
+  expect(slopeText(0)).toBe("Slope 0.0° (20 m DEM, 60 m window)"); // a real flat pixel is a value
+  expect(slopeText(undefined)).toBeNull();
+  expect(slopeText(NaN)).toBeNull();
 });
