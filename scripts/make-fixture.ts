@@ -30,7 +30,7 @@ const scoreboard = [
 const scenario = {
   fake: true,
   note: "FAKE DATA for layout only. Not a model result.",
-  api_version: 4,
+  api_version: 5,
   site: { lat_deg: -84.7906, lon_deg: 29.1957, ground_m: 0, mast_m: 2 },
   start_unix_s: T0,
   step_s: STEP,
