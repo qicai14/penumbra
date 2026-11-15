@@ -13,7 +13,7 @@
   import Tracer from "./lib/Tracer.svelte";
   import Scoreboard from "./lib/Scoreboard.svelte";
   import About from "./lib/About.svelte";
-  import Tour, { tourSeen } from "./lib/Tour.svelte";
+  import Tour, { tourOff } from "./lib/Tour.svelte";
   import SitePicker from "./lib/SitePicker.svelte";
   import Terrain3D from "./lib/Terrain3D.svelte";
   import { MaskFeed } from "./lib/maskFeed.svelte";
@@ -70,7 +70,7 @@
   const VIEWS = [["site", "Site"], ["planner", "Planner"], ["terrain", "Terrain"], ["compare", "Compare"], ["replay", "IM-2 replay"], ["validation", "Validation"], ["about", "About"]] as const;
   type View = (typeof VIEWS)[number][0];
   let view = $state<View>("site");
-  let tourOpen = $state(!tourSeen());
+  let tourOpen = $state(!tourOff());
   let cmp = $state<{ pairs: { a: Pair; b: Pair }; base: Preset; metas: NearMeta[]; eph: EphSegment[]; why: { pair: Pair; text: string } | null } | null>(null); // deep state: Compare edits the pairs in place, so they survive a trip to the site view
   let cmpError = $state<string | null>(null);
   async function openCompare(search: string) {
