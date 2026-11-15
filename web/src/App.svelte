@@ -175,6 +175,7 @@
   /* Touch: every control gets a 44 px target (WCAG 2.5.5 AAA / Apple HIG); mouse layouts keep the compact size. */
   @media (pointer: coarse) {
     :global(button), :global(select), :global(input), :global(summary) { min-height: 44px; }
+    .gh { min-height: 44px; }
   }
   .gh { display: inline-flex; align-items: center; gap: var(--spacing-8); color: var(--color-fog); text-decoration: none; font: var(--text-caption)/var(--leading-caption) var(--font-mono); }
   .gh:hover { color: var(--color-paper); }

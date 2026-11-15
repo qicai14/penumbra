@@ -331,6 +331,7 @@
   .tools p { margin: 0 0 4px; }
   .tools a { color: var(--color-fog); margin-right: var(--spacing-16); }
   .tools a:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }
+  @media (pointer: coarse) { .tools a { display: inline-flex; align-items: center; min-height: 44px; } } /* touch: 44 px target like the buttons */
   code { color: var(--color-paper); font-family: inherit; user-select: all; }
   .best { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--spacing-8) var(--spacing-16); border: 1px solid var(--color-slate); border-radius: var(--radius-sm); padding: var(--spacing-8) var(--spacing-16); }
   .best .col p, .best .note { margin: 0 0 4px; }
