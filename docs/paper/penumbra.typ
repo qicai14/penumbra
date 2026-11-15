@@ -2,7 +2,7 @@
 // Every number has a source in docs/submission/facts.md (copied word-identical), web/public/scoreboard.json,
 // docs/DATA-NOTES.md, docs/EVIDENCE.md or refs.yml. The equations are docs/SCIENCE-SPEC.md section 1.
 
-#set document(title: "Penumbra", author: ("Charls Pua Vui Hau", "Lim Qi Cai"))
+#set document(title: "Penumbra", author: ("Lim Qi Cai", "Charls Pua Vui Hau"))
 #set page(paper: "a4", margin: 2cm, numbering: "1")
 #set text(size: 10.5pt)
 #set par(justify: false, leading: 0.62em)
@@ -32,7 +32,7 @@
   #text(size: 22pt, weight: "bold")[Penumbra] \
   #text(size: 12pt)[Sunlight, Earth contact and the first lethal shadow at lunar south-pole landing sites] \
   #v(4pt)
-  Team Fractured Toes: Charls Pua Vui Hau, Lim Qi Cai · NASA Space Apps Challenge 2026, Kuala Lumpur \
+  Team Fractured Toes: Lim Qi Cai, Charls Pua Vui Hau · NASA Space Apps Challenge 2026, Kuala Lumpur \
   Live app: #link("https://penumbra-lunar.pages.dev") · Code: #link("https://github.com/qicai14/penumbra")
 ]
 
@@ -40,7 +40,7 @@
 // Team poster (guidebook outline item 1).
 #figure(
   image("poster.png", height: 19.5cm),
-  caption: [Team poster: Penumbra by Team Fractured Toes (Charls Pua Vui Hau, Lim Qi Cai). Challenge: Lunar Landing Site Navigator.],
+  caption: [Team poster: Penumbra by Team Fractured Toes (Lim Qi Cai, Charls Pua Vui Hau). Challenge: Lunar Landing Site Navigator.],
 )
 #pagebreak()
 
@@ -292,7 +292,7 @@ Hosting costs *\$0/month*: Cloudflare Pages serves static assets free and unlimi
   caption: [Penumbra beside the tools planners already use. Lookups on 2026-11-15.],
 ) <tab-compare>
 
-The other tools are better in several ways. Moon Trek covers the whole Moon in one portal, with lighting, slope, Sun-angle and line-of-sight tools @moontrek @moontrek-egu23; Penumbra covers ten south-pole regions. QuickMap carries the full LROC data catalogue, a Sun+Earth terrain-shadow tool over any time range, and CSV export @quickmap-query; Penumbra ships only the layers its model needs. Horizons is the ephemeris authority (DE441), free and scriptable through an API @horizons-manual @horizons, and Penumbra's V1 test uses it as the judge. SUNLOCK @sunlock and Lunar Window @lunar-window also address this challenge; we did not compare features.
+The other tools are better in several ways. Moon Trek covers the whole Moon in one portal, with lighting, slope, Sun-angle and line-of-sight tools @moontrek @moontrek-egu23; Penumbra covers ten south-pole regions. QuickMap carries the full LROC data catalogue, a Sun+Earth terrain-shadow tool over any time range, and CSV export @quickmap-query; Penumbra ships only the layers its model needs. Horizons is the ephemeris authority (DE441), free and scriptable through an API @horizons-manual @horizons, and Penumbra's V1 test uses it as the judge.
 
 == Limitations and future work
 
@@ -329,6 +329,12 @@ As a price anchor we use *our own illustrative number, not a sourced figure*: \$
 = Conclusion
 
 Penumbra tells a planner how many hours of sunlight and Earth contact a lander gets at a south-pole site and date, and when the first lethal shadow arrives. One Rust model runs natively for validation and as WASM in the browser, with no backend and \$0/month hosting. It agrees with JPL Horizons to 0.00011° against a 0.002° threshold (V1) and with NASA's average-visibility map to a pooled median of 0.48 points (V2), and all 7 red-team cases pass (V5). V2b fails on SP-01 by 0.21 days, V3 was not run, and V4 is a reconstruction; the scoreboard says so in the app and in this paper. The next south-pole landers can check a site and a date in a browser before they fly.
+
+= Team
+
+Team Fractured Toes. Counts from the git history on `main`, as of 2026-11-15.
+- *Lim Qi Cai* (team lead; 107 commits, 49 merged PRs): idea and research, planning, repo scaffolding, CI and Cloudflare deploy, the science model and data pipeline (`crates/core`, `crates/pipeline`, WASM), validation (V1–V5), web app features, the D1 paper and submission docs.
+- *Charls Pua Vui Hau* (60 commits, 21 merged PRs): web app UI and tests (`web/src`, `web/tests`), design and v2 wireframes (`design/`), screenshots, the D2 poster and the D3/D4 videos.
 
 #bibliography("refs.yml", title: "References", style: "ieee")
 
