@@ -9,7 +9,7 @@ Penumbra tells lunar landing planners how many hours of sunlight and Earth conta
 ## Layout
 - `crates/` Cargo workspace: `core` (pure maths, no I/O), `pipeline` (native, offline), `wasm` (bindings)
 - `web/` Svelte 5 + Vite app, Three.js and uPlot · `scripts/` Bun TS tooling
-- `design/` brand, wireframes, prototype (planning only) · `docs/` specs and process
+- `design/` brand, tokens, wireframes · `docs/` specs and process
 
 ## Working with the user
 Treat every request as a draft. Before any edit or command that changes something:
@@ -20,7 +20,7 @@ Treat every request as a draft. Before any edit or command that changes somethin
 Skip the confirmation only for read-only lookups, or when the user says "go" or "just do it". Charls is new to Claude Code: explain each choice in one plain line, and end with the next prompt he should type.
 
 ## Workflow
-Every session starts with `/ticket <n>` (or `/design-pass` for design work). Pre-event rule until Nov 14: no lunar maths or Penumbra UI. Raw data is already downloaded to `D:\DownloadHDD\penumbra-resource` (Nov 11 exception); only format-level checks on it before Nov 14.
+Every session starts with `/ticket <n>` (or `/design-pass` for design work).
 
 ## Docs (read when the task touches them)
 - Science model, numbers, tests: [docs/SCIENCE-SPEC.md](docs/SCIENCE-SPEC.md) · product and scope tiers: [docs/IDEA.md](docs/IDEA.md)
