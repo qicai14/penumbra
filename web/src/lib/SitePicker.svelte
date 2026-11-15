@@ -76,8 +76,8 @@
       g.drawImage(off, 0.5 - gr.stride / 2, 0.5 - gr.stride / 2, gr.cols * gr.stride, gr.rows * gr.stride);
     }
     if (grid && gridK >= 0) {
-      // Regional point grid (derived operable hours): sequential slate-to-sun ramp, one line at 5 operable days.
-      const gm = grid.meta, lo = rgb(c("--color-slate")), hi = rgb(c("--color-sun")), top = gm.span_days * 24;
+      // Regional point grid (derived operable hours): sequential steel-to-earth-line ramp (steel keeps the low end at 3:1 on carbon) (the mask keeps the Sun colour), one line at 5 operable days.
+      const gm = grid.meta, lo = rgb(c("--color-steel")), hi = rgb(c("--color-earth-line")), top = gm.span_days * 24;
       const img = new ImageData(gm.width, gm.height), a = grid.operable[gridK];
       for (let i = 0; i < a.length; i++) {
         if (a[i] === NODATA) continue;
@@ -158,8 +158,11 @@
     const mark = [reg?.tier === 3 ? "validation tile, not a 2024 region" : reg?.tier === 2 ? "IM-2 site tile" : "", outsideAvgvisib(tileLat) ? "not checked against LOLA AVGVISIB (north of 85°S)" : ""].filter(Boolean).join(" · ");
     return { g, b, lat: +lat.toFixed(4), lon: +lon.toFixed(4), lethalH, name: reg?.name ?? g.meta.region, mark };
   })));
-  const gridDates = $derived([...new Set(grids.flatMap((g) => g.meta.dates))].sort().join(", "));
   const gridDiffers = $derived(grids.length > 0 && (controls.preset !== null || controls.mastM !== grids[0].meta.mast_m || controls.spanDays !== grids[0].meta.span_days));
+  const noGridMsg = "Region ranking and heatmap are precomputed for 3 landing dates only (data budget). This site's own timelines and headline still work for any date.";
+  const gridDateList = $derived([...new Set(grids.flatMap((g) => g.meta.dates))].sort());
+  const allUnranked = $derived(bests.length > 0 && bests.every((x) => !x.b));
+  function setDate(d: string) { if (tryDate(d, controls.spanDays)) { controls.date = d; dateDraft = d; } }
   function goBest(id: string, lat: number, lon: number) {
     if (id === tile.region.id) setSite(lat, lon); else onregion(id, [lat, lon]);
   }
@@ -209,10 +212,10 @@
         <div class="legend" data-testid="heat-legend">
           {#if gridK >= 0}
             <p class="what"><strong>Operable days</strong>, regional terrain, point grid {grid.meta.pixel_m} m</p>
-            <p><i class="ramp" aria-hidden="true"></i>0 to {grid.meta.span_days} d <i class="line" aria-hidden="true"></i>{CONTOUR_H / 24} d line</p>
+            <p><i class="ramp" aria-hidden="true"></i>0 to {grid.meta.span_days} operable d <i class="line" aria-hidden="true"></i>{CONTOUR_H / 24} d line</p>
             <p class="note">Landing {controls.date} 00:00 UTC,{grid.meta.span_days} d span, mast {grid.meta.mast_m} m: set at grid build, not the controls on the right.</p>
           {:else}
-            <p class="note" data-testid="heat-dates">Regional terrain, point grid {grid.meta.pixel_m} m: no heatmap for {controls.date}. Grid landing dates: {grid.meta.dates.join(", ")}.</p>
+            <p class="note" data-testid="heat-dates">Regional terrain, point grid {grid.meta.pixel_m} m: no heatmap for {controls.date}; pick one of the three grid dates.</p>
           {/if}
         </div>
       {/if}
@@ -267,6 +270,7 @@
       <label class="row"><span>Landing date (UTC)</span>
         <input data-testid="date" type="date" min={dates.min} max={dates.max} bind:value={dateDraft} onchange={ondate} />
       </label>
+      <p class="now" data-testid="date-note">Ranking and heatmap exist for 3 landing dates only (data budget); timelines and headline work for any date.</p>
 
       <div class="row"><span id="span-l">Span</span>
         <div class="group" role="group" aria-labelledby="span-l">
@@ -284,6 +288,10 @@
       {#if grids.length}
         <div class="best" data-testid="best-cells">
           <h3 data-testid="ranking-title">Region ranking for {controls.date} · default preset, mast {grids[0].meta.mast_m} m, {grids[0].meta.span_days} d span</h3>
+          {#if allUnranked}
+            <p class="gridmsg" data-testid="no-grid-msg">{noGridMsg}</p>
+            <div class="chips">{#each gridDateList as d (d)}<button type="button" data-testid="date-chip" onclick={() => setDate(d)}>{d}</button>{/each}</div>
+          {:else}
           <ol>
           {#each bests as { g, b, lat, lon, lethalH, name, mark }, n (g.meta.region)}
             <li class="col" data-testid="best-{g.meta.region}">
@@ -295,13 +303,14 @@
                 <p>{lat.toFixed(4)}°, {lon.toFixed(4)}°E</p>
                 <button type="button" onclick={() => goBest(g.meta.region, lat, lon)}>Move site here</button>
               {:else}
-                <p>No grid for {controls.date}.</p>
+                <p>No grid for this date.</p>
               {/if}
             </li>
           {/each}
           </ol>
+          {/if}
           <p class="note" data-testid="ranking-scope">The ranking covers each shipped tile's pickable square (about 16.6 km a side), not the whole region: Haworth is 888 km², Mons Mouton Plateau 4452 km².</p>
-          <p class="note">Ranked by operable hours, then by a later first lethal shadow. Best cell of each {grids[0].meta.pixel_m} m point grid on the landing date; a tie goes to the first cell, top row then left to right on the map.{#if gridDates && bests.every((x) => !x.b)} Grid landing dates: {gridDates}.{/if} Built for the default preset, mast {grids[0].meta.mast_m} m and {grids[0].meta.span_days} d span{gridDiffers ? "; your controls differ, so these days will not match the headline" : ""}.</p>
+          <p class="note">Ranked by operable hours, then by a later first lethal shadow. Best cell of each {grids[0].meta.pixel_m} m point grid on the landing date; a tie goes to the first cell, top row then left to right on the map. Built for the default preset, mast {grids[0].meta.mast_m} m and {grids[0].meta.span_days} d span{gridDiffers ? "; your controls differ, so these days will not match the headline" : ""}.</p>
         </div>
       {/if}
 
@@ -326,7 +335,7 @@
   .sw { display: inline-block; width: 12px; height: 12px; margin: 0 var(--spacing-8) -2px 0; border: 1px solid var(--color-slate); }
   .sw.lit { background: color-mix(in srgb, var(--color-sun) 60%, var(--color-slate)); }
   .sw.dark { background: color-mix(in srgb, black 50%, var(--color-fog)); margin-left: var(--spacing-16); }
-  .ramp { display: inline-block; width: 48px; height: 10px; margin: 0 var(--spacing-8) 0 0; background: linear-gradient(to right, var(--color-slate), var(--color-sun)); }
+  .ramp { display: inline-block; width: 48px; height: 10px; margin: 0 var(--spacing-8) 0 0; background: linear-gradient(to right, var(--color-steel), var(--color-earth-line)); }
   .line { display: inline-block; width: 16px; border-top: 2px solid var(--color-paper); margin: 0 var(--spacing-8) 3px var(--spacing-16); }
   figcaption { margin-top: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .fields { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: var(--spacing-16); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
@@ -358,6 +367,9 @@
   .best .who { color: var(--color-paper); }
   .best .col .mark { color: var(--color-ash); }
   .best .days { color: var(--color-fog); font-variant-numeric: tabular-nums; }
+  .gridmsg { grid-column: 1 / -1; margin: 0; color: var(--color-paper); }
+  .chips { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: var(--spacing-8); }
+  .chips button { margin-left: 0; border-radius: var(--radius-sm); min-height: 44px; }
   .best .note { grid-column: 1 / -1; color: var(--color-ash); }
   .best button { margin-left: 0; border-radius: var(--radius-sm); }
   .group { display: flex; }
