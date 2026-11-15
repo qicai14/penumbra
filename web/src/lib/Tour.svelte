@@ -1,6 +1,6 @@
 <script module lang="ts">
-  const KEY = "penumbra-tour-done";
-  export const tourSeen = (): boolean => { try { return localStorage.getItem(KEY) === "1"; } catch { return false; } };
+  // The tour opens on every load. Only the smoke tests set this key, so the card never covers what they click.
+  export const tourOff = (): boolean => { try { return localStorage.getItem("penumbra-tour-off") === "1"; } catch { return false; } };
 </script>
 
 <script lang="ts">
@@ -15,7 +15,6 @@
 
   function close() {
     open = false; step = 0;
-    try { localStorage.setItem(KEY, "1"); } catch { /* private mode: it will show again next visit */ }
   }
 
   $effect(() => {

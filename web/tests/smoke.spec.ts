@@ -2,9 +2,9 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
-test("first-visit tour: three steps, Esc dismisses and it stays dismissed, ? reopens it", async ({ page }) => {
-  // Clear the beforeEach flag on the first load only, so the reload below still sees the dismissal.
-  await page.addInitScript(() => { if (!sessionStorage.getItem("t")) { sessionStorage.setItem("t", "1"); localStorage.removeItem("penumbra-tour-done"); } });
+test("tour: opens on every load, three steps, Esc dismisses, ? reopens it", async ({ page }) => {
+  // Undo the beforeEach opt-out on every load (this script runs after it).
+  await page.addInitScript(() => localStorage.removeItem("penumbra-tour-off"));
   await page.goto("/");
   const tour = page.getByTestId("tour");
   await expect(tour).toContainText("Pick a site");
@@ -17,7 +17,8 @@ test("first-visit tour: three steps, Esc dismisses and it stays dismissed, ? reo
   await page.keyboard.press("Escape");
   await expect(tour).toHaveCount(0);
   await page.reload();
-  await expect(page.getByTestId("readout")).toBeVisible();
+  await expect(tour).toContainText("Pick a site"); // dismissal is not remembered: every visit starts with the tour
+  await page.getByTestId("tour-close").click();
   await expect(tour).toHaveCount(0);
   await expect(page.locator("header").getByRole("button", { name: "Show the quick tour" })).toHaveCount(0); // floats bottom-right, not in the header
   await page.getByRole("button", { name: "Show the quick tour" }).click();
@@ -26,8 +27,8 @@ test("first-visit tour: three steps, Esc dismisses and it stays dismissed, ? reo
   await expect(tour).toHaveCount(0);
 });
 
-// The first-visit tour must not cover what other tests click: mark it seen before every page loads.
-test.beforeEach(({ page }) => page.addInitScript(() => localStorage.setItem("penumbra-tour-done", "1")));
+// The tour opens on every load and must not cover what other tests click: opt out before every page loads.
+test.beforeEach(({ page }) => page.addInitScript(() => localStorage.setItem("penumbra-tour-off", "1")));
 
 // Runs against `vite preview` locally and the deployed URL in CI (BASE_URL).
 // Site shows the inputs, not a "Computed for" line; Planner keeps it, so read it there and come back.
