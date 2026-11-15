@@ -1,4 +1,5 @@
 <script lang="ts">
+  import MoonVsEarth from "./MoonVsEarth.svelte";
   import Explain from "./Explain.svelte";
   import PlayButton from "./PlayButton.svelte";
   import type { Scenario } from "./engine";
@@ -229,6 +230,7 @@
       {/each}
     </div>
   </div>
+  <MoonVsEarth {scenario} />
 </section>
 
 <style>
