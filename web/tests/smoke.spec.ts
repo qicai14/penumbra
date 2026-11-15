@@ -614,3 +614,51 @@ test("play advances the time marker (C4-7 #113)", async ({ page }) => {
   await page.waitForTimeout(300);
   expect(await slider.inputValue()).toBe(held);
 });
+
+// Hero line and three scenario buttons (C4-4 #110). The survival headline lives on Planner.
+async function heroHeadline(page: import("@playwright/test").Page) {
+  await page.getByRole("navigation", { name: "View" }).getByRole("button", { name: "Planner", exact: true }).click();
+  await expect(page.getByTestId("headline-operable")).toHaveText(/\S/);
+  await expect(page.getByTestId("headline-lethal")).toHaveText(/\S/);
+}
+
+test("hero: line and three buttons are in the first viewport, 44 px, no horizontal scroll (#110)", async ({ page }) => {
+  for (const [w, h] of [[1440, 900], [390, 844]]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto("/");
+    const hero = page.getByTestId("hero");
+    await expect(hero).toBeVisible();
+    await expect(page.getByTestId("hero-line")).not.toContainText(/tier|AVGVISIB/i);
+    for (const id of ["hero-im2", "hero-best", "hero-slip"]) {
+      const b = page.getByTestId(id);
+      const box = (await b.boundingBox())!;
+      expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.y + box.height).toBeLessThanOrEqual(h);
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  }
+});
+
+test("hero: IM-2's site button lands on a headline (#110)", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTestId("hero-im2").click();
+  await expect(page.getByTestId("date")).toHaveValue("2026-11-14");
+  await expect(page.getByTestId("lat")).toHaveValue("-84.7906");
+  await heroHeadline(page);
+});
+
+test("hero: best region button moves to the top-ranked cell and lands on a headline (#110)", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("ranking-top")).toContainText("best: ");
+  await page.getByTestId("hero-best").click();
+  await expect(page.getByTestId("refusal")).toHaveCount(0);
+  await heroHeadline(page);
+});
+
+test("hero: schedule-slips button sets IM-2's site and 2026-11-12 and lands on a headline (#110)", async ({ page }) => {
+  await page.goto("/");
+  await page.getByTestId("hero-slip").click();
+  await expect(page.getByTestId("date")).toHaveValue("2026-11-12");
+  await expect(page.getByTestId("lat")).toHaveValue("-84.7906");
+  await heroHeadline(page);
+});

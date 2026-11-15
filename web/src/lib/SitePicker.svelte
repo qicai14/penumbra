@@ -6,6 +6,7 @@
   import { rgb } from "./color";
   import type { MaskFeed } from "./maskFeed.svelte";
   import { fmtUtc } from "./panorama";
+  import Hero from "./Hero.svelte";
   import { coverageRegion, latLonText, MOON_TREK_URL, QUICKMAP_URL, SITES, type CuratedSite } from "./sites";
   import { loadManifest } from "./engine";
   import { outsideAvgvisib, rankBests } from "./ranking";
@@ -191,7 +192,12 @@
   }
   const ondate = () => { if (tryDate(dateDraft, controls.spanDays)) controls.date = dateDraft; else dateDraft = controls.date; };
   const onspan = (s: number) => { if (tryDate(controls.date, s)) controls.spanDays = s; };
+  // Hero scenarios: only the picker's own setters. IM-2 comes from the curated list; best region is the top of `bests`.
+  function heroIm2(date = "2026-11-14") { onsite("im2"); setDate(date); }
+  function heroBest() { const t = bests[0]; if (t?.b) goBest(t.g.meta.region, t.lat, t.lon); }
 </script>
+
+<Hero onim2={() => heroIm2()} onbest={heroBest} onslip={() => heroIm2("2026-11-12")} bestReady={!!bests[0]?.b} />
 
 <section class="panel" aria-labelledby="site-h">
   <h2 id="site-h">Site and date</h2>
