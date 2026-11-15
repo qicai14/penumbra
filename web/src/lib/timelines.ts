@@ -82,25 +82,27 @@ export function fmtDH(s: number): string {
 }
 
 const WORDS = {
-  sunset: { set: "Sunset", none: "sunset", rise: "sunrise" },
-  Earthset: { set: "Earthset", none: "Earthset", rise: "Earthrise" },
+  sunset: { set: "Sunset", none: "sunset", rise: "sunrise", Rise: "Sunrise" },
+  Earthset: { set: "Earthset", none: "Earthset", rise: "Earthrise", Rise: "Earth contact" },
 } as const;
 
 /**
  * Time from step `idx` to the next set: the first later step where `up` turns false after being true (T26, §1d).
- * Already down at `idx` counts to the set after the next rise. With no set left in the span it says so, never blank;
- * down for the rest of the span says "no sunrise", so a site in shadow never reads like a sunlit one.
+ * Already down at `idx`, the next rise comes first: "Sunrise in X · then sunset in Y", both from `idx` (#107).
+ * With no set left in the span it says so, never blank; down for the rest of the span says "no sunrise".
  */
 export function countdown(t: ArrayLike<number>, col: ArrayLike<number>, up: (x: number) => boolean, idx: number, what: keyof typeof WORDS): string {
   const w = WORDS[what];
-  let rises = up(col[idx]);
-  for (let j = idx + 1; j < col.length; j++) {
-    if (up(col[j - 1]) && !up(col[j])) return `${w.set} in ${fmtDH(t[j] - t[idx])}`;
-    rises ||= up(col[j]);
-  }
   const left = t[t.length - 1] - t[idx];
-  const word = rises ? w.none : w.rise;
-  return left < 3600 ? `no ${word} before the span ends` : `no ${word} in ${fmtDays(left / 3600)}`;
+  const none = (word: string) => (left < 3600 ? `no ${word} before the span ends` : `no ${word} in ${fmtDays(left / 3600)}`);
+  let r = idx;
+  while (r < col.length && !up(col[r])) r++;
+  if (r === col.length) return none(w.rise);
+  const head = r > idx ? `${w.Rise} in ${fmtDH(t[r] - t[idx])} · then ` : "";
+  for (let j = r + 1; j < col.length; j++) {
+    if (!up(col[j])) return `${head}${head ? w.none : w.set} in ${fmtDH(t[j] - t[idx])}`;
+  }
+  return head + none(w.none);
 }
 
 /** Unix time of the first lethal shadow, or null when none falls in the span. */
