@@ -14,7 +14,10 @@ export type Row = {
   date: string | null;
 };
 export type Status = "pass" | "miss" | "not run";
-export type Tally = { total: number; ran: number; passed: number; missed: string[]; notRun: string[] };
+export type Tally = { total: number; ran: number; passed: number; missed: string[]; notRun: string[]; recon: string[] };
+
+/** A pass with no threshold is a reconstruction (V4), not a validation. */
+export const isRecon = (r: Row) => r.pass === true && r.threshold === null;
 
 /** `pass` alone decides: null is "not run" even when a value is present. */
 export function rowStatus(r: Row): Status {
@@ -22,21 +25,23 @@ export function rowStatus(r: Row): Status {
 }
 
 export function tally(rows: Row[]): Tally {
-  const by = (s: Status) => rows.filter((r) => rowStatus(r) === s).map((r) => r.id);
+  const by = (s: Status) => rows.filter((r) => rowStatus(r) === s && !isRecon(r)).map((r) => r.id);
   const notRun = by("not run");
   const missed = by("miss");
-  return { total: rows.length, ran: rows.length - notRun.length, passed: by("pass").length, missed, notRun };
+  const recon = rows.filter(isRecon).map((r) => r.id);
+  return { total: rows.length, ran: rows.length - notRun.length - recon.length, passed: by("pass").length, missed, notRun, recon };
 }
 
 const list = (ids: string[]) => (ids.length < 2 ? ids.join("") : `${ids.slice(0, -1).join(", ")} and ${ids[ids.length - 1]}`);
 
 /** One-line verdict that counts only the checks that ran. */
 export function headline(t: Tally): string {
-  if (t.ran === 0) return `No checks have run yet (0 of ${t.total} checks run).`;
+  const rc = t.recon.length ? [`${list(t.recon)} ${t.recon.length === 1 ? "is a reconstruction" : "are reconstructions"}`] : [];
+  if (t.ran === 0 && !rc.length) return `No checks have run yet (0 of ${t.total} checks run).`;
   const parts = [`${t.passed} of the ${t.ran} ${t.ran === 1 ? "check we ran passes" : "checks we ran pass"}`];
   if (t.missed.length) parts.push(`${list(t.missed)} missed`);
   if (t.notRun.length) parts.push(`${list(t.notRun)} not run`);
-  return parts.join("; ") + ".";
+  return [...parts, ...rc].join("; ") + ".";
 }
 
 export function parseScoreboard(raw: unknown): Row[] {

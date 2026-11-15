@@ -14,7 +14,13 @@ test("pass null is not run, even with a value set", () => {
 
 test("tally counts only checks that ran", () => {
   const t = tally([row("V1", true), row("V2", true), row("V3", null), row("V4", true), row("V5", false)]);
-  expect(t).toEqual({ total: 5, ran: 4, passed: 3, missed: ["V5"], notRun: ["V3"] });
+  expect(t).toEqual({ total: 5, ran: 4, passed: 3, missed: ["V5"], notRun: ["V3"], recon: [] });
+});
+
+test("a pass with no threshold is a reconstruction, not a pass", () => {
+  const v4 = { ...row("V4", true), threshold: null };
+  const t = tally([row("V1", true), row("V2b", false), row("V3", null), v4]);
+  expect(headline(t)).toBe("1 of the 2 checks we ran pass; V2b missed; V3 not run; V4 is a reconstruction.");
 });
 
 test("headline is honest when nothing has run", () => {
