@@ -9,7 +9,7 @@
 
 use crate::dem::ShippedTiles;
 use crate::eph::{Result, build_table, load_almanac};
-use crate::grid::{GRID_PIXEL_M, GridSpec, USABLE_BORDER_M};
+use crate::grid::{GRID_PIXEL_M, GridSpec};
 use crate::psr::{START_UNIX_S, STEPS};
 use crate::v2::{Candidate, RefRaster, bin_of, cell_of, par_map, passes, stats, stratified_draw};
 use penumbra_core::eph::Ephemeris;
@@ -36,7 +36,11 @@ pub fn run(data_dir: &Path, resource_dir: &Path, region: &str) -> Result<serde_j
     let started = std::time::Instant::now();
     let tiles = ShippedTiles::load(data_dir)?;
     let (near, mid) = (tiles.near(region)?, tiles.mid(region)?);
-    let spec = GridSpec::usable(near.meta(), GRID_PIXEL_M, USABLE_BORDER_M)?;
+    let spec = GridSpec::usable(
+        near.meta(),
+        GRID_PIXEL_M,
+        penumbra_core::horizon::pick_border_m(near.meta()),
+    )?;
     let sun_ref = RefRaster::open(&resource_dir.join("AVGVISIB_85S_060M_201608.TIF"))?;
 
     // Shared cells: those whose centre falls in a valid AVGVISIB pixel (distinct cells, distinct pixels: 100 m > 60 m).

@@ -448,3 +448,20 @@ test("About lists team, user story, limitations with ids, and no video slot whil
   await expect(page.locator("main video, main iframe")).toHaveCount(0);
   await expect(page.getByText("V1’s live demo")).toBeVisible();
 });
+
+test("ten regions: each shows its tier and label, and the ranking is numbered and sorted by operable days (#26)", async ({ page }) => {
+  await page.goto("/");
+  const sel = page.getByLabel("Region");
+  await expect(sel.locator("option")).toHaveCount(10);
+  for (const id of ["haworth", "slater-plain", "peak-near-cabeus-b"]) {
+    await sel.selectOption(id);
+    await expect(page.getByTestId("region-label")).toContainText(/Tier [123]/);
+    await expect(page.getByTestId("refusal")).toHaveCount(0);
+    await expect(page.getByTestId("headline-operable")).toHaveText(/\S/);
+  }
+  await expect(page.getByTestId("ranking-title")).toContainText("Region ranking for 2026-11-14");
+  const days = (await page.getByTestId("best-cells").locator(".days").allTextContents()).map((t) => parseFloat(t));
+  expect(days.length).toBe(10);
+  expect([...days].sort((a, b) => b - a)).toEqual(days);
+  await expect(page.getByTestId("best-cells").locator(".who").first()).toContainText("1. ");
+});

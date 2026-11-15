@@ -6,6 +6,7 @@ pub mod grid;
 pub mod grid_avgvisib;
 pub mod horizon_report;
 pub mod psr;
+pub mod regions;
 pub mod table_check;
 pub mod v2;
 pub mod v4;

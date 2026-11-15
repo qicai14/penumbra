@@ -152,34 +152,19 @@ fn eph(out_dir: &Path) -> Result<()> {
 
 /// Near tile side, pixels: 30.72 km at 20 m, so a site at the centre has 15.36 km of margin (ARCHITECTURE §2.1).
 const NEAR_PX: u32 = 1536;
-/// Far tile side, pixels: ±382.08 km at 240 m about the pole (ARCHITECTURE §2.1).
-const FAR_PX: u32 = 3184;
+/// Far tile side, pixels: ±396 km at 240 m about the pole, so a pick corner of the farthest region
+/// (Peak near Cabeus B, ~204 km out) keeps its 200 km `REQUIRED_RANGE_M` (#26; ARCHITECTURE §2.1).
+const FAR_PX: u32 = 3300;
 
 fn dem(out_dir: &Path) -> Result<()> {
-    use penumbra_core::geometry::{LatLon, MapXy, latlon_to_xy};
+    use penumbra_core::geometry::MapXy;
     use penumbra_pipeline::dem::{
         GeoTiff, MID_BLOCK_PX, MID_PX, build_tile, encode_far, encode_finest, tile_json,
         to_le_bytes,
     };
     let src_dir = PathBuf::from(std::env::var("PENUMBRA_DATA").map_err(|_| "set PENUMBRA_DATA")?);
-    let im2 = latlon_to_xy(LatLon {
-        lat_rad: (-84.7906f64).to_radians(),
-        lon_east_rad: 29.1957f64.to_radians(),
-    })
-    .map_err(|e| format!("{e:?}"))?;
-    // Mons Mouton: centred on the IM-2 site. Shackleton ridge: between SP-01 (−11.31, −12.26) km
-    // and Barker's Site 1 RoIs (−11.58 .. −10.23, −12.56 .. −11.55) km, so all sit ~15 km inside.
-    let regions = [
-        ("mons-mouton", "Mons Mouton", im2),
-        (
-            "shackleton-ridge",
-            "Shackleton ridge",
-            MapXy {
-                x_m: -11_000.0,
-                y_m: -12_000.0,
-            },
-        ),
-    ];
+    // regions.json: one near and one middle tile per region, in file order (#26)
+    let regions = penumbra_pipeline::regions::regions()?;
 
     std::fs::create_dir_all(out_dir)?;
     let mut written = Vec::new();
@@ -198,13 +183,23 @@ fn dem(out_dir: &Path) -> Result<()> {
 
     let mut near_src = GeoTiff::open(&src_dir.join("LDEM_80S_20MPP_ADJ.TIF"))?;
     let mut region_json = Vec::new();
-    for (id, name, centre) in regions {
+    for penumbra_pipeline::regions::Region {
+        id,
+        name,
+        centre,
+        tier,
+        label,
+        ..
+    } in regions
+    {
         let tile = build_tile(&mut near_src, centre, NEAR_PX, 1, encode_finest)?;
         let url = write(&format!("near-{id}"), &tile)?;
         let mid = build_tile(&mut near_src, centre, MID_PX, MID_BLOCK_PX, encode_finest)?;
         let mid_url = write(&format!("mid-{id}"), &mid)?;
-        region_json.push(serde_json::json!({"id": id, "name": name,
-            "near": tile_json(&url, tile.meta()), "mid": tile_json(&mid_url, mid.meta())}));
+        region_json.push(
+            serde_json::json!({"id": id, "name": name, "tier": tier, "label": label,
+            "near": tile_json(&url, tile.meta()), "mid": tile_json(&mid_url, mid.meta())}),
+        );
     }
     let mut far_src = GeoTiff::open(&src_dir.join("LDEM_60S_240MPP_ADJ.TIF"))?;
     let far = build_tile(
@@ -256,9 +251,7 @@ const GRID_MAST_M: f64 = 2.0;
 
 fn grid(data_dir: &Path, region: &str) -> Result<()> {
     use penumbra_core::timeline::DEFAULT_EARTH_MARGIN_DEG;
-    use penumbra_pipeline::grid::{
-        GRID_PIXEL_M, GridSpec, RunInputs, USABLE_BORDER_M, encode, run_grid,
-    };
+    use penumbra_pipeline::grid::{GRID_PIXEL_M, GridSpec, RunInputs, encode, run_grid};
     let tiles = penumbra_pipeline::dem::ShippedTiles::load(data_dir)?;
     let (near, mid) = (tiles.near(region)?, tiles.mid(region)?);
     let mut eph = Ephemeris::default();
@@ -274,7 +267,11 @@ fn grid(data_dir: &Path, region: &str) -> Result<()> {
         penumbra_pipeline::eph::read_shipped_table(data_dir, REPLAY_IM2_FILE_PREFIX)?,
     )
     .map_err(|e| format!("{e}"))?;
-    let spec = GridSpec::usable(near.meta(), GRID_PIXEL_M, USABLE_BORDER_M)?;
+    let spec = GridSpec::usable(
+        near.meta(),
+        GRID_PIXEL_M,
+        penumbra_core::horizon::pick_border_m(near.meta()),
+    )?;
     let inp = RunInputs {
         mast_m: GRID_MAST_M,
         step_s: f64::from(GRID_STEP_S),

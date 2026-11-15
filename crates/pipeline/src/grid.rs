@@ -11,9 +11,6 @@ use penumbra_core::site::{site_horizon, site_survival};
 
 /// Grid pixel, map metres (#25 Cut A).
 pub const GRID_PIXEL_M: f64 = 100.0;
-/// A cell centre must sit this far inside the near tile: the site picker's P5 border
-/// (`PICK_BORDER_M` in web/src/lib/site.ts: 7 km of ground is up to 7.05 km of map).
-pub const USABLE_BORDER_M: f64 = 7050.0;
 /// Cell outside the usable area, or no data under its horizon.
 pub const NODATA_U16: u16 = 65535;
 /// Lethal value when no lethal shadow falls in the span.
@@ -33,7 +30,8 @@ pub struct GridSpec {
 
 impl GridSpec {
     /// Every cell whose centre lies at least `border_m` inside the tile `near`, the block of
-    /// centres placed in the middle of that usable square.
+    /// centres placed in the middle of that usable square. The grid passes the site picker's P5
+    /// border, `penumbra_core::horizon::pick_border_m(near)`.
     pub fn usable(near: &TileMeta, pixel_m: f64, border_m: f64) -> Result<GridSpec> {
         let axis = |n_px: u32| -> Result<(u32, f64)> {
             let span_m = f64::from(n_px) * near.pixel_m - 2.0 * border_m;
@@ -45,8 +43,9 @@ impl GridSpec {
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             // whole, ≥ 0 and below 2^32 (a 1536 px tile gives 167)
             let n = gaps as u32 + 1;
-            // map metres from the tile edge to the grid edge
-            let lead_m = border_m + (span_m - gaps * pixel_m) / 2.0 - pixel_m / 2.0;
+            // map metres from the tile edge to the grid edge: border + (span − gaps·pixel)/2 −
+            // pixel/2 with the border cancelled, so a non-round border still gives round corners
+            let lead_m = (f64::from(n_px) * near.pixel_m - gaps * pixel_m) / 2.0 - pixel_m / 2.0;
             Ok((n, lead_m))
         };
         let (width, lead_x_m) = axis(near.width)?;
@@ -206,6 +205,7 @@ pub fn encode(results: &[Vec<Cell>]) -> Result<Vec<u8>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use penumbra_core::horizon::pick_border_m;
 
     fn mons_mouton_near() -> TileMeta {
         // the shipped near tile's geometry (manifest.json, #48)
@@ -222,15 +222,39 @@ mod tests {
     }
 
     #[test]
-    fn usable_grid_is_167_cells_whose_centres_sit_7_06_km_inside_every_edge() {
-        // 30 720 m − 2 × 7 050 m = 16 620 m of centres: 167 at 100 m span 16 600 m, so 10 m
-        // spare each side; first centre 7 060 m in, grid corner 7 010 m in.
-        let g = GridSpec::usable(&mons_mouton_near(), GRID_PIXEL_M, USABLE_BORDER_M);
+    fn usable_grid_is_167_cells_whose_corner_centres_sit_inside_the_7_029_km_pick_border() {
+        // Border 7 028.59 m (#26 S6): 30 720 − 2 × 7 028.59 = 16 662.82 m of centres; 167 at
+        // 100 m span 16 600 m, centred, so the grid corner is 7 010 m in, as with the old 7 050 m
+        // border and the shipped grid (manifest.json grids, #25).
+        let near = mons_mouton_near();
+        let g = GridSpec::usable(&near, GRID_PIXEL_M, pick_border_m(&near));
         assert_eq!(
             g.ok(),
             Some(GridSpec {
                 x0_m: 68_750.0,
                 y0_m: 146_350.0,
+                width: 167,
+                height: 167,
+                pixel_m: 100.0
+            })
+        );
+    }
+
+    #[test]
+    fn shackleton_ridge_grid_matches_the_shipped_grid() {
+        // Border 7 010.84 m (#26 S6); the shipped grid (manifest.json, #25) starts at
+        // (−19 350, −3 650) m with 167 × 167 cells.
+        let near = TileMeta {
+            x0_m: -26_360.0,
+            y0_m: 3_360.0,
+            ..mons_mouton_near()
+        };
+        let g = GridSpec::usable(&near, GRID_PIXEL_M, pick_border_m(&near));
+        assert_eq!(
+            g.ok(),
+            Some(GridSpec {
+                x0_m: -19_350.0,
+                y0_m: -3_650.0,
                 width: 167,
                 height: 167,
                 pixel_m: 100.0

@@ -516,3 +516,30 @@ fn mid_range_shorter_than_one_mid_pixel_past_the_near_range_is_refused() {
     );
     assert!(matches!(r, Err(DemError::BadInput(_))), "{r:?}");
 }
+
+/// Near tile meta with the shipped geometry (web/public/data/manifest.json): 1536 px at 20 m.
+fn near_meta(x0_m: f64, y0_m: f64) -> TileMeta {
+    TileMeta {
+        width: 1536,
+        height: 1536,
+        x0_m,
+        y0_m,
+        pixel_m: 20.0,
+        scale_m: SCALE_M,
+        offset_m: 0.0,
+        nodata: -32768,
+    }
+}
+
+// #26 S6: border = 7 000 m × k + half a pixel, k = 1 + r²/4R² at the tile corner farthest from
+// the pole. Worked by hand: Mons Mouton corner (92 460, 153 360) m, r = 179 075.80 m, gives
+// 7 028.5914 m; Shackleton-ridge corner (−26 360, −27 360) m, r = 37 992.36 m, gives 7 010.8368 m
+// (S6: "7028 m" and "7011 m"). web/src/lib/site.ts must give the same two values.
+#[test]
+fn pick_border_grows_with_the_farthest_corner_scale_factor() {
+    use penumbra_core::horizon::pick_border_m;
+    let mm = pick_border_m(&near_meta(61_740.0, 153_360.0));
+    assert!((mm - 7_028.591_4).abs() < 1e-4, "Mons Mouton {mm}");
+    let sr = pick_border_m(&near_meta(-26_360.0, 3_360.0));
+    assert!((sr - 7_010.836_8).abs() < 1e-4, "Shackleton ridge {sr}");
+}

@@ -4,6 +4,7 @@
 
 use penumbra_core::dem::{DemError, DemTile, TileMeta};
 use penumbra_core::geometry::{LatLon, MapXy, latlon_to_xy};
+use penumbra_core::horizon::pick_border_m;
 use penumbra_pipeline::dem::MAX_SCALE_M;
 use penumbra_pipeline::eph::hash6;
 use serde_json::Value;
@@ -41,6 +42,16 @@ fn load(entry: &Value) -> DemTile {
     let (words, rest) = bytes.as_chunks::<2>();
     assert!(rest.is_empty());
     DemTile::new(meta, words.iter().map(|w| i16::from_le_bytes(*w)).collect()).unwrap()
+}
+
+/// Every region id, in manifest order.
+fn region_ids() -> Vec<String> {
+    manifest()["regions"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|r| r["id"].as_str().unwrap().to_string())
+        .collect()
 }
 
 fn near(id: &str) -> DemTile {
@@ -135,13 +146,8 @@ fn inner_margin_m(m: &TileMeta, p: MapXy) -> f64 {
         .fold(f64::INFINITY, f64::min)
 }
 
-/// 7 km of ground at the site in map metres: stereographic scale k = 1 + (x² + y²)/(4R²) (§1a).
-fn seven_km_in_map_m(p: MapXy) -> f64 {
-    let r = penumbra_core::geometry::MOON_RADIUS_M;
-    7000.0 * (1.0 + (p.x_m * p.x_m + p.y_m * p.y_m) / (4.0 * r * r))
-}
-
-// Issue #7: IM-2, SP-01 and the seven RoIs are each ≥ 7 km inside their near tile [est].
+// Issue #7, #26 S6: IM-2, SP-01 and the seven RoIs each sit at least the tile's pick border (7 km
+// of ground at the far corner's map scale, plus half a pixel) inside their near tile.
 #[test]
 fn sites_are_at_least_7km_inside_their_near_tile() {
     let cases = [
@@ -156,11 +162,36 @@ fn sites_are_at_least_7km_inside_their_near_tile() {
         for p in pts {
             let margin = inner_margin_m(t.meta(), p);
             println!("{id} {p:?}: margin {margin:.0} m");
-            // the sampler's footprint ends half a pixel inside the tile edge
-            assert!(
-                margin >= seven_km_in_map_m(p) + t.meta().pixel_m / 2.0,
-                "{id} {p:?}"
-            );
+            assert!(margin >= pick_border_m(t.meta()), "{id} {p:?}");
+        }
+    }
+}
+
+// #26 S6: every shipped grid's four corner cell centres sit at least its near tile's pick border
+// inside that tile, so every cell the grid computed is a pickable site.
+#[test]
+fn every_grid_corner_cell_is_inside_its_near_tiles_pick_border() {
+    let m = manifest();
+    let grids = m["grids"].as_array().unwrap();
+    assert_eq!(grids.len(), region_ids().len());
+    for g in grids {
+        let id = g["region"].as_str().unwrap();
+        let t = near(id);
+        let n = |k: &str| g[k].as_f64().unwrap();
+        let (x0, y0, px) = (n("x0_m"), n("y0_m"), n("pixel_m"));
+        let (w, h) = (n("width"), n("height"));
+        for (cx, cy) in [
+            (0.5, 0.5),
+            (w - 0.5, 0.5),
+            (0.5, h - 0.5),
+            (w - 0.5, h - 0.5),
+        ] {
+            let p = MapXy {
+                x_m: x0 + cx * px,
+                y_m: y0 - cy * px,
+            };
+            let margin = inner_margin_m(t.meta(), p);
+            assert!(margin >= pick_border_m(t.meta()), "{id} {p:?}: {margin} m");
         }
     }
 }
@@ -168,8 +199,8 @@ fn sites_are_at_least_7km_inside_their_near_tile() {
 // Every near site's 7 km march disc has heights (no no-data inside the pickable square).
 #[test]
 fn near_tiles_have_no_nodata() {
-    for id in ["mons-mouton", "shackleton-ridge"] {
-        let t = near(id);
+    for id in region_ids() {
+        let t = near(&id);
         assert!(!t.counts().contains(&t.meta().nodata), "{id}");
     }
 }
@@ -178,8 +209,8 @@ fn near_tiles_have_no_nodata() {
 // −32 767 and +32 767, and the scale is 0.25 m or finer (SCIENCE-SPEC §1a tile encoding).
 #[test]
 fn near_scale_is_the_finest_that_fits_the_tile() {
-    for id in ["mons-mouton", "shackleton-ridge"] {
-        let t = near(id);
+    for id in region_ids() {
+        let t = near(&id);
         let m = t.meta();
         let (lo, hi) = t
             .counts()
@@ -194,14 +225,14 @@ fn near_scale_is_the_finest_that_fits_the_tile() {
     }
 }
 
-// Far tile: 240 m, ±382.08 km about the pole, 0.5 m; the site + 200 km march stays inside it.
+// Far tile: 240 m, ±396 km about the pole (#26), 0.5 m; the site + 200 km march stays inside it.
 #[test]
-fn far_tile_is_240m_to_382km_at_half_metre() {
+fn far_tile_is_240m_to_396km_at_half_metre() {
     let far = load(&manifest()["far"]);
     let m = far.meta();
     assert!((m.pixel_m - 240.0).abs() < 1e-12 && (m.scale_m - 0.5).abs() < 1e-12);
-    assert!((m.x0_m + 382_080.0).abs() < 1e-6 && (m.y0_m - 382_080.0).abs() < 1e-6);
-    assert_eq!((m.width, m.height), (3184, 3184));
+    assert!((m.x0_m + 396_000.0).abs() < 1e-6 && (m.y0_m - 396_000.0).abs() < 1e-6);
+    assert_eq!((m.width, m.height), (3300, 3300));
     assert!(!far.counts().contains(&m.nodata));
     assert!(inner_margin_m(m, im2()) > 200_000.0);
 }
@@ -259,7 +290,7 @@ fn grid_px(v: f64) -> u32 {
 /// Issue #7 round trip: at 1000 random pixels the shipped tile, sampled at the pixel centre through
 /// the core sampler, is within half a scale step of the source Float32. The source pixel is read with
 /// raw `tiff::read_chunk`, not the pipeline's window reader, so a crop offset cannot hide.
-fn round_trip(tile: &DemTile, src_name: &str) {
+fn round_trip(tile: &DemTile, label: &str, src_name: &str) {
     use tiff::decoder::{Decoder, DecodingResult};
     let g = penumbra_pipeline::dem::GeoTiff::open(&source(src_name)).unwrap();
     let mut d = Decoder::new(std::io::BufReader::new(
@@ -305,7 +336,7 @@ fn round_trip(tile: &DemTile, src_name: &str) {
         );
     }
     println!(
-        "{src_name}: worst |decoded − source| {worst:.4} m at scale {} m",
+        "{label} ({src_name}): worst |decoded − source| {worst:.4} m at scale {} m",
         m.scale_m
     );
 }
@@ -313,31 +344,35 @@ fn round_trip(tile: &DemTile, src_name: &str) {
 #[test]
 #[ignore = "needs local GeoTIFFs in PENUMBRA_DATA"]
 fn round_trip_near_tiles_within_half_a_step_at_1000_pixels() {
-    for id in ["mons-mouton", "shackleton-ridge"] {
-        round_trip(&near(id), "LDEM_80S_20MPP_ADJ.TIF");
+    for id in region_ids() {
+        round_trip(&near(&id), &id, "LDEM_80S_20MPP_ADJ.TIF");
     }
 }
 
 #[test]
 #[ignore = "needs local GeoTIFFs in PENUMBRA_DATA"]
 fn round_trip_far_tile_within_half_a_step_at_1000_pixels() {
-    round_trip(&load(&manifest()["far"]), "LDEM_60S_240MPP_ADJ.TIF");
+    round_trip(&load(&manifest()["far"]), "far", "LDEM_60S_240MPP_ADJ.TIF");
 }
 
-// Issue #7: ≥ 20 PSR-floor pixels (LPSR = 1, same 20 m grid as the DEM) lie ≥ 7 km inside each near tile.
+// Issue #7: ≥ 20 PSR-floor pixels (LPSR = 1, same 20 m grid as the DEM) lie inside each near tile's
+// pick border. Counted for every region; the ≥ 20 floor holds only for the two tiles #7 chose for
+// their PSR floors, as a newer region with few PSRs is a property of its terrain, not a bug.
 #[test]
 #[ignore = "needs local GeoTIFFs in PENUMBRA_DATA"]
-fn at_least_20_psr_pixels_are_7km_inside_each_near_tile() {
+fn psr_pixels_lie_inside_each_near_tiles_pick_border() {
     let mut psr = penumbra_pipeline::dem::GeoTiff::open(&source("LPSR_80S_20MPP_ADJ.TIF")).unwrap();
-    for id in ["mons-mouton", "shackleton-ridge"] {
-        let m = *near(id).meta();
-        let border_px = 350; // 7 km at 20 m
+    for id in region_ids() {
+        let m = *near(&id).meta();
+        let border_px = grid_px((pick_border_m(&m) / m.pixel_m).ceil());
         let col = grid_px((m.x0_m - psr.x0_m) / psr.pixel_m) + border_px;
         let row = grid_px((psr.y0_m - m.y0_m) / psr.pixel_m) + border_px;
         let side = m.width - 2 * border_px;
         let mask = psr.read_window(col, row, side, side).unwrap();
         let n = mask.iter().filter(|&&v| v > 0.5).count();
         println!("{id}: {n} PSR pixels in the inner {side}² px");
-        assert!(n >= 20, "{id}: {n}");
+        if ["mons-mouton", "shackleton-ridge"].contains(&id.as_str()) {
+            assert!(n >= 20, "{id}: {n}");
+        }
     }
 }

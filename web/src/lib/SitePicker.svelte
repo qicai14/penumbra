@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { latlonToXy, xyToLatlon, type EphSegment, type NearTile, type Region } from "./engine";
-  import { checkDate, checkPick, dateRange, edgeDistanceM, PICK_BORDER_M, SPANS_DAYS } from "./site";
+  import { latlonToXy, TIER_TEXT, xyToLatlon, type EphSegment, type NearTile, type Region } from "./engine";
+  import { checkDate, checkPick, dateRange, edgeDistanceM, pickBorderM, SPANS_DAYS } from "./site";
   import type { Controls } from "./state.svelte";
   import { maskAt, maskGrid, maskPixels, MASK_STRIDE, MASK_LIT_ALPHA, MASK_DARK_ALPHA } from "./mask";
   import { rgb } from "./color";
@@ -8,7 +8,8 @@
   import { fmtUtc } from "./panorama";
   import { coverageRegion, latLonText, MOON_TREK_URL, QUICKMAP_URL, SITES, type CuratedSite } from "./sites";
   import { loadManifest } from "./engine";
-  import { bestCell, contour, CONTOUR_H, dateIndex, NODATA, type Grid } from "./grid";
+  import { outsideAvgvisib, rankBests } from "./ranking";
+  import { bestCell, contour, CONTOUR_H, dateIndex, NODATA, NO_LETHAL, type Grid } from "./grid";
 
   // `feed` is the shared point-Sun mask for the time marker; the 3D terrain paints the same one.
   let { controls, tile, onregion, feed, grid = null, gridK = -1, grids = [] }: { controls: Controls; tile: NearTile & { regions: Region[]; eph: EphSegment[] }; onregion: (id: string, at?: [number, number]) => void; feed: MaskFeed; grid?: Grid | null; gridK?: number; grids?: Grid[] } = $props();
@@ -35,6 +36,7 @@
 
   const dates = $derived(dateRange(tile.eph));
   const m = $derived(tile.meta);
+  const borderM = $derived(pickBorderM(m)); // per tile: the map length of 7 km of ground grows away from the pole
   const heightM = (v: number) => m.offset_m + m.scale_m * v;
 
   // Grey image straight from the int16 counts; nodata stays transparent.
@@ -93,8 +95,8 @@
       for (const [x1, y1, x2, y2] of contour(grid, gridK)) { const [a1, b1] = mapToPx(x1, y1), [a2, b2] = mapToPx(x2, y2); g.moveTo(a1, b1); g.lineTo(a2, b2); }
       g.stroke();
     }
-    // Dim the 7 km border: picks there are refused.
-    const b = PICK_BORDER_M / m.pixel_m;
+    // Dim the border (7 km of ground): picks there are refused.
+    const b = borderM / m.pixel_m;
     const shade = new Path2D();
     shade.rect(0, 0, m.width, m.height); shade.rect(b, b, m.width - 2 * b, m.height - 2 * b);
     g.fillStyle = "rgba(0,0,0,0.6)"; g.fill(shade, "evenodd");
@@ -144,12 +146,18 @@
     const [lat, lon] = xyToLatlon(x, y);
     setSite(+lat.toFixed(4), +lon.toFixed(4));
   }
-  // Best cell of each region's grid on the picked date (first in row-major order on a tie); null for a region whose grid lacks the date.
-  const bests = $derived(grids.map((g) => {
+  // Region ranking on the picked date: best cell of each grid (first in row-major order on a tie), most operable hours first,
+  // a later first lethal shadow breaking a tie; a region whose grid lacks the date goes last, unranked.
+  const bests = $derived(rankBests(grids.map((g) => {
     const k = dateIndex(g, controls.date), b = k < 0 ? null : bestCell(g, k);
     const [lat, lon] = b ? xyToLatlon(b.x, b.y) : [0, 0];
-    return { g, b, lat: +lat.toFixed(4), lon: +lon.toFixed(4), name: tile.regions.find((r) => r.id === g.meta.region)?.name ?? g.meta.region };
-  }));
+    const l = b ? g.lethal[k][b.j * g.meta.width + b.i] : NODATA;
+    const lethalH = l === NODATA ? undefined : l === NO_LETHAL ? Infinity : l; // undefined: unknown, Infinity: none in span
+    const reg = tile.regions.find((r) => r.id === g.meta.region), near = regionMetas.find((r) => r.id === g.meta.region)?.near;
+    const tileLat = near ? xyToLatlon(near.x0_m + (near.width * near.pixel_m) / 2, near.y0_m - (near.height * near.pixel_m) / 2)[0] : -90;
+    const mark = [reg?.tier === 3 ? "validation tile, not a 2024 region" : reg?.tier === 2 ? "IM-2 site tile" : "", outsideAvgvisib(tileLat) ? "not checked against LOLA AVGVISIB (north of 85°S)" : ""].filter(Boolean).join(" · ");
+    return { g, b, lat: +lat.toFixed(4), lon: +lon.toFixed(4), lethalH, name: reg?.name ?? g.meta.region, mark };
+  })));
   const gridDates = $derived([...new Set(grids.flatMap((g) => g.meta.dates))].sort().join(", "));
   const gridDiffers = $derived(grids.length > 0 && (controls.preset !== null || controls.mastM !== grids[0].meta.mast_m || controls.spanDays !== grids[0].meta.span_days));
   function goBest(id: string, lat: number, lon: number) {
@@ -209,16 +217,19 @@
         </div>
       {/if}
       <figcaption>
-        {tile.region.name} · black {grey.lo_m.toFixed(0)} m, white {grey.hi_m.toFixed(0)} m · dashed line: {PICK_BORDER_M / 1000} km from the edge, picks outside it are refused
+        {tile.region.name} · black {grey.lo_m.toFixed(0)} m, white {grey.hi_m.toFixed(0)} m · dashed line: {(borderM / 1000).toFixed(2)} km from the edge, picks outside it are refused
       </figcaption>
     </figure>
 
     <div class="fields">
       <label class="row"><span>Region</span>
         <select aria-label="Region" value={tile.region.id} onchange={(e) => onregion(e.currentTarget.value)}>
-          {#each tile.regions as r (r.id)}<option value={r.id}>{r.name}</option>{/each}
+          {#each tile.regions as r (r.id)}<option value={r.id}>{r.name}{r.tier ? ` · tier ${r.tier}` : ""}</option>{/each}
         </select>
       </label>
+      {#if tile.region.tier || tile.region.label}
+        <p class="now region-note" data-testid="region-label">{#if tile.region.tier}Tier {tile.region.tier}, {TIER_TEXT[tile.region.tier]}.{/if} {tile.region.label ?? ""}</p>
+      {/if}
 
       <label class="row"><span>Curated site</span>
         <select data-testid="curated" aria-label="Curated site" disabled={!regionMetas.length} value="" onchange={(e) => { onsite(e.currentTarget.value); e.currentTarget.value = ""; }}>
@@ -272,19 +283,25 @@
 
       {#if grids.length}
         <div class="best" data-testid="best-cells">
-          {#each bests as { g, b, lat, lon, name } (g.meta.region)}
-            <div class="col" data-testid="best-{g.meta.region}">
-              <p class="who">{name}</p>
+          <h3 data-testid="ranking-title">Region ranking for {controls.date} · default preset, mast {grids[0].meta.mast_m} m, {grids[0].meta.span_days} d span</h3>
+          <ol>
+          {#each bests as { g, b, lat, lon, lethalH, name, mark }, n (g.meta.region)}
+            <li class="col" data-testid="best-{g.meta.region}">
+              <p class="who">{b ? `${n + 1}. ` : ""}{name}</p>
+              {#if mark}<p class="mark" data-testid="mark-{g.meta.region}">{mark}</p>{/if}
               {#if b}
                 <p class="days">{(b.operableH / 24).toFixed(1)} operable days</p>
+                <p>{lethalH === undefined ? "First lethal shadow unknown" : lethalH === Infinity ? "No lethal shadow in the span" : `First lethal shadow at +${(lethalH / 24).toFixed(1)} d`}</p>
                 <p>{lat.toFixed(4)}°, {lon.toFixed(4)}°E</p>
                 <button type="button" onclick={() => goBest(g.meta.region, lat, lon)}>Move site here</button>
               {:else}
                 <p>No grid for {controls.date}.</p>
               {/if}
-            </div>
+            </li>
           {/each}
-          <p class="note">Best cell of each {grids[0].meta.pixel_m} m point grid on the landing date; a tie goes to the first cell, top row then left to right on the map.{#if gridDates && bests.every((x) => !x.b)} Grid landing dates: {gridDates}.{/if} Built for the default preset, mast {grids[0].meta.mast_m} m and {grids[0].meta.span_days} d span{gridDiffers ? "; your controls differ, so these days will not match the headline" : ""}.</p>
+          </ol>
+          <p class="note" data-testid="ranking-scope">The ranking covers each shipped tile's pickable square (about 16.6 km a side), not the whole region: Haworth is 888 km², Mons Mouton Plateau 4452 km².</p>
+          <p class="note">Ranked by operable hours, then by a later first lethal shadow. Best cell of each {grids[0].meta.pixel_m} m point grid on the landing date; a tie goes to the first cell, top row then left to right on the map.{#if gridDates && bests.every((x) => !x.b)} Grid landing dates: {gridDates}.{/if} Built for the default preset, mast {grids[0].meta.mast_m} m and {grids[0].meta.span_days} d span{gridDiffers ? "; your controls differ, so these days will not match the headline" : ""}.</p>
         </div>
       {/if}
 
@@ -330,9 +347,13 @@
   .tools a { color: var(--color-fog); margin-right: var(--spacing-16); }
   .tools a:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }
   code { color: var(--color-paper); font-family: inherit; user-select: all; }
-  .best { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--spacing-8) var(--spacing-16); border: 1px solid var(--color-slate); border-radius: var(--radius-sm); padding: var(--spacing-8) var(--spacing-16); }
+  .best { display: grid; grid-template-columns: 1fr; gap: var(--spacing-8) var(--spacing-16); border: 1px solid var(--color-slate); border-radius: var(--radius-sm); padding: var(--spacing-8) var(--spacing-16); }
+  .best h3 { grid-column: 1 / -1; margin: 0; font: var(--font-weight-regular) var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-paper); }
+  .best ol { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--spacing-8) var(--spacing-16); margin: 0; padding: 0; list-style: none; }
   .best .col p, .best .note { margin: 0 0 4px; }
+  .region-note { margin: calc(-1 * var(--spacing-8)) 0 0; color: var(--color-ash); font-variant-numeric: normal; }
   .best .who { color: var(--color-paper); }
+  .best .col .mark { color: var(--color-ash); }
   .best .days { color: var(--color-fog); font-variant-numeric: tabular-nums; }
   .best .note { grid-column: 1 / -1; color: var(--color-ash); }
   .best button { margin-left: 0; border-radius: var(--radius-sm); }

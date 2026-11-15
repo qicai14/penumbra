@@ -30,7 +30,7 @@
 
   let tileError = $state<string | null>(null); // kept apart so a later compute success cannot hide it
   loadNearTile().then((t) => (tile = t), (e) => (tileError = String(e?.message ?? e)));
-  // A new region puts the site at the middle of its tile, which is always inside the 7.05 km border.
+  // A new region puts the site at the middle of its tile, which is always inside the pick border.
   function onregion(id: string, at?: [number, number]) { // `at` (lat, lon) overrides the tile middle
     loadNearTile(id).then((t) => {
       tile = t; tileError = null;
@@ -99,7 +99,7 @@
   $effect(() => {
     const req: Inputs = {
       lat_deg: controls.lat, lon_deg: controls.lon, mast_m: controls.mastM,
-      start_unix_s: parseDate(controls.date)!, span_days: controls.spanDays, preset: controls.preset ?? undefined, // the picker only stores dates that parse
+      start_unix_s: parseDate(controls.date)!, span_days: controls.spanDays, preset: controls.preset ?? undefined, region: tile?.region.id, // the picker only stores dates that parse
     };
     const mine = ++gen;
     computeScenario(req).then(

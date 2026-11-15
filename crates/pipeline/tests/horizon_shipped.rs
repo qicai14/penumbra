@@ -2,7 +2,7 @@
 //! IM-2 cross-check values: two-tier from the T07 design (TS reference marcher), three-tier from #48.
 
 use penumbra_core::geometry::LatLon;
-use penumbra_core::horizon::{HorizonOptions, N_AZ, NEAR_RANGE_M, ground_height_m};
+use penumbra_core::horizon::{HorizonOptions, N_AZ, NEAR_RANGE_M, ground_height_m, pick_border_m};
 use penumbra_pipeline::dem::ShippedTiles;
 use std::path::PathBuf;
 
@@ -97,11 +97,17 @@ fn early_exit_changes_nothing_at_the_highest_pickable_pixel() {
     assert_eq!(bits(&on.dist_m), bits(&off.dist_m));
 }
 
-/// The UI pick border (web/src/lib/site.ts PICK_BORDER_M): a 7 km march needs ~7 014 m of map
-/// at Mons Mouton (scale 1 + r²/4R²), so the picker insets each near tile by 7 050 m.
-const PICK_BORDER_M: f64 = 7_050.0;
+/// Corners of a near tile's pick area: the tile inset by its per-tile P5 border (#26 S6,
+/// `pick_border_m`, the same rule as web/src/lib/site.ts), map metres.
+fn pick_corners(m: &penumbra_core::dem::TileMeta) -> [(f64, f64); 4] {
+    let b = pick_border_m(m);
+    let (x_lo, y_hi) = (m.x0_m + b, m.y0_m - b);
+    let x_hi = m.x0_m + f64::from(m.width) * m.pixel_m - b;
+    let y_lo = m.y0_m - f64::from(m.height) * m.pixel_m + b;
+    [(x_lo, y_hi), (x_hi, y_hi), (x_lo, y_lo), (x_hi, y_lo)]
+}
 
-// The four corners of the 7 050 m-inset area of both shipped near tiles get a horizon (P5 margin);
+// The four corners of the border-inset area of both shipped near tiles get a horizon (P5 margin);
 // the march stops at the near range, so this checks the near tile alone.
 #[test]
 fn corners_of_the_pick_area_get_a_horizon() {
@@ -112,11 +118,7 @@ fn corners_of_the_pick_area_get_a_horizon() {
     };
     let t = shipped();
     for (id, near) in &t.regions {
-        let m = near.meta();
-        let (x_lo, y_hi) = (m.x0_m + PICK_BORDER_M, m.y0_m - PICK_BORDER_M);
-        let x_hi = m.x0_m + f64::from(m.width) * m.pixel_m - PICK_BORDER_M;
-        let y_lo = m.y0_m - f64::from(m.height) * m.pixel_m + PICK_BORDER_M;
-        for (x_m, y_m) in [(x_lo, y_hi), (x_hi, y_hi), (x_lo, y_lo), (x_hi, y_lo)] {
+        for (x_m, y_m) in pick_corners(near.meta()) {
             let site = xy_to_latlon(MapXy { x_m, y_m }).unwrap();
             let r = t.horizon(id, site, 2.0, &near_only);
             assert!(r.is_ok(), "{id} corner ({x_m}, {y_m}): {:?}", r.err());
@@ -145,11 +147,7 @@ fn corners_of_the_pick_area_get_a_horizon_through_the_mid_tier() {
     use penumbra_core::geometry::{MapXy, xy_to_latlon};
     let t = shipped();
     for (id, near) in &t.regions {
-        let m = near.meta();
-        let (x_lo, y_hi) = (m.x0_m + PICK_BORDER_M, m.y0_m - PICK_BORDER_M);
-        let x_hi = m.x0_m + f64::from(m.width) * m.pixel_m - PICK_BORDER_M;
-        let y_lo = m.y0_m - f64::from(m.height) * m.pixel_m + PICK_BORDER_M;
-        for (x_m, y_m) in [(x_lo, y_hi), (x_hi, y_hi), (x_lo, y_lo), (x_hi, y_lo)] {
+        for (x_m, y_m) in pick_corners(near.meta()) {
             let site = xy_to_latlon(MapXy { x_m, y_m }).unwrap();
             let r = t.horizon(id, site, 2.0, &HorizonOptions::default());
             assert!(r.is_ok(), "{id} corner ({x_m}, {y_m}): {:?}", r.err());
@@ -165,5 +163,37 @@ fn every_region_ships_an_80m_mid_tile() {
     for (id, _) in &t.regions {
         let m = t.mid(id).unwrap().meta();
         assert!((m.pixel_m - 80.0).abs() < 1e-12, "{id}: {} m", m.pixel_m);
+    }
+}
+
+// #26 S6: with the per-tile border, the two shipped tiles still accept their curated sites
+// (web/src/lib/sites.ts, #82): IM-2 (W9) on Mons Mouton; SP-01 (E85) and Barker Site 1 RoI 1
+// (E129, E130, derived 89.4389°S 222.904°E) on the Shackleton ridge. Each gets a horizon.
+#[test]
+fn curated_sites_sit_inside_the_per_tile_pick_border() {
+    use penumbra_core::geometry::latlon_to_xy;
+    let t = shipped();
+    let deg = |lat: f64, lon: f64| LatLon {
+        lat_rad: lat.to_radians(),
+        lon_east_rad: lon.to_radians(),
+    };
+    for (id, site) in [
+        ("mons-mouton", im2()),
+        ("shackleton-ridge", deg(-89.45, 222.69)),
+        ("shackleton-ridge", deg(-89.4389, 222.904)),
+    ] {
+        let m = t.near(id).unwrap().meta();
+        let xy = latlon_to_xy(site).unwrap();
+        let x1 = m.x0_m + f64::from(m.width) * m.pixel_m;
+        let y1 = m.y0_m - f64::from(m.height) * m.pixel_m;
+        let edge_m = (xy.x_m - m.x0_m)
+            .min(x1 - xy.x_m)
+            .min(xy.y_m - y1)
+            .min(m.y0_m - xy.y_m);
+        assert!(edge_m >= pick_border_m(m), "{id}: {edge_m} m from the edge");
+        assert!(
+            t.horizon(id, site, 2.0, &HorizonOptions::default()).is_ok(),
+            "{id}"
+        );
     }
 }

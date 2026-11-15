@@ -11,8 +11,8 @@ function groundM(aLat: number, aLon: number, bLat: number, bLon: number): number
   return Math.hypot((aLat - bLat) * D * R, dLon * D * R * Math.cos(aLat * D));
 }
 
-test("the reference covers SP-01, IM-2, four corners of both near tiles and the 0/360 wrap", () => {
-  const corners = ["mons-mouton", "shackleton-ridge"].flatMap((id) => ["NW", "NE", "SW", "SE"].map((c) => `${id} ${c}`));
+test("the reference covers SP-01, IM-2, four corners of every near tile and the 0/360 wrap", () => {
+  const corners = ["mons-mouton", "shackleton-ridge", "peak-near-cabeus-b", "haworth", "malapert-massif", "mons-mouton-region", "nobile-rim-1", "nobile-rim-2", "slater-plain", "de-gerlache-rim-2"].flatMap((id) => ["NW", "NE", "SW", "SE"].map((c) => `${id} ${c}`));
   expect(ref.map((p) => p.name)).toEqual(["SP-01", "IM-2", ...corners, "wrap lon 0", "wrap lon 359.9999", "wrap x -1e-12"]);
 });
 
