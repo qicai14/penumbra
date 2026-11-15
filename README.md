@@ -27,7 +27,7 @@ You plan a landing for a CLPS lander or an Artemis crew. You have a few candidat
 Two recent landers show what happens when that goes wrong. Intuitive Machines' Odysseus (IM-1) landed on 2024-02-22 at 80.1276° S, 1.4367° E (E72a, E72b) on a 12° slope, came to rest about 30° off the surface, and ended "as the sun moved out of view of the one illuminated solar panel" ([SCIENCE-SPEC](docs/SCIENCE-SPEC.md) E75a–c). Athena (IM-2) reached Mons Mouton on 2025-03-06 and "ended up on its side within a 20-meter diameter crater" ([LROC](https://lroc.im-ldi.com/images/1408)); a low Sun angle and the panels' orientation stopped charging (E73, E74). NASA's Artemis III candidate list now holds nine south-pole regions ([NTRS 20250011660](https://ntrs.nasa.gov/citations/20250011660)), and Penumbra ships all nine plus the Shackleton ridge.
 
 <p align="center">
-  <img alt="Penumbra's first screen in the live app: the hero question, three scenario buttons, and the site and date panel with the Sun mask" src="docs/screenshots/submission/hero-1440.png" width="900">
+  <img alt="Penumbra's first screen in the live app: the hero question, three scenario buttons, the operable-days and first-lethal-shadow headline, and the site and date panel with the Sun map" src="docs/screenshots/submission/hero-1440.png" width="900">
 </p>
 
 ## Three questions, one site and date
@@ -157,7 +157,7 @@ Every median in every run is under the 50 ms target. The single worst call in th
 | LROC | IM-2 landing site and crater (W6, W9); Artemis III region outlines via the QuickMap layer (W16) | https://lroc.im-ldi.com/images/1408; https://quickmap.lroc.im-ldi.com |
 | Published PGDA-based studies | V2b reference values | Barker et al. 2021, Mazarico et al. 2011 |
 
-Evidence ids (C, E, W) resolve in [`docs/EVIDENCE.md`](docs/EVIDENCE.md) and [`docs/SCIENCE-SPEC.md`](docs/SCIENCE-SPEC.md); full reference entries are in [`docs/paper/refs.yml`](docs/paper/refs.yml).
+Every number in this README comes from [`docs/submission/facts.md`](docs/submission/facts.md), which names its source. Evidence ids (C, E, W) resolve in [`docs/EVIDENCE.md`](docs/EVIDENCE.md) and [`docs/SCIENCE-SPEC.md`](docs/SCIENCE-SPEC.md); full reference entries are in [`docs/paper/refs.yml`](docs/paper/refs.yml).
 
 ## Stack, and why not the default
 
