@@ -100,7 +100,8 @@ export function validate(result: Horizon | Track | Timeline | Survival): void {
 
 /** 1 = centred on NASA's 2024 region outline, 2 = a published site inside one, 3 = not a 2024 region (validation tile). Optional: older manifests have none. */
 export type RegionTier = 1 | 2 | 3;
-export const TIER_TEXT: Record<RegionTier, string> = { 1: "Source: NASA 2024 region outlines via LROC QuickMap (W16)", 2: "IM-2 site (W9) inside NASA's Mons Mouton Plateau outline (W16)", 3: "validation tile (E85, E129, E130)" };
+export const TIER_TEXT: Record<RegionTier, string> = { 1: "Source: NASA 2024 region outlines via LROC QuickMap", 2: "IM-2 site inside NASA's Mons Mouton Plateau outline", 3: "validation tile" };
+export const TIER_EVIDENCE: Record<RegionTier, string> = { 1: "Evidence W16", 2: "Evidence W9, W16", 3: "Evidence E85, E129, E130" };
 type TileMeta = { url: string; width: number; height: number; x0_m: number; y0_m: number; pixel_m: number; scale_m: number; offset_m: number; nodata: number };
 export type EphSegment = { id: string; url: string; t0_unix_s: number; step_s: number; rows: number };
 export type Manifest = {

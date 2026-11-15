@@ -2,7 +2,7 @@
 
 > **Hook:** For CLPS and Artemis landing planners, Penumbra shows how many hours of sunlight and Earth contact a lander gets at any south-pole site and landing date, and **when the first shadow arrives that would kill it**. It is computed from LOLA terrain and DE440 ephemerides, then checked against JPL Horizons and NASA's published LOLA illumination maps.
 
-Source of the ambition pass: `/be-ambitious docs/IDEA-brief.md` (Nov 8). Research: NotebookLM `5d807093…` and `docs/research/lunar-landing/`.
+Source of the ambition pass: `/be-ambitious docs/archive/IDEA-brief.md` (Nov 8). Research: NotebookLM `5d807093…` and `docs/research/lunar-landing/`.
 
 ## Problem
 - At the south pole at the pole itself the Sun's centre stays within 1.54° of the horizon; at 85°S it reaches about 6.5° (SCIENCE-SPEC E104; the 6.5° is derived [D]: 5° + 1.54°). A 10 m hill casts a shadow hundreds of metres long, so moving the site 100 m or the date by 2 days can decide whether a mission survives.
