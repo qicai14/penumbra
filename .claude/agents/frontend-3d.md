@@ -21,4 +21,6 @@ Load on demand with the Skill tool (not preloaded, to keep context small): `play
 
 Rules that come from the science: every shaded pixel, curve and label shows a value computed by the WASM model; at 1° sun elevation the view stays legible. If the WASM API lacks a value you need, stop and report it; never compute or fake it in TypeScript.
 
+Fresh worktree: run `bun run wasm` then `bun run build` before any test or smoke run; never copy `web/src/lib/wasm/` from another checkout (a stale copy fails engine tests and the smoke test).
+
 Done when: the behaviour the issue describes works in `bun run dev`; `bun run check`, `bun run build` and `bun run smoke` pass; existing smoke tests are not deleted or loosened; the work is committed on the current branch.
