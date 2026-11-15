@@ -596,3 +596,21 @@ test("landing window: bar equals headline, clicking a bar sets the date and the 
   await page.getByRole("navigation", { name: "View" }).getByRole("button", { name: "Site", exact: true }).click(); // the date box lives on Site
   await expect(page.getByTestId("date")).toHaveValue(wantDate);
 });
+
+test("play advances the time marker (C4-7 #113)", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" }); // no autoplay, but play still works
+  await page.goto("/");
+  const slider = page.getByLabel("Time within the span");
+  await expect(slider).toBeVisible();
+  const before = Number(await slider.inputValue());
+  await page.waitForTimeout(300);
+  expect(Number(await slider.inputValue())).toBe(before);
+  await page.getByTestId("play").focus();
+  await page.keyboard.press("Space"); // Space toggles when the button has focus
+  await page.waitForTimeout(1000);
+  expect(Number(await slider.inputValue())).toBeGreaterThan(before);
+  await page.getByTestId("play").click(); // pause holds
+  const held = await slider.inputValue();
+  await page.waitForTimeout(300);
+  expect(await slider.inputValue()).toBe(held);
+});
