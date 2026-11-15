@@ -2,6 +2,31 @@ import { expect, test } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+test("first-visit tour: three steps, Esc dismisses and it stays dismissed, ? reopens it", async ({ page }) => {
+  // Clear the beforeEach flag on the first load only, so the reload below still sees the dismissal.
+  await page.addInitScript(() => { if (!sessionStorage.getItem("t")) { sessionStorage.setItem("t", "1"); localStorage.removeItem("penumbra-tour-done"); } });
+  await page.goto("/");
+  const tour = page.getByTestId("tour");
+  await expect(tour).toContainText("Pick a site");
+  await page.getByTestId("tour-next").click();
+  await expect(tour).toContainText("Read the headline");
+  await page.getByTestId("tour-next").click();
+  await expect(tour).toContainText("Scrub the timeline");
+  await expect(page.getByLabel("Time within the span")).toHaveAttribute("data-tour-on", "");
+  await page.keyboard.press("Escape");
+  await expect(tour).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByTestId("readout")).toBeVisible();
+  await expect(tour).toHaveCount(0);
+  await page.getByRole("button", { name: "Show the quick tour" }).click();
+  await expect(tour).toContainText("Pick a site");
+  await page.getByTestId("tour-close").click();
+  await expect(tour).toHaveCount(0);
+});
+
+// The first-visit tour must not cover what other tests click: mark it seen before every page loads.
+test.beforeEach(({ page }) => page.addInitScript(() => localStorage.setItem("penumbra-tour-done", "1")));
+
 // Runs against `vite preview` locally and the deployed URL in CI (BASE_URL).
 // Site shows the inputs, not a "Computed for" line; Planner keeps it, so read it there and come back.
 async function expectComputed(page: import("@playwright/test").Page, text: string) {
