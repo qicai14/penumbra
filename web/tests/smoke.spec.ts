@@ -143,15 +143,14 @@ test("scoreboard lists V1-V5 plus V2b and shows 'not run' for checks that have n
 
 // T13 (#14): every dataset carries its role and an evidence-ledger citation, none left pending (rubric 4 and 10).
 // Each citation links to its original source, and every link is one the research lists or a ledger W row already name.
-test("every dataset row has a role, SCIENCE-SPEC §6 ids and links to the original sources", async ({ page }) => {
+test("every dataset row has a role and links to the original sources, with no ledger ids shown", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("button", { name: "About", exact: true }).click();
   const rows = page.getByTestId("datasets").locator("tbody tr");
   await expect(rows).toHaveCount(6);
   await expect(page.getByTestId("datasets")).not.toContainText("pending");
-  // Every cited id must be a real row of the ledger, so a typo such as E999 fails.
+  await expect(page.getByTestId("datasets")).not.toContainText("SCIENCE-SPEC"); // ledger ids stay in the source, not on the page
   const ledger = readFileSync(fileURLToPath(new URL("../../docs/SCIENCE-SPEC.md", import.meta.url)), "utf8");
-  const known = new Set([...ledger.matchAll(/^\| ([EW]\d+[a-z]?) \|/gm)].map((m) => m[1]));
   const research = (f: string) => readFileSync(fileURLToPath(new URL(`../../docs/research/lunar-landing/${f}`, import.meta.url)), "utf8");
   const bare = (u: string) => u.replace(/^https?:\/\//, ""); // the W1 row says http://, the page links https://
   const listed = bare([ledger, research("sources.txt"), research("index-addendum.txt")].join("\n"));
@@ -167,13 +166,6 @@ test("every dataset row has a role, SCIENCE-SPEC §6 ids and links to the origin
       expect(listed.includes(bare(href)), `${href} in sources.txt, index-addendum.txt or a §6 W row`).toBe(true);
       await expect(a).toHaveAttribute("target", "_blank");
       await expect(a).toHaveAttribute("rel", "noopener noreferrer");
-    }
-    const ids = ((await cell.getByTestId("ids").textContent()) ?? "").replace(/^.*§6:\s*/, "").split(/,\s*/);
-    expect(ids.length).toBeGreaterThan(0);
-    for (const id of ids) {
-      const range = id.match(/^([EW]\d+)([a-z])–([a-z])$/); // "E75a–c" stands for E75a, E75b, E75c
-      const expanded = range ? [...Array(range[3].charCodeAt(0) - range[2].charCodeAt(0) + 1)].map((_, i) => range[1] + String.fromCharCode(range[2].charCodeAt(0) + i)) : [id];
-      for (const one of expanded) expect(known.has(one), `${one} in SCIENCE-SPEC §6`).toBe(true);
     }
   }
   await page.getByRole("button", { name: "Validation", exact: true }).click(); // the scoreboard table lives on Validation
