@@ -57,6 +57,25 @@ test("timelines render labelled series and follow the panorama time slider", asy
   expect(await page.getByTestId("timelines-now").textContent()).not.toBe(textA);
 });
 
+test("zoom buttons: + narrows, - widens, Reset shows the full span, and the time cursor stays put (T81 #81)", async ({ page }) => {
+  await page.goto("/");
+  const zoom = page.getByTestId("zoom");
+  await expect(page.getByTestId("timelines").locator("canvas")).toHaveCount(3);
+  const span = async () => Number(await zoom.getAttribute("data-span"));
+  const full = await span();
+  await page.getByTestId("zoom-in").click();
+  const half = await span();
+  expect(half).toBeCloseTo(full / 2, -1);
+  await page.getByTestId("zoom-in").click();
+  const quarter = await span();
+  expect(quarter).toBeLessThan(half);
+  await page.getByTestId("zoom-out").click();
+  expect(await span()).toBeGreaterThan(quarter);
+  await page.getByTestId("zoom-reset").click();
+  expect(await span()).toBe(full);
+  await expect(page.getByTestId("timelines-now")).toBeVisible();
+});
+
 test("hovering the chart moves the panorama time", async ({ page }) => {
   await page.goto("/");
   const before = await page.getByTestId("now").textContent();
@@ -381,4 +400,24 @@ test("a curated site outside the tiles shows OUT_OF_COVERAGE, not an error; both
   await curated.selectOption("sp01");
   await expect(page.getByTestId("out-of-coverage")).toHaveCount(0);
   await expect(page.getByTestId("lat")).toHaveValue("-89.45");
+});
+
+// T80 (#80): About content. Limitations carry their issue or scoreboard ids; empty video URLs render nothing.
+test("About lists team, user story, limitations with ids, and no video slot while URLs are empty", async ({ page, request }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "About", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Team" })).toBeVisible();
+  await expect(page.getByText("Fractured Toes")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Why Penumbra" })).toBeVisible();
+  const lim = page.getByTestId("limitations");
+  for (const id of ["V2b", "V3", "#75", "#48"]) await expect(lim.locator(`[data-limit="${id}"]`)).toHaveCount(1);
+  // Every scoreboard row that is not a pass is named in the limitations.
+  const rows = (await (await request.get("scoreboard.json")).json()) as { id: string; pass: boolean | null }[];
+  for (const r of rows.filter((r) => r.pass !== true)) await expect(lim.locator(`[data-limit="${r.id}"]`).first()).toBeVisible();
+  await expect(lim).toContainText("0.21 d");
+  await expect(lim).toContainText("123 sampled pixels above 60 %");
+  await expect(page.getByTestId("videos")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Videos" })).toHaveCount(0);
+  await expect(page.locator("main video, main iframe")).toHaveCount(0);
+  await expect(page.getByText("V1’s live demo")).toBeVisible();
 });

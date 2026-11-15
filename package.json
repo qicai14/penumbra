@@ -11,6 +11,6 @@
     "test": "cargo test --workspace",
     "fixture": "bun scripts/make-fixture.ts",
     "smoke": "bun run --cwd web smoke",
-    "paper": "typst compile docs/paper/penumbra.typ docs/paper/penumbra.pdf"
+    "paper": "typst compile --root . docs/paper/penumbra.typ docs/paper/penumbra.pdf"
   }
 }
