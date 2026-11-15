@@ -172,6 +172,11 @@
   .toprow :global(.panel) { margin-top: 0; }
   @media (min-width: 1100px) and (min-height: 800px) { .toprow { position: sticky; top: 0; z-index: 1; background: var(--surface-void); padding-bottom: var(--spacing-8); } }
   nav { display: flex; }
+  /* Touch: every control gets a 44 px target (WCAG 2.5.8 AAA / Apple HIG); mouse layouts keep the compact size. */
+  @media (pointer: coarse) {
+    :global(button), :global(select), :global(input:not([type="range"])), :global(summary) { min-height: 44px; }
+    :global(input[type="range"]) { min-height: 44px; }
+  }
   .gh { display: inline-flex; align-items: center; gap: var(--spacing-8); color: var(--color-fog); text-decoration: none; font: var(--text-caption)/var(--leading-caption) var(--font-mono); }
   .gh:hover { color: var(--color-paper); }
   .gh:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }

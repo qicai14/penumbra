@@ -76,7 +76,7 @@
   h2 { margin: 0 0 var(--spacing-16); font: var(--font-weight-bold) var(--text-heading)/var(--leading-heading) var(--font-mono); }
   h3 { margin: var(--spacing-24) 0 var(--spacing-8); font: var(--font-weight-bold) var(--text-base)/var(--leading-base) var(--font-mono); }
   ul { margin: 0; padding-left: var(--spacing-24); }
-  .scroll { overflow-x: auto; }
+  .scroll { position: relative; overflow-x: auto; } /* relative: the sr-only spans are absolute and would otherwise escape the clip and widen the page */
   table { width: 100%; border-collapse: collapse; font-size: var(--text-sm); line-height: var(--leading-sm); }
   caption { text-align: left; color: var(--color-ash); padding-bottom: var(--spacing-8); font-size: var(--text-caption); }
   th, td { border: 1px solid var(--color-iron); padding: var(--spacing-8); text-align: left; vertical-align: top; }

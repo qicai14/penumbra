@@ -312,9 +312,11 @@
   .ramp { display: inline-block; width: 48px; height: 10px; margin: 0 var(--spacing-8) 0 0; background: linear-gradient(to right, var(--color-slate), var(--color-sun)); }
   .line { display: inline-block; width: 16px; border-top: 2px solid var(--color-paper); margin: 0 var(--spacing-8) 3px var(--spacing-16); }
   figcaption { margin-top: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
-  .fields { flex: 1 1 280px; display: flex; flex-direction: column; gap: var(--spacing-16); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
+  .fields { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: var(--spacing-16); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .row { display: flex; align-items: center; gap: var(--spacing-8); }
   .row > span:first-child { flex: 0 0 150px; }
+  .row > select { flex: 1 1 0; width: 0; min-width: 0; } /* a long option name must not widen the row past a 375 px screen */
+  @media (max-width: 480px) { .row > span:first-child { flex-basis: 96px; } }
   .row input[type="range"] { flex: 1; accent-color: var(--color-fog); }
   output { min-width: 5ch; color: var(--color-paper); font-variant-numeric: tabular-nums; }
   .latlon { display: flex; flex-wrap: wrap; gap: var(--spacing-8); align-items: flex-end; }

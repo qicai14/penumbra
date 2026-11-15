@@ -57,6 +57,7 @@
     ctl.minDistance = 300; ctl.maxDistance = 60000; ctl.maxPolarAngle = Math.PI * 0.495;
     ctl.listenToKeyEvents(canvas);
     ctl.touches = { ONE: null as unknown as THREE.TOUCH, TWO: THREE.TOUCH.DOLLY_ROTATE }; // one finger scrolls the page; two rotate and zoom
+    canvas.style.touchAction = "pan-y"; // OrbitControls sets "none", which traps the page scroll under one finger
 
     // Unlit: the vertex colour is the whole shading, so no GPU light or shadow map can add a shadow the model did not compute.
     const mesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial({ vertexColors: true }));
