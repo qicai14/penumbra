@@ -8,6 +8,7 @@ test("first-visit tour: three steps, Esc dismisses and it stays dismissed, ? reo
   await page.goto("/");
   const tour = page.getByTestId("tour");
   await expect(tour).toContainText("Pick a site");
+  await expect(page.getByRole("button", { name: "Show the quick tour" })).toHaveCount(0); // hidden while the card holds its corner
   await page.getByTestId("tour-next").click();
   await expect(tour).toContainText("Read the headline");
   await page.getByTestId("tour-next").click();
@@ -18,6 +19,7 @@ test("first-visit tour: three steps, Esc dismisses and it stays dismissed, ? reo
   await page.reload();
   await expect(page.getByTestId("readout")).toBeVisible();
   await expect(tour).toHaveCount(0);
+  await expect(page.locator("header").getByRole("button", { name: "Show the quick tour" })).toHaveCount(0); // floats bottom-right, not in the header
   await page.getByRole("button", { name: "Show the quick tour" }).click();
   await expect(tour).toContainText("Pick a site");
   await page.getByTestId("tour-close").click();
