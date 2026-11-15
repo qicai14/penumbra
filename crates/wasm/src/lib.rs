@@ -175,6 +175,23 @@ impl Engine {
         penumbra_core::horizon::ground_height_m(near, site_deg(lat_deg, lon_deg)).map_err(dem_err)
     }
 
+    /// Ground slope at the site (MOON_ME degrees, east longitude), degrees from horizontal: Horn's
+    /// gradient over the near tile's 3 × 3 pixels (60 m window at 20 m, #112). `undefined` when the
+    /// window leaves the tile or touches no-data (OUT_OF_COVERAGE / NO_DATA), never 0°.
+    pub fn slope(&self, lat_deg: f64, lon_deg: f64) -> Result<Option<f64>, JsError> {
+        let near = self
+            .near
+            .as_ref()
+            .ok_or_else(|| JsError::new("NOT_LOADED: near tile"))?;
+        let xy = penumbra_core::geometry::latlon_to_xy(site_deg(lat_deg, lon_deg))
+            .map_err(|e| dem_err(e.into()))?;
+        match near.slope_deg(xy) {
+            Ok(s) => Ok(Some(s)),
+            Err(DemError::OutOfCoverage | DemError::NoData) => Ok(None),
+            Err(e) => Err(dem_err(e)),
+        }
+    }
+
     /// 1 440 values: `el_deg[720]` (topocentric ENU) then `dist_m[720]`; bin i is azimuth i × 0.5°
     /// clockwise from north (docs/API.md). `mast_m` is H above the near tile's ground. Marches the
     /// near, middle and far tiles; each must be loaded.

@@ -341,3 +341,10 @@ export function loadMaskEngine(regionId: string): Promise<{ engine: WasmEngine; 
   }
   return p;
 }
+
+/** Ground slope at a pin, degrees (WASM Engine.slope, 20 m DEM); undefined outside coverage or on no-data. */
+export const computeSlope = serialize(async (lat: number, lon: number, regionId?: string): Promise<number | undefined> => {
+  const engine = await loadEngine();
+  await ensureNear(engine, lat, lon, regionId);
+  return engine.slope(lat, lon);
+});

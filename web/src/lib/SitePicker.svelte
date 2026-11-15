@@ -1,6 +1,6 @@
 <script lang="ts">
   import { latlonToXy, TIER_TEXT, xyToLatlon, type EphSegment, type NearTile, type Region } from "./engine";
-  import { checkDate, checkPick, dateRange, edgeDistanceM, isoDay, parseDate, pickBorderM, SPANS_DAYS } from "./site";
+  import { checkDate, checkPick, dateRange, edgeDistanceM, isoDay, parseDate, pickBorderM, slopeText, SPANS_DAYS } from "./site";
   import type { Controls } from "./state.svelte";
   import { maskAt, maskGrid, maskPixels, MASK_STRIDE, MASK_LIT_ALPHA, MASK_DARK_ALPHA } from "./mask";
   import { rgb } from "./color";
@@ -8,7 +8,7 @@
   import { fmtUtc } from "./panorama";
   import Hero from "./Hero.svelte";
   import { coverageRegion, latLonText, MOON_TREK_URL, QUICKMAP_URL, SITES, type CuratedSite } from "./sites";
-  import { loadManifest } from "./engine";
+  import { computeSlope, loadManifest } from "./engine";
   import { outsideAvgvisib, rankBests } from "./ranking";
   import { bestCell, contour, CONTOUR_H, dateIndex, NODATA, NO_LETHAL, type Grid } from "./grid";
 
@@ -62,6 +62,16 @@
   const siteXy = $derived(latlonToXy(controls.lat, controls.lon));
   const siteLit = $derived(shown ? maskAt(shown, m, siteXy[0], siteXy[1]) : null);
   const edgeKm = $derived(edgeDistanceM(siteXy[0], siteXy[1], m) / 1000);
+  // Slope from the Engine (20 m DEM). Cleared first so a stale value never shows for a new pin; undefined = no line.
+  let slope = $state<number | undefined>(undefined);
+  $effect(() => {
+    const lat = controls.lat, lon = controls.lon, region = tile.region.id;
+    let live = true;
+    slope = undefined;
+    computeSlope(lat, lon, region).then((v) => { if (live) slope = v; }, () => {});
+    return () => { live = false; };
+  });
+  const slopeLine = $derived(slopeText(slope));
 
   function draw() {
     const g = canvas.getContext("2d")!;
@@ -265,6 +275,7 @@
       <p class="now" data-testid="site-now">
         {edgeKm.toFixed(1)} km from the tile edge
       </p>
+      {#if slopeLine}<p class="now" data-testid="slope">{slopeLine}</p>{/if}
       <p class="now" role="status" aria-live="polite" aria-atomic="true" data-testid="mask-site" data-lit={siteLit ?? ""} data-t={shown?.t_unix_s ?? ""} data-stride={shown?.stride ?? ""}>
         Nearest mask point (within {((shown?.stride ?? MASK_STRIDE) * m.pixel_m) / 2} m of the site), point Sun: {siteLit === null ? "computing" : siteLit ? "lit" : "in shadow"}
       </p>

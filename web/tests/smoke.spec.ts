@@ -698,3 +698,8 @@ test("hero: schedule-slips button sets IM-2's site and 2026-11-12; both dates gi
   console.info(`hero slip: operable ${on14} on 2026-11-14, ${on12} on 2026-11-12`);
   expect(on12).not.toBe(on14);
 });
+
+test("the pin shows its slope from the 20 m DEM (C4-6 #112)", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("slope")).toHaveText(/^Slope \d+\.\d° \(20 m DEM, 60 m window\)$/);
+});
