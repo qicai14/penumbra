@@ -108,7 +108,7 @@ What reruns on each kind of change (the adapter keeps the last horizon, keyed by
 
 ## 2. Data structures and algorithms
 
-Sizes used throughout: R = 1 737 400 m; 720 azimuths at 0.5° (SCIENCE-SPEC §1a); near field 20 m to 7 km, middle 80 m to 31 km, far field 240 m beyond (#48); far tile ±382 km; hourly ephemeris 2026–2030; timelines at 10 min. 360 azimuths halves every horizon number below, but the spec fixes 720 and the Sun's disc (0.53°) is about one 0.5° bin wide, so 360 would undersample it.
+Sizes used throughout: R = 1 737 400 m; 720 azimuths at 0.5° (SCIENCE-SPEC §1a); near field 20 m to 7 km, middle 80 m to 31 km, far field 240 m beyond (#48); far tile ±396 km (±382 km before #26); hourly ephemeris 2026–2030; timelines at 10 min. 360 azimuths halves every horizon number below, but the spec fixes 720 and the Sun's disc (0.53°) is about one 0.5° bin wide, so 360 would undersample it.
 
 ### 2.1 DEM tiles
 
@@ -118,11 +118,11 @@ Sizes used throughout: R = 1 737 400 m; 720 azimuths at 0.5° (SCIENCE-SPEC §1a
 |---|---|---|---|---|
 | Source `LDEM_80S_20MPP_ADJ` (never loaded whole) | 30 400² | 3.70 GB decoded | ±304 km | float |
 | Near, one per region | 1536² = 2 359 296 | 4 718 592 (4.72 MB) | 30.72 km square at 20 m | 0.25 m or finer |
-| Far, shared | 3184² = 10 137 856 | 20 275 712 (20.28 MB) | ±382.08 km at 240 m | 0.5 m |
+| Far, shared | 3300² = 10 890 000 | 21 780 000 (21.78 MB) | ±396 km at 240 m (#26; was 3184², ±382.08 km) | 0.5 m |
 
-- Runtime download: two regions 2 × 4.72 + 20.28 + 2.10 = 31.8 MB; nine regions 64.9 MB. Both are inside the 100 MB budget.
-- Browser memory, steady state: the engine holds one near tile, the far tile and the ephemeris, 27.1 MB. `web/` keeps its own copy of the near tile to draw the height image, 4.7 MB. While a file loads, its fetch buffer and its WASM copy exist together, so the peak is about 20 MB higher for a moment.
-- The pickable area of a near tile is the tile minus a 7.05 km border (7 km of ground, map length scale): 16.62 km square.
+- Runtime download (measured Nov 15): one region is near 4.72 + mid 1.97 + grid 0.33 = 7.02 MB; ten regions 70.21 MB plus the far tile 21.78 MB = 92.0 MB, and `web/public/data` with the ephemeris is 94.2 MB (89.8 MiB), inside the 100 MB budget.
+- Browser memory, steady state: the engine holds one near tile (4.72 MB), its mid tile (1.97 MB), the far tile (21.78 MB, ±396 km since #26) and the ephemeris (2.10 MB), 30.6 MB. `web/` keeps its own copy of the near tile to draw the height image, 4.7 MB. While a file loads, its fetch buffer and its WASM copy exist together, so the peak is about 20 MB higher for a moment.
+- The pickable area of a near tile is the tile minus its pick border `pick_border_m` on each side (7 km of ground at the map scale of the tile corner farthest from the pole, plus half a pixel, #26 S6): 7.011 km (Shackleton ridge) to 7.036 km (Peak near Cabeus B), so a 16.70 to 16.65 km square.
 
 **Height decode.** `h = offset_m + scale_m × v`, with `v == nodata` an error (never 0 m, P5).
 - Near scale: the encoder picks the finest of 0.0625, 0.125, 0.25 m that fits the tile's height range in ±32 767 counts, and fails if 0.25 m clips. At 0.25 m the quantisation error is 0.072 m RMS (spec); at 0.125 m it is 0.036 m. A 30 km tile whose relief is under 8.19 km gets 0.125 m for free, and the decoder doesn't change because the scale comes from the manifest.

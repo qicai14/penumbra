@@ -1,9 +1,17 @@
 // Pure checks for the site picker and date controls. No model maths: only the refusal rules P5 and P16.
 import type { EphSegment, NearMeta } from "./engine";
 
-// P5: a site must be at least 7 km inside the near tile. The horizon needs 7 km of ground, which is up to 7.05 km of map
-// (polar stereographic length scale), else the Engine answers OUT_OF_COVERAGE.
-export const PICK_BORDER_M = 7050;
+const NEAR_RANGE_M = 7000, MOON_RADIUS_M = 1_737_400;
+/**
+ * P5: a site must have 7 km of ground inside the near tile, else the Engine answers OUT_OF_COVERAGE. On the polar
+ * stereographic map that is 7000 x k metres, k = 1 + r^2 / 4R^2 at the tile corner farthest from the pole, plus half a
+ * pixel (the outermost pixel centre sits that far inside the edge). Same rule as pick_border_m in crates/core/src/horizon.rs.
+ */
+export function pickBorderM(t: NearMeta): number {
+  const x1 = t.x0_m + t.width * t.pixel_m, y1 = t.y0_m - t.height * t.pixel_m;
+  const x = Math.max(Math.abs(t.x0_m), Math.abs(x1)), y = Math.max(Math.abs(t.y0_m), Math.abs(y1));
+  return NEAR_RANGE_M * (1 + (x * x + y * y) / (4 * MOON_RADIUS_M * MOON_RADIUS_M)) + t.pixel_m / 2;
+}
 export const SPANS_DAYS = [14, 30, 60] as const;
 export const DEFAULT_SPAN_DAYS = 30;
 export const DEFAULT_MAST_M = 2;
@@ -21,8 +29,9 @@ export function checkPick(x: number, y: number, t: NearMeta): Verdict {
   const d = edgeDistanceM(x, y, t);
   // !(d >= 0), not d < 0: also catches NaN from a pole or non-finite projection
   if (!(d >= 0)) return { ok: false, reason: "That point is outside the near tile. Pick inside the image." };
-  if (d < PICK_BORDER_M)
-    return { ok: false, reason: `Too close to the tile edge: ${(Math.floor(d / 10) / 100).toFixed(2)} km. A site needs at least 7 km of terrain around it, which is a ${PICK_BORDER_M / 1000} km map border (P5).` };
+  const border = pickBorderM(t);
+  if (d < border)
+    return { ok: false, reason: `Too close to the tile edge: ${(Math.floor(d / 10) / 100).toFixed(2)} km. A site needs at least 7 km of terrain around it, which is a ${(Math.ceil(border / 10) / 100).toFixed(2)} km map border on this tile (P5).` };
   return { ok: true };
 }
 
@@ -62,4 +71,15 @@ export function checkDate(s: string, spanDays: number, eph: readonly EphSegment[
 export function dateRange(eph: readonly EphSegment[]): { min: string; max: string } {
   if (!eph.length) return { min: "", max: "" };
   return { min: isoDay(Math.min(...eph.map((g) => g.t0_unix_s))), max: isoDay(Math.max(...eph.map(segEnd)) - 86400) };
+}
+
+/**
+ * Which region's near tile answers a site. Overlapping tiles carry different int16 scales, so the choice must not depend on
+ * session history: the region the UI selected (if it passes its pick border), else the first in manifest order that does,
+ * else the first whose tile merely holds the site (shared links a few metres inside the border still load).
+ */
+export function pickRegion<R extends { id: string; near: NearMeta }>(regions: R[], x: number, y: number, preferId?: string): R | undefined {
+  const ok = (r: R) => edgeDistanceM(x, y, r.near) >= pickBorderM(r.near);
+  const sel = regions.find((r) => r.id === preferId);
+  return (sel && ok(sel) ? sel : undefined) ?? regions.find(ok) ?? regions.find((r) => edgeDistanceM(x, y, r.near) >= 0);
 }

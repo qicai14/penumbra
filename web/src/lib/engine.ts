@@ -97,12 +97,15 @@ export function validate(result: Horizon | Track | Timeline | Survival): void {
   if (t) for (let i = 1; i < t.length; i++) if (!(t[i] > t[i - 1])) fail(`t_unix_s is not increasing at ${i}`);
 }
 
+/** 1 = centred on NASA's 2024 region outline, 2 = a published site inside one, 3 = not a 2024 region (validation tile). Optional: older manifests have none. */
+export type RegionTier = 1 | 2 | 3;
+export const TIER_TEXT: Record<RegionTier, string> = { 1: "Source: NASA 2024 region outlines via LROC QuickMap (W16)", 2: "IM-2 site (W9) inside NASA's Mons Mouton Plateau outline (W16)", 3: "validation tile (E85, E129, E130)" };
 type TileMeta = { url: string; width: number; height: number; x0_m: number; y0_m: number; pixel_m: number; scale_m: number; offset_m: number; nodata: number };
 export type EphSegment = { id: string; url: string; t0_unix_s: number; step_s: number; rows: number };
 export type Manifest = {
   format_version: number; api_version: number;
   ephemeris: EphSegment[];
-  far: TileMeta; regions: { id: string; name: string; near: TileMeta; mid: TileMeta }[];
+  far: TileMeta; regions: { id: string; name: string; tier?: RegionTier; label?: string; near: TileMeta; mid: TileMeta }[];
   grids?: GridMeta[]; // regional point grids (T24); optional so the app runs without them
 };
 
@@ -189,7 +192,7 @@ export function loadTracerTrack(): Promise<Track> {
 }
 
 import type { GridMeta } from "./grid";
-import { edgeDistanceM } from "./site";
+import { pickRegion } from "./site";
 import { serialize } from "./serialize";
 import { checkPit, DEGRADED_SLOPE_DEG } from "./replay";
 import { latlonToXy } from "./projection";
@@ -201,26 +204,28 @@ export type NearMeta = {
   width: number; height: number; x0_m: number; y0_m: number; pixel_m: number;
   scale_m: number; offset_m: number; nodata: number;
 };
-export type NearTile = { region: { id: string; name: string }; meta: NearMeta; data: Int16Array };
-export type Inputs = { lat_deg: number; lon_deg: number; mast_m: number; start_unix_s: number; span_days: number; preset?: Preset };
+export type NearTile = { region: Region; meta: NearMeta; data: Int16Array };
+export type Inputs = { lat_deg: number; lon_deg: number; mast_m: number; start_unix_s: number; span_days: number; preset?: Preset; region?: string };
 
-export type Region = { id: string; name: string };
+export type Region = { id: string; name: string; tier?: RegionTier; label?: string };
 /** The near tile of one region (the first when no id is given); the int16 counts exactly as shipped. */
 export async function loadNearTile(regionId?: string): Promise<NearTile & { regions: Region[]; eph: EphSegment[] }> {
   const m = await loadManifest();
   const region = regionId === undefined ? m.regions[0] : m.regions.find((r) => r.id === regionId);
   if (!region) throw new Error(`BAD_INPUT: unknown region ${regionId}`);
   const { url, ...meta } = region.near;
-  return { region: { id: region.id, name: region.name }, regions: m.regions.map(({ id, name }) => ({ id, name })), eph: m.ephemeris, meta, data: await fetchTile(region.near) };
+  const pub = ({ id, name, tier, label }: Region): Region => ({ id, name, tier, label });
+  return { region: pub(region), regions: m.regions.map(pub), eph: m.ephemeris, meta, data: await fetchTile(region.near) };
 }
 
 let nearId: string | undefined; // region now in the Engine
-/** Loads the near tile of the region whose tile holds the site; OUT_OF_COVERAGE when none does. */
-async function ensureNear(engine: WasmEngine, lat: number, lon: number): Promise<void> {
+/** Loads the near tile of a region whose tile holds the site; OUT_OF_COVERAGE when none does. */
+async function ensureNear(engine: WasmEngine, lat: number, lon: number, regionId?: string): Promise<void> {
   const m = await loadManifest();
   const [x, y] = latlonToXy(lat, lon);
-  const r = m.regions.find(({ near }) => edgeDistanceM(x, y, near) >= 0);
-  if (!r) throw new Error("OUT_OF_COVERAGE: that site is outside every shipped near tile");
+  // Tiles overlap with different int16 scales: the answer must not depend on what was loaded before (see pickRegion).
+  const r = pickRegion(m.regions, x, y, regionId);
+  if (!r) throw new Error("OUT_OF_COVERAGE: that site is outside every shipped near tile, or closer to its edge than the pick border");
   const t = r.near, u = r.mid, [data, midData] = await Promise.all([fetchTile(t), fetchTile(u)]);
   if (nearId !== r.id) { engine.load_near(data, t.width, t.height, t.x0_m, t.y0_m, t.pixel_m, t.scale_m, t.offset_m, t.nodata); engine.load_mid(midData, u.width, u.height, u.x0_m, u.y0_m, u.pixel_m, u.scale_m, u.offset_m, u.nodata); nearId = r.id; }
 }
@@ -249,7 +254,7 @@ let fixtureBase: Promise<Scenario> | undefined;
 async function computeNow(inp: Inputs): Promise<Scenario> {
   const s = await (fixtureBase ??= loadFixture());
   const engine = await loadEngine();
-  await ensureNear(engine, inp.lat_deg, inp.lon_deg);
+  await ensureNear(engine, inp.lat_deg, inp.lon_deg, inp.region);
   const ground_m = engine.ground_height(inp.lat_deg, inp.lon_deg);
   const site = { ...s.site, lat_deg: inp.lat_deg, lon_deg: inp.lon_deg, ground_m, mast_m: inp.mast_m };
   const raw = engine.horizon(inp.lat_deg, inp.lon_deg, inp.mast_m);
