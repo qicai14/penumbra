@@ -193,7 +193,12 @@
       linear-gradient(to right, #000 calc(50% - var(--page-max-width) / 2 - 24px), transparent calc(50% - var(--page-max-width) / 2), transparent calc(50% + var(--page-max-width) / 2), #000 calc(50% + var(--page-max-width) / 2 + 24px));
     mask-composite: intersect;
   }
-  nav { display: flex; flex-wrap: wrap; gap: var(--spacing-16); }
+  nav { display: flex; flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; gap: var(--spacing-16); scroll-snap-type: x proximity; }
+  nav button { scroll-snap-align: start; }
+  /* Right-edge fade says more tabs are off screen; padding lets the last tab scroll clear of it. */
+  @media (max-width: 600px) {
+    nav { padding-right: 32px; mask-image: linear-gradient(to right, #000 85%, transparent); }
+  }
   /* Touch: every control gets a 44 px target (WCAG 2.5.5 AAA / Apple HIG); mouse layouts keep the compact size. */
   @media (pointer: coarse) {
     :global(button), :global(select), :global(input), :global(summary) { min-height: 44px; }
