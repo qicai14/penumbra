@@ -82,6 +82,14 @@
   th, td { border: 1px solid var(--color-iron); padding: var(--spacing-8); text-align: left; vertical-align: top; }
   thead th { color: var(--color-fog); font-weight: var(--font-weight-regular); background: var(--surface-carbon); }
   .sources { padding-left: var(--spacing-16); }
+  /* Phone: one stacked card per dataset instead of a 713 px table to swipe; the row header stays first, so each card still names its dataset. */
+  @media (max-width: 600px) {
+    table, caption, tbody, tr, th, td { display: block; }
+    thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+    tr { margin-bottom: var(--spacing-16); border: 1px solid var(--color-iron); }
+    th, td { border: 0; }
+    th[scope="row"] { background: var(--surface-carbon); }
+  }
   /* Touch: stacked source links sit 3 px apart, so their 24 px circles overlap (WCAG 2.5.8); give each a 44 px row like the buttons. */
   @media (pointer: coarse) { .sources a { display: inline-flex; align-items: center; min-height: 44px; } }
   li > .ids { display: inline; color: var(--color-ash); font-size: var(--text-caption); }
