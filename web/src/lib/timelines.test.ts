@@ -20,9 +20,18 @@ test("sunset is the next step where illumination drops to 0", () => {
   expect(countdown(hourly(6), illum, (x) => x > 0, 2, "sunset")).toBe("Sunset in 0d 1h");
 });
 
-test("when it is already down, count to the next set after it rises, never negative", () => {
+test("down now: the next rise first, then the set after it, both from now and never negative (#107)", () => {
   const illum = Float64Array.from([0, 0, 1, 1, 0, 0]);
-  expect(countdown(hourly(6), illum, (x) => x > 0, 0, "sunset")).toBe("Sunset in 0d 4h");
+  expect(countdown(hourly(6), illum, (x) => x > 0, 0, "sunset")).toBe("Sunrise in 0d 2h · then sunset in 0d 4h");
+  expect(countdown(hourly(6), illum, (x) => x > 0, 1, "sunset")).toBe("Sunrise in 0d 1h · then sunset in 0d 3h");
+  const contact = Float64Array.from([0, 1, 0]);
+  expect(countdown(hourly(3), contact, (x) => x >= 0.5, 0, "Earthset")).toBe("Earth contact in 0d 1h · then Earthset in 0d 2h");
+  // Rises but does not set again: the rise shows, then the existing no-set wording.
+  expect(countdown(hourly(3), Float64Array.from([0, 1, 1]), (x) => x > 0, 0, "sunset")).toBe("Sunrise in 0d 1h · then no sunset in 2 h");
+});
+
+test("up now: unchanged, the next set only", () => {
+  expect(countdown(hourly(6), Float64Array.from([1, 1, 0, 0, 1, 0]), (x) => x > 0, 0, "sunset")).toBe("Sunset in 0d 2h");
 });
 
 test("no crossing left in the span says 'no sunset in …', never blank", () => {
@@ -32,8 +41,6 @@ test("no crossing left in the span says 'no sunset in …', never blank", () => 
   // Down for the rest of the span: there is nothing to set, so it says no rise (a shadowed site never reads as sunlit).
   expect(countdown(hourly(3), down, (x) => x > 0, 0, "Earthset")).toBe("no Earthrise in 2 h");
   expect(countdown(hourly(3), down, (x) => x > 0, 0, "sunset")).toBe("no sunrise in 2 h");
-  // Rises but does not set again: still "no sunset".
-  expect(countdown(hourly(3), Float64Array.from([0, 1, 1]), (x) => x > 0, 0, "sunset")).toBe("no sunset in 2 h");
   expect(countdown(Float64Array.from([0, 30 * 86400]), Float64Array.from([1, 1]), (x) => x > 0, 0, "sunset")).toBe("no sunset in 30 days");
   expect(countdown(hourly(4), up, (x) => x > 0, 3, "sunset")).toBe("no sunset before the span ends"); // last step, never "0 h"
 });

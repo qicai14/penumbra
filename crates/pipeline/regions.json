@@ -1,0 +1,82 @@
+[
+  {
+    "id": "mons-mouton",
+    "name": "Mons Mouton Plateau · IM-2",
+    "centre": { "lat_deg": -84.7906, "lon_east_deg": 29.1957 },
+    "tier": 2,
+    "evidence": ["W9", "W16", "E116"],
+    "label": "Centred on the IM-2 Athena landing site, inside NASA's Mons Mouton Plateau region (4452 km², larger than one tile)."
+  },
+  {
+    "id": "shackleton-ridge",
+    "name": "Shackleton ridge",
+    "centre": { "x_m": -11000.0, "y_m": -12000.0 },
+    "tier": 3,
+    "evidence": ["E85", "E129", "E130"],
+    "label": "Not one of NASA's nine 2024 regions. Kept as the validation tile: centred between SP-01 and Barker Site 1."
+  },
+  {
+    "id": "peak-near-cabeus-b",
+    "name": "Peak near Cabeus B",
+    "centre": { "lat_deg": -83.6375, "lon_east_deg": -68.7495 },
+    "tier": 1,
+    "evidence": ["W16", "E116"],
+    "label": "Centred on NASA's 2024 region outline (400 km²)."
+  },
+  {
+    "id": "haworth",
+    "name": "Haworth",
+    "centre": { "lat_deg": -86.7639, "lon_east_deg": -22.7770 },
+    "tier": 1,
+    "evidence": ["W16", "E116"],
+    "label": "Centred on NASA's 2024 region outline (888 km², larger than one tile)."
+  },
+  {
+    "id": "malapert-massif",
+    "name": "Malapert Massif",
+    "centre": { "lat_deg": -85.9948, "lon_east_deg": -0.2358 },
+    "tier": 1,
+    "evidence": ["W16", "E116"],
+    "label": "Centred on NASA's 2024 region outline (441 km²)."
+  },
+  {
+    "id": "mons-mouton-region",
+    "name": "Mons Mouton",
+    "centre": { "lat_deg": -85.4266, "lon_east_deg": 31.7428 },
+    "tier": 1,
+    "evidence": ["W16", "E116"],
+    "label": "Centred on NASA's 2024 region outline (256 km²)."
+  },
+  {
+    "id": "nobile-rim-1",
+    "name": "Nobile Rim 1",
+    "centre": { "lat_deg": -85.4364, "lon_east_deg": 37.3470 },
+    "tier": 1,
+    "evidence": ["W16", "E116"],
+    "label": "Centred on NASA's 2024 region outline (400 km²)."
+  },
+  {
+    "id": "nobile-rim-2",
+    "name": "Nobile Rim 2",
+    "centre": { "lat_deg": -83.9541, "lon_east_deg": 58.8215 },
+    "tier": 1,
+    "evidence": ["W16", "E116"],
+    "label": "Centred on NASA's 2024 region outline (400 km²)."
+  },
+  {
+    "id": "slater-plain",
+    "name": "Slater Plain",
+    "centre": { "lat_deg": -87.1637, "lon_east_deg": 125.5377 },
+    "tier": 1,
+    "evidence": ["W16", "E116"],
+    "label": "Centred on NASA's 2024 region outline (400 km²)."
+  },
+  {
+    "id": "de-gerlache-rim-2",
+    "name": "de Gerlache Rim 2",
+    "centre": { "lat_deg": -88.2300, "lon_east_deg": -64.6284 },
+    "tier": 1,
+    "evidence": ["W16", "E116"],
+    "label": "Centred on NASA's 2024 region outline (400 km²)."
+  }
+]

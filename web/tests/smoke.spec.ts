@@ -196,9 +196,14 @@ test("Sun and Earth elevation and the sunset and Earthset countdown follow the t
   const el = /^[+−]\d+\.\d°$/; // one decimal
   await expect(page.getByTestId("cd-sun-el")).toHaveText(el);
   await expect(page.getByTestId("cd-earth-el")).toHaveText(el);
-  const when = /^(Sunset|Earthset) in (\d+d \d+h|\d+m)$|^no (sunset|Earthset|sunrise|Earthrise) (in [\d.]+ (h|days?)|before the span ends)$/;
+  const dh = String.raw`(\d+d \d+h|\d+m)`;
+  const none = String.raw`no (sunset|Earthset|sunrise|Earthrise) (in [\d.]+ (h|days?)|before the span ends)`;
+  const when = new RegExp(`^((Sunrise|Earth contact) in ${dh} · then )?((Sunset|Earthset|sunset) in ${dh}|${none})$`);
   await expect(page.getByTestId("sunset")).toHaveText(when);
   await expect(page.getByTestId("earthset")).toHaveText(when);
+  // IM-2 from 2026-11-14 00:00 UTC starts in shadow: the next event is the sunrise on the 15th (first limb at ~03:00,
+  // band list 06:11 for the centre), not the sunset 17 days out (#107).
+  await expect(page.getByTestId("sunset")).toHaveText(/^Sunrise in 1d \d+h · then sunset in 17d /);
   const before = await cd.textContent();
   const slider = page.getByLabel("Time within the span");
   await slider.fill(String(Math.round(Number(await slider.getAttribute("max")) * 0.6)));
@@ -504,4 +509,51 @@ test("Terrain has its own time slider; moving it redraws the 3D mask and carries
   const after = await t3.getAttribute("data-t");
   await nav.getByRole("button", { name: "Site" }).click();
   await expect(page.getByTestId("mask-site")).toHaveAttribute("data-t", after!, { timeout: 60000 });
+});
+
+test("ten regions: each shows its tier and label, and the ranking is numbered and sorted by operable days (#26)", async ({ page }) => {
+  await page.goto("/");
+  const sel = page.getByLabel("Region");
+  await expect(sel.locator("option")).toHaveCount(10);
+  for (const id of ["haworth", "slater-plain", "peak-near-cabeus-b"]) {
+    await sel.selectOption(id);
+    await expect(page.getByTestId("region-label")).toContainText(/Tier [123]/);
+    await expect(page.getByTestId("refusal")).toHaveCount(0);
+    // the survival headline lives on Planner
+    await page.getByRole("navigation", { name: "View" }).getByRole("button", { name: "Planner", exact: true }).click();
+    await expect(page.getByTestId("headline-operable")).toHaveText(/\S/);
+    await page.getByRole("navigation", { name: "View" }).getByRole("button", { name: "Site", exact: true }).click();
+  }
+  await expect(page.getByTestId("ranking-title")).toContainText("Region ranking for 2026-11-14");
+  const days = (await page.getByTestId("best-cells").locator(".days").allTextContents()).map((t) => parseFloat(t));
+  expect(days.length).toBe(10);
+  expect([...days].sort((a, b) => b - a)).toEqual(days);
+  await expect(page.getByTestId("best-cells").locator(".who").first()).toContainText("1. ");
+});
+
+test("off-grid date: one message and three chips, a chip restores the ranking; move pin matches the readout (#111)", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("best-cells")).toBeVisible();
+  await page.getByTestId("date").fill("2026-12-20");
+  await page.getByTestId("date").blur();
+  await expect(page.getByTestId("no-grid-msg")).toHaveCount(1);
+  await expect(page.getByTestId("best-cells")).not.toContainText("No grid for");
+  await expect(page.getByTestId("date-chip")).toHaveCount(3);
+  await expect(page.getByTestId("date-note")).toBeVisible();
+  await page.getByTestId("date-chip").filter({ hasText: "2026-11-14" }).click();
+  await expect(page.getByTestId("no-grid-msg")).toHaveCount(0);
+  await expect(page.getByTestId("ranking-title")).toContainText("Region ranking for 2026-11-14");
+  expect(await page.getByTestId("best-cells").locator(".days").count()).toBe(10);
+  // Move pin there: the headline then shows the readout's gain over the old figure. Both live on Planner.
+  await page.getByRole("navigation", { name: "View" }).getByRole("button", { name: "Planner", exact: true }).click();
+  const days = async () => parseFloat((await page.getByTestId("headline-operable").textContent())!);
+  const before = await days();
+  const move = page.getByTestId("move-pin");
+  await expect(move).toHaveCount(1);
+  {
+    const gain = parseFloat((await page.getByTestId("nearest-better").textContent())!.match(/\+(\d+\.\d) d/)![1]);
+    expect((await move.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+    await move.click();
+    await expect.poll(async () => Math.abs((await days()) - (before + gain))).toBeLessThan(0.15);
+  }
 });

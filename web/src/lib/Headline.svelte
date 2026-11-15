@@ -3,7 +3,7 @@
   import type { Scenario } from "./engine";
   import { headline, hourFigures, spanDays } from "./headline";
 
-  let { scenario, nearby = null }: { scenario: Scenario; nearby?: string | null } = $props();
+  let { scenario, nearby = null, onmove }: { scenario: Scenario; nearby?: string | null; onmove?: () => void } = $props();
   const head = $derived(headline(scenario.survival, spanDays(scenario.count, scenario.step_s)));
   const hours = $derived(hourFigures(scenario.survival));
 </script>
@@ -24,6 +24,7 @@
     <p class="fig"><span class="cap">Sunlight</span><strong class="sub" data-testid="headline-sun-hours">{hours.sun}</strong></p>
     <p class="fig"><span class="cap">Earth contact</span><strong class="sub" data-testid="headline-earth-hours">{hours.earth}</strong></p>
     {#if nearby}<p class="nearby" data-testid="nearest-better">{nearby}</p>{/if}
+    {#if onmove}<button type="button" data-testid="move-pin" onclick={onmove}>Move pin there</button>{/if}
   </div>
 </section>
 
@@ -36,5 +37,7 @@
   .cap { font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .nearby { margin: 0; color: var(--color-fog); font: var(--text-caption)/var(--leading-caption) var(--font-mono); }
   .sub { font-size: var(--text-heading); line-height: var(--leading-heading); }
+  button { grid-column: 1 / -1; justify-self: start; min-height: 44px; font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-fog); background: transparent; border: 1px solid var(--color-slate); border-radius: var(--radius-sm); padding: var(--spacing-8) var(--spacing-16); cursor: pointer; }
+  button:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }
   strong { font: var(--font-weight-regular) var(--text-display)/var(--leading-display) var(--font-mono); color: var(--color-paper); font-variant-numeric: tabular-nums; }
 </style>

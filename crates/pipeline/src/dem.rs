@@ -29,6 +29,12 @@ pub struct Encoded {
 /// Encode heights (metres, NaN = no data) with the first of `scales_m` whose ±32 767 counts
 /// hold every height around the mid-range offset. Errors if every scale clips or nothing is finite.
 pub fn encode(heights_m: &[f32], scales_m: &[f64]) -> Result<Encoded> {
+    encode_snapped(heights_m, scales_m, None)
+}
+
+/// `encode`, with the offset moved by under half a count onto `anchor_m` + k·scale when given,
+/// so a resized tile keeps an earlier tile's quantisation grid. Needs a single scale.
+fn encode_snapped(heights_m: &[f32], scales_m: &[f64], anchor_m: Option<f64>) -> Result<Encoded> {
     let (lo, hi) = heights_m
         .iter()
         .filter(|v| v.is_finite())
@@ -38,7 +44,17 @@ pub fn encode(heights_m: &[f32], scales_m: &[f64]) -> Result<Encoded> {
     if lo > hi {
         return Err("tile has no finite height".into());
     }
-    let offset_m = (lo + hi) / 2.0;
+    let mid_m = (lo + hi) / 2.0;
+    // counts are rounded relative to `base_m`, then shifted by `k_counts`, so a snapped tile rounds
+    // ties exactly as a tile whose offset was the anchor did (f64::round is half away from zero)
+    let (offset_m, base_m, k_counts) = match (anchor_m, scales_m) {
+        (None, _) => (mid_m, mid_m, 0.0),
+        (Some(a), [s]) => {
+            let k = ((mid_m - a) / s).round();
+            (a + k * s, a, k)
+        }
+        (Some(_), _) => return Err("a snapped offset needs exactly one scale".into()),
+    };
     let limit = f64::from(i16::MAX);
     let scale_m = *scales_m
         .iter()
@@ -52,7 +68,7 @@ pub fn encode(heights_m: &[f32], scales_m: &[f64]) -> Result<Encoded> {
             if v.is_finite() {
                 #[allow(clippy::cast_possible_truncation)]
                 // within ±32 767, checked by the scale choice
-                let c = ((f64::from(v) - offset_m) / scale_m).round() as i16;
+                let c = (((f64::from(v) - base_m) / scale_m).round() - k_counts) as i16;
                 c
             } else {
                 NODATA
@@ -87,9 +103,16 @@ pub fn encode_finest(heights_m: &[f32]) -> Result<Encoded> {
     encode(heights_m, &[scale_m])
 }
 
-/// The far tile's encoder: the first of `FAR_SCALES_M` that holds it.
+/// Offset of the ±382 km far tile shipped before #26. The ±396 km tile snaps its offset onto this
+/// grid (anchor + k × 0.5 m) and rounds its counts relative to the anchor, so a height the old tile
+/// held decodes to the same value, rounding ties included (before that tie fix, 1 pixel of the
+/// 10 137 856 shared ones differed, measured Nov 15).
+pub const FAR_OFFSET_ANCHOR_M: f64 = -345.260_742_187_5;
+
+/// The far tile's encoder: the first of `FAR_SCALES_M` that holds it, offset on the
+/// `FAR_OFFSET_ANCHOR_M` grid.
 pub fn encode_far(heights_m: &[f32]) -> Result<Encoded> {
-    encode(heights_m, &FAR_SCALES_M)
+    encode_snapped(heights_m, &FAR_SCALES_M, Some(FAR_OFFSET_ANCHOR_M))
 }
 
 /// One Float32 GeoTIFF band, read window by window (never the whole raster, N6), with the

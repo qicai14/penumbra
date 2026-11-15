@@ -29,7 +29,7 @@
 
   let tileError = $state<string | null>(null); // kept apart so a later compute success cannot hide it
   loadNearTile().then((t) => (tile = t), (e) => (tileError = String(e?.message ?? e)));
-  // A new region puts the site at the middle of its tile, which is always inside the 7.05 km border.
+  // A new region puts the site at the middle of its tile, which is always inside the pick border.
   function onregion(id: string, at?: [number, number]) { // `at` (lat, lon) overrides the tile middle
     loadNearTile(id).then((t) => {
       tile = t; tileError = null;
@@ -45,6 +45,14 @@
   loadManifest().then((m) => Promise.all((m.grids ?? []).map(fetchGrid))).then((g) => (grids = g), (e) => (tileError = `Heatmap not loaded: ${e?.message ?? e}`));
   const grid = $derived(grids.find((g) => g.meta.region === tile?.region.id) ?? null);
   const gridK = $derived(grid ? dateIndex(grid, controls.date) : -1);
+  const betterAt = $derived.by((): [number, number] | null => {
+    if (!grid || gridK < 0 || controls.preset || controls.mastM !== grid.meta.mast_m || controls.spanDays !== grid.meta.span_days) return null;
+    const b = nearestBetter(grid, gridK, ...latlonToXy(controls.lat, controls.lon));
+    if (b?.kind !== "better") return null;
+    const [lat, lon] = xyToLatlon(b.x, b.y);
+    return [+lat.toFixed(4), +lon.toFixed(4)];
+  });
+  const movePin = () => { if (betterAt) [controls.lat, controls.lon] = betterAt; };
   const nearby = $derived.by(() => {
     if (!grid || gridK < 0) return null;
     // The grid is built for the default preset, mast and span; once the planner changes any, its numbers no longer match the headline.
@@ -94,7 +102,7 @@
   $effect(() => {
     const req: Inputs = {
       lat_deg: controls.lat, lon_deg: controls.lon, mast_m: controls.mastM,
-      start_unix_s: parseDate(controls.date)!, span_days: controls.spanDays, preset: controls.preset ?? undefined, // the picker only stores dates that parse
+      start_unix_s: parseDate(controls.date)!, span_days: controls.spanDays, preset: controls.preset ?? undefined, region: tile?.region.id, // the picker only stores dates that parse
     };
     const mine = ++gen;
     computeScenario(req).then(
@@ -150,7 +158,7 @@
       <Panorama {scenario} bind:idx />
       <Timelines {scenario} bind:idx />
     {:else if view === "planner"}
-      <Headline {scenario} {nearby} />
+      <Headline {scenario} {nearby} onmove={betterAt ? movePin : undefined} />
       <Survival {scenario} {controls} />
       <WhatChanges {scenario} {computedFor} {grid} {gridK} gridUsable={!controls.preset && controls.mastM === grid?.meta.mast_m && controls.spanDays === grid?.meta.span_days} />
     {:else if tile}

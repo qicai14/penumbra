@@ -615,6 +615,10 @@ Web rows (NASA documents fetched Nov 10 by a subagent with curl; not in the corp
 | W13 | https://www.apollojournals.org/alsj/alsjcoords.html | `Apollo 15` Lunar Module row, Apollo-era columns: `26.1008` (lat °N), `3.6527` (lon °E); `These values agree with those given in the various Mission Reports` | Apollo 15 landing site (curated site list, #82); signs as the table prints them |
 | W14 | https://www.apollojournals.org/alsj/alsjcoords.html | `Apollo 16` Lunar Module row, Apollo-era columns: `-8.9913` (lat °N), `15.5144` (lon °E); `These values agree with those given in the various Mission Reports` | Apollo 16 landing site (curated site list, #82); signs as the table prints them |
 | W15 | https://www.apollojournals.org/alsj/alsjcoords.html | `Apollo 17` Lunar Module row, Apollo-era columns: `20.1653` (lat °N), `30.7658` (lon °E); `These values agree with those given in the various Mission Reports` | Apollo 17 landing site (curated site list, #82); signs as the table prints them |
+| W16 | https://files.actgate.com/lunar/A3_9regions-lonlat-simplified.geojson (LROC QuickMap layer 3927 "A3: Candidate Landing Regions 2024", source 3359 "Artemis III – Nine Potential Landing Regions 2024", metadataUrl = NASA's 28 Oct 2024 release; copy in `crates/pipeline/data/`, sha256 88e8594e…, fetched Nov 15 and re-fetched byte-identical) | `"Region":"Nobile Rim 2","Area_km2":400,"RegionCode":"N2"` (one of 9 features, each a 4-vertex lon/lat outline) | the nine 2024 Artemis III region outlines (#26); the layer's attribution field is blank, so NASA content by its metadata link only |
+| W17 | https://zenodo.org/records/17084058 (CC-BY-4.0; data for Wueller et al. 2026, JGR Planets 131(3), e2025JE009434) | `includes the georeferenced shapefile of the candidate landing sites` | 130 candidate landing sites; each region's sites fall inside the matching W16 outline (independent check of W16, #26) |
+
+Derived [D] (#26): each tier-1 region centre in `crates/pipeline/regions.json` = mean of its 4 W16 outline vertices in polar stereographic metres (sphere 1 737 400 m), back to lat/lon, 4 decimals. Mons Mouton Plateau (4452 km²) is wider than a tile, so its tile stays on IM-2 (W9), which lies inside the outline. Shackleton ridge lies in none of the nine outlines.
 
 Derived [D] (curated site list, #82): Barker 2021 Site 1 = RoI 1 centroid (E129, E130) = (−11.5825, −12.4625) km through the §1 inverse = (−89.4389°, 222.904°E). Recomputed in `web/src/lib/sites.test.ts` with `xyToLatlon` and held within 0.001°.
 
@@ -632,4 +636,4 @@ Negative results (looked for, not found):
 - W-rows are quotes from web documents fetched by subagents or copied from `facts-grill-1.md`. They are not in the corpus and were not re-fetched by this review.
 - [D] items are derivations and are not counted.
 
-**Count: 178 claims [V] · 11 claims [W] (web, not grep-checkable) · 20 claims [U].** (E131 re-tagged [V]→[U] by the independent review.)
+**Count: 178 claims [V] · 13 claims [W] (web, not grep-checkable) · 20 claims [U].** (E131 re-tagged [V]→[U] by the independent review.)

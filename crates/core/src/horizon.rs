@@ -19,6 +19,21 @@ pub const REQUIRED_RANGE_M: f64 = 200_000.0;
 /// An obstacle closer than 3 near pixels (60 m) is flagged as a possible DEM spike (P13).
 pub const NEAR_OBSTACLE_M: f64 = 60.0;
 
+/// Pick border of a near tile, south polar stereographic map metres (P5, #26 S6): the closest a
+/// site may sit to the tile edge and still march `NEAR_RANGE_M` of ground inside the tile.
+/// Map length = ground length × k, k = 1 + r²/4R² (§1), largest at the tile corner farthest from
+/// the pole; plus half a pixel, as the outermost pixel centre sits that far inside the edge.
+/// Same rule as `pickBorderM` in web/src/lib/site.ts.
+pub fn pick_border_m(near: &crate::dem::TileMeta) -> f64 {
+    let x1_m = near.x0_m + f64::from(near.width) * near.pixel_m;
+    let y1_m = near.y0_m - f64::from(near.height) * near.pixel_m;
+    // the farthest corner of an axis-aligned tile takes the largest |x| and the largest |y|
+    let x_m = near.x0_m.abs().max(x1_m.abs());
+    let y_m = near.y0_m.abs().max(y1_m.abs());
+    let k = 1.0 + (x_m * x_m + y_m * y_m) / (4.0 * MOON_RADIUS_M * MOON_RADIUS_M);
+    NEAR_RANGE_M * k + near.pixel_m / 2.0
+}
+
 /// March settings. `Default` is the shipped behaviour.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct HorizonOptions {

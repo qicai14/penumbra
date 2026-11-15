@@ -66,7 +66,7 @@ Report misses honestly, with the numbers.
 
 ### If "deployed by Sat 12:00" slips, cut in this order
 1. 3D terrain with live shadows → a 2D map coloured by the same model output.
-2. Nine regions → two: Mons Mouton (IM-2) and de Gerlache Rim 2 / the Shackleton ridge (SP-01, Site 1, and the V2 area).
+2. Nine regions → two: Mons Mouton (IM-2) and de Gerlache Rim 2 / the Shackleton ridge (SP-01, Site 1, and the V2 area). **Undone by #26 (Nov 15):** all nine 2024 regions ship, centred on NASA's outlines (W16). The IM-2 tile lies in Mons Mouton Plateau, not Mons Mouton, and the Shackleton ridge tile lies in none of the nine, so neither stood in for the region named here.
 3. In-browser horizon in WASM → horizons precomputed natively on a 100 m grid for those two regions (720 int16 per point, about 14 MB per 10 × 10 km). The panorama and timelines still work; only free clicking is lost.
 4. V2 sample → the A1 table check alone.
 

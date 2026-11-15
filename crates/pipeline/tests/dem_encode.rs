@@ -2,7 +2,9 @@
 
 use penumbra_core::dem::{DemTile, TileMeta};
 use penumbra_core::geometry::MapXy;
-use penumbra_pipeline::dem::{FAR_SCALES_M, MIN_SCALE_M, NODATA, encode, encode_finest};
+use penumbra_pipeline::dem::{
+    FAR_OFFSET_ANCHOR_M, FAR_SCALES_M, MIN_SCALE_M, NODATA, encode, encode_far, encode_finest,
+};
 
 /// Heights spanning exactly `range_m`, from −range/2 + 100 to +range/2 + 100.
 fn span(range_m: f32) -> Vec<f32> {
@@ -94,4 +96,35 @@ fn round_trip_through_the_sampler_is_within_half_a_step() {
             );
         }
     }
+}
+
+// #26: the far offset snaps onto the old ±382 km tile's grid, anchor + k × 0.5 m. Heights 100 ± 500 m
+// have mid 100 m; (100 + 345.260 742 187 5) / 0.5 = 891.02 → k = 891, so 445.5 m above the anchor.
+#[test]
+fn far_offset_snaps_to_the_anchor_grid() {
+    let e = encode_far(&span(1000.0)).unwrap();
+    assert_eq!(e.offset_m, 100.239_257_812_5);
+    assert!((e.scale_m - 0.5).abs() < 1e-12);
+}
+
+// The snap moves the offset by under half a count, so a tile that clips at 0.5 m still errors.
+#[test]
+fn far_encoder_fails_when_the_snapped_tile_clips() {
+    assert!(encode_far(&span(33_000.0)).is_err());
+}
+
+// A height half a count below the anchor is a rounding tie. The old tile counted it relative to the
+// anchor, f64::round (half away from zero) → −1, decoding to anchor − 0.5 m. The snapped tile must
+// decode it the same, though its count sits on the other side of zero (offset anchor − 30 m, k = −60).
+#[test]
+fn far_tie_decodes_as_the_old_tile_did() {
+    #[allow(clippy::cast_possible_truncation)] // both are exact in f32 (19 significant bits)
+    let heights = [
+        (FAR_OFFSET_ANCHOR_M - 0.25) as f32,
+        (FAR_OFFSET_ANCHOR_M - 59.75) as f32,
+    ];
+    let e = encode_far(&heights).unwrap();
+    assert_eq!(e.offset_m, -375.260_742_187_5);
+    let decoded_m = e.offset_m + e.scale_m * f64::from(e.counts[0]);
+    assert_eq!(decoded_m, -345.760_742_187_5);
 }
