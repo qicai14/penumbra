@@ -212,6 +212,8 @@
       ],
     }, buildSocData(tl.t_unix_s, scenario.survival.soc_wh, scenario.preset), socHost);
     charts = [illum, margin, contact, soc];
+    // the wrapper's aria-label describes each chart; the bare canvases would read as unnamed graphics
+    for (const u of charts) u.root.querySelectorAll("canvas").forEach((c) => c.setAttribute("aria-hidden", "true"));
     for (const u of charts) u.setScale("x", { min: full[0], max: full[1] });
     placeCursors();
   }

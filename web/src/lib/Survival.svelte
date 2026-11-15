@@ -37,7 +37,7 @@
   .panel { background: var(--surface-carbon); border-radius: var(--radius-sm); padding: var(--spacing-16); margin-top: var(--spacing-24); }
   h2 { margin: 0 0 var(--spacing-16); font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
   .fields { display: flex; flex-direction: column; gap: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
-  .row { display: flex; align-items: center; gap: var(--spacing-8); margin: 0; }
+  .row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-8); margin: 0; }
   .name { flex: 0 0 150px; }
   .unit { flex: 0 0 3ch; }
   .tag { margin-left: auto; border: 1px solid var(--color-slate); border-radius: var(--radius-full); padding: 0 var(--spacing-8); color: var(--color-fog); }
