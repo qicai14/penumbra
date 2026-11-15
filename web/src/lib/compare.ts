@@ -1,10 +1,12 @@
 // Pure helpers for the Compare A vs B view (T27): the URL query for two site-date pairs and the preset edits, and the
 // B - A text. Text and validation only; every operable-time figure comes from the model's `survival` result.
 import type { EphSegment, NearMeta, Preset } from "./engine";
-import { latlonToXy } from "./projection";
+import { latlonToXy, xyToLatlon } from "./projection";
 import { presetFields, setPresetField, type FieldKey } from "./headline";
 import { checkDate, checkPick, DEFAULT_MAST_M, DEFAULT_SPAN_DAYS, MAST_MAX_M, parseDate, SPANS_DAYS } from "./site";
 import { fmtDays } from "./timelines";
+import { dateIndex, nearestBetter, type Grid } from "./grid";
+import { DATE_SHIFT_D, PIN_RADIUS_M, withinRadius } from "./whatChanges";
 
 export type Pair = { lat: number; lon: number; date: string }; // date: landing day, UTC "YYYY-MM-DD"
 export type PresetEdit = [FieldKey, number]; // value in the preset form's units (efficiency in percent)
@@ -102,4 +104,29 @@ export function compareSentence(a: PairResult, b: PairResult): string {
     ? `makes no difference to operable time: both give ${fmtDays(a.operableH)}`
     : `gives ${fmtDays(Math.abs(d))} ${d > 0 ? "more" : "less"} operable time than A (B ${fmtDays(b.operableH)}, A ${fmtDays(a.operableH)})`;
   return `${change} ${result}.`;
+}
+
+/** B when the URL gives none (C4-3): the best cell within the pin radius, the figure of "Pin moved … m: best cell" in What
+ *  changes what (same grid, same radius, same 24 h bar for "better"); else the same site DATE_SHIFT_D days later. The grid is
+ *  only valid for the default preset, mast and span, as everywhere else. */
+export function defaultB(a: Pair, grids: Grid[], o: { mastM: number; spanDays: number; hasPreset: boolean; eph: Parameters<typeof checkDate>[2] }): { pair: Pair; note: string } {
+  const [x, y] = latlonToXy(a.lat, a.lon);
+  for (const g of grids) {
+    const k = dateIndex(g, a.date);
+    if (k < 0 || o.hasPreset || o.mastM !== g.meta.mast_m || o.spanDays !== g.meta.span_days) continue;
+    const near = withinRadius(g, k, x, y);
+    if (!near) continue;
+    const b = nearestBetter(g, k, x, y, PIN_RADIUS_M, near.bestH - near.hereH);
+    if (b?.kind === "better" && near.bestH - near.hereH >= 24) {
+      const [lat, lon] = xyToLatlon(b.x, b.y);
+      return { pair: { lat: +lat.toFixed(4), lon: +lon.toFixed(4), date: a.date }, note: `B is the best cell within ${PIN_RADIUS_M} m of A, ${Math.round(b.distM)} m away, on the same date.` };
+    }
+  }
+  // Later first; at the end of the ephemeris table (P16) try earlier, else keep A's date rather than give B an error.
+  for (const d of [DATE_SHIFT_D, -DATE_SHIFT_D]) {
+    const date = new Date((parseDate(a.date)! + d * 86400) * 1000).toISOString().slice(0, 10);
+    if (checkDate(date, o.spanDays, o.eph).ok)
+      return { pair: { ...a, date }, note: `B is the same site ${DATE_SHIFT_D} days ${d > 0 ? "later" : "earlier"}: no better cell within ${PIN_RADIUS_M} m of A, or no grid for this setup.` };
+  }
+  return { pair: { ...a }, note: `B is the same as A: no better cell within ${PIN_RADIUS_M} m, and no other date fits the ephemeris table. Edit B to compare.` };
 }

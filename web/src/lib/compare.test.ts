@@ -1,7 +1,10 @@
 import { expect, test } from "bun:test";
 import type { NearMeta, Preset } from "./engine";
-import { applyPresetEdits, compareSentence, decodeCompare, diffDays, encodeCompare, presetEdits, type Pair } from "./compare";
-import { xyToLatlon } from "./projection";
+import { applyPresetEdits, compareSentence, defaultB, decodeCompare, diffDays, encodeCompare, presetEdits, type Pair } from "./compare";
+import { latlonToXy, xyToLatlon } from "./projection";
+import { parseDate } from "./site";
+import { operableAt, type Grid } from "./grid";
+import { withinRadius } from "./whatChanges";
 
 const A: Pair = { lat: -84.7906, lon: 29.1957, date: "2026-11-14" };
 // The manifest example near tile: 30.72 km square, upper-left (61740, 153360).
@@ -147,4 +150,42 @@ test("B - A row for operable days is signed", () => {
   expect(diffDays(240, 216)).toBe("−1 day");
   expect(diffDays(240, 240)).toBe("no difference");
   expect(diffDays(240, 246.5)).toBe("+6.5 h");
+});
+
+// Default B (C4-3 #109): a 3 x 3 grid of 100 m cells; the site sits in the centre (100 h), the best cell within 300 m is 300 h.
+function grid(cells: number[]): Grid {
+  const meta = { region: "r", pixel_m: 100, x0_m: 0, y0_m: 300, width: 3, height: 3, span_days: 30, mast_m: 2, dates: [A.date], landing_unix_s: [0], url: "" };
+  return { meta, operable: [Uint16Array.from(cells)], lethal: [new Uint16Array(9)] };
+}
+const [cx, cy] = [150, 150];
+const [clat, clon] = xyToLatlon(cx, cy);
+const here: Pair = { lat: clat, lon: clon, date: A.date };
+const opts = { mastM: 2, spanDays: 30, hasPreset: false, eph: EPH };
+const better = grid([100, 100, 100, 100, 100, 300, 100, 100, 100]);
+
+test("default B is the best cell within the pick radius, with the same figure as the pin-best bar", () => {
+  const r = defaultB(here, [better], opts);
+  expect(r.pair.date).toBe(A.date);
+  const [x, y] = latlonToXy(r.pair.lat, r.pair.lon);
+  expect(operableAt(better, 0, x, y)).toBe(withinRadius(better, 0, cx, cy)!.bestH);
+  expect(r.note).toContain("100 m");
+});
+
+test("default B is the same site 2 days later when no better cell exists, the grid is missing, or the preset is edited", () => {
+  const later = { ...here, date: "2026-11-16" };
+  const flat = grid(Array(9).fill(100));
+  expect(defaultB(here, [flat], opts).pair).toEqual(later);
+  expect(defaultB(here, [], opts).pair).toEqual(later);
+  expect(defaultB(here, [better], { ...opts, hasPreset: true }).pair).toEqual(later);
+  expect(defaultB(here, [flat], opts).note).toContain("2 days later");
+});
+
+test("the 2-day fallback stays inside the ephemeris table: earlier at the table end, else the same date", () => {
+  // The table ends exactly at A + 30 days, so A + 2 days runs past it; A - 2 days fits only when the table starts by then.
+  const t = parseDate(A.date)!;
+  const endsAtA = (daysBefore: number) => [{ id: "e", url: "", t0_unix_s: t - daysBefore * 86400, step_s: 3600, rows: (30 + daysBefore) * 24 + 1 }];
+  const r = defaultB(here, [], { ...opts, eph: endsAtA(10) });
+  expect(r.pair).toEqual({ ...here, date: "2026-11-12" });
+  expect(r.note).toContain("2 days earlier");
+  expect(defaultB(here, [], { ...opts, eph: endsAtA(0) }).pair).toEqual(here);
 });

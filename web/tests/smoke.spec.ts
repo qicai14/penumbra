@@ -268,7 +268,11 @@ test("the Compare button opens the compare view from the site view, and a bad UR
   await page.goto("/");
   await page.getByRole("button", { name: "Compare A vs B" }).click();
   await expect(page.getByTestId("col-a")).toBeVisible();
-  await expect(page).toHaveURL(/a=-84\.7906,29\.1957@2026-11-14&b=-84\.7906,29\.1957@2026-11-14/);
+  await expect(page).toHaveURL(/a=-84\.7906,29\.1957@2026-11-14&b=/);
+  // C4-3 (#109): B is never a copy of A, says why, and B − A is a real difference on the default IM-2 site.
+  await expect(page.getByTestId("compare-why")).toContainText(/^B is the /);
+  await expect(page.getByTestId("diff-operable")).toHaveText(/^[+−]/);
+  await expect(page.getByTestId("compare-sentence")).not.toContainText("nothing to compare");
   await page.goto("/?a=garbage&b=-1,2@1999-01-01");
   await expect(page.getByTestId("col-a")).toContainText("-84.7906");
   await expect(page.getByTestId("col-b")).toContainText("-84.7906");
