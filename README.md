@@ -42,10 +42,15 @@ For a site, a landing date and a mast height, Penumbra answers:
 | How many hours of Earth contact? | Hours with Earth above the horizon by a 2° margin (assumed: a preset value, taken from one paper's comms margin, not a mission requirement) | [`web/src/lib/engine.ts`](web/src/lib/engine.ts) preset `earth_margin_deg: 2`; SCIENCE-SPEC E62 |
 | When does the first lethal shadow arrive? | The first moment stored battery energy falls to the preset's minimum (survival model) | [`docs/GLOSSARY.md`](docs/GLOSSARY.md) "Lethal shadow"; [`crates/core/src/power.rs`](crates/core/src/power.rs) (#10, T09) |
 
-The app also gives the slope at the pin from the 20 m DEM (#112), the operable days for the next 30 landing dates (#108), side-by-side comparison of two site and date pairs, and a replay of the IM-2 site.
+The app also gives the slope at the pin from the 20 m DEM (#112), the operable days for the next 30 landing dates (#108), side-by-side comparison of two site and date pairs, and a replay of the IM-2 site. A first-visit tour of three coach marks introduces the app on a first visit.
 
 <p align="center">
   <img alt="Site view, Play pressed at 5 days per second: the Sun's track crosses the terrain horizon panorama while the time marker advances" src="docs/screenshots/submission/play.gif" width="800">
+</p>
+
+<p align="center">
+  <img alt="3D LOLA terrain around the site, coloured by the model's illumination" src="docs/screenshots/submission/terrain.gif" width="800">
+  <br><em>Dragging the camera across the 3D terrain: orange ground is sunlit at the chosen time, as computed by the model.</em>
 </p>
 
 | Landing window (Planner) | Compare A vs B |

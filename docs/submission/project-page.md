@@ -44,6 +44,7 @@ _Length: about 1 950 characters._
 > - a 3D terrain view;
 > - a side-by-side comparison of two sites or dates;
 > - a replay of IM-2's landing site and date.
+> - First-visit tour: three coach marks introduce the app on a first visit.
 >
 > A region heatmap over Mons Mouton shows the nearest nearby spot that would have kept the lander running longer.
 >

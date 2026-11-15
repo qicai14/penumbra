@@ -172,8 +172,9 @@
     return { g, b, lat: +lat.toFixed(4), lon: +lon.toFixed(4), lethalH, name: reg?.name ?? g.meta.region, mark };
   })));
   const gridDiffers = $derived(grids.length > 0 && (controls.preset !== null || controls.mastM !== grids[0].meta.mast_m || controls.spanDays !== grids[0].meta.span_days));
-  const noGridMsg = "Region ranking and heatmap are precomputed for 3 landing dates only (data budget). This site's own timelines and headline still work for any date.";
   const gridDateList = $derived([...new Set(grids.flatMap((g) => g.meta.dates))].sort());
+  const dateWord = $derived(gridDateList.length ? `${gridDateList.length} landing dates: ${gridDateList.join(", ")}` : "a few landing dates");
+  const noGridMsg = $derived(`Region ranking and heatmap are precomputed for ${dateWord} (data budget). This site's own timelines and headline still work for any date.`);
   const allUnranked = $derived(bests.length > 0 && bests.every((x) => !x.b));
   const notes = $derived([...new Set(bests.flatMap((x) => (x.mark ? x.mark.split(" · ") : [])))]); // each caveat once, as a numbered footnote
   function setDate(d: string) { if (tryDate(d, controls.spanDays)) { controls.date = d; dateDraft = d; } }
@@ -293,7 +294,7 @@
       <label class="row"><span>Landing date (UTC)</span>
         <input data-testid="date" type="date" min={dates.min} max={dates.max} bind:value={dateDraft} onchange={ondate} />
       </label>
-      <p class="now" data-testid="date-note">Ranking and heatmap exist for 3 landing dates only (data budget); timelines and headline work for any date.</p>
+      <p class="now" data-testid="date-note">Ranking and heatmap exist for {dateWord} (data budget); timelines and headline work for any date.</p>
 
       <div class="row"><span id="span-l">Span</span>
         <div class="group" role="group" aria-labelledby="span-l">
