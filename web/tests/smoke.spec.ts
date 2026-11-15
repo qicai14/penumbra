@@ -528,7 +528,13 @@ test("ten regions: each shows its tier and label, and the ranking is numbered an
   const days = (await page.getByTestId("best-cells").locator(".days").allTextContents()).map((t) => parseFloat(t));
   expect(days.length).toBe(10);
   expect([...days].sort((a, b) => b - a)).toEqual(days);
-  await expect(page.getByTestId("best-cells").locator(".who").first()).toContainText("1. ");
+  // one ranked table in a closed dropdown whose summary names the #1 site; open it, rank starts at 1, each row's → moves the site
+  await expect(page.getByTestId("ranking-top")).toContainText("best: ");
+  await page.getByTestId("ranking").locator("summary").first().click();
+  const rows = page.getByTestId("best-cells").locator("tbody tr");
+  await expect(rows).toHaveCount(10);
+  await expect(rows.first().locator(".n")).toHaveText("1");
+  await expect(page.getByTestId("best-cells").getByRole("button", { name: /^Move site to / })).toHaveCount(10);
 });
 
 test("off-grid date: one message and three chips, a chip restores the ranking; move pin matches the readout (#111)", async ({ page }) => {
