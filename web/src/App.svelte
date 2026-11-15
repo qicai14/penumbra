@@ -7,6 +7,7 @@
   import Timelines from "./lib/Timelines.svelte";
   import Survival from "./lib/Survival.svelte";
   import Headline from "./lib/Headline.svelte";
+  import LandingWindow from "./lib/LandingWindow.svelte";
   import WhatChanges from "./lib/WhatChanges.svelte";
   import Countdown from "./lib/Countdown.svelte";
   import Tracer from "./lib/Tracer.svelte";
@@ -157,6 +158,7 @@
       <Headline {scenario} {nearby} onmove={betterAt ? movePin : undefined} />
     </div>
     <WhatChanges {scenario} {computedFor} {grid} {gridK} gridUsable={!controls.preset && controls.mastM === grid?.meta.mast_m && controls.spanDays === grid?.meta.span_days} />
+    {#if tile}<LandingWindow {computedFor} eph={tile.eph} date={controls.date} onpick={(d) => (controls.date = d)} />{/if}
     <Survival {scenario} {controls} />
     <Panorama {scenario} bind:idx />
     {#if tile}<Terrain3D {controls} {tile} feed={maskFeed} t={markerT} sunAz={scenario.track.sun_az_deg[idx]} sunEl={scenario.track.sun_el_deg[idx]} sunLon={computedFor.lon_deg} />{/if}
