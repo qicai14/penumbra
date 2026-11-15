@@ -11,7 +11,7 @@ CLI: `notebooklm ask "<q>" -n <id>` · each notebook also holds `sources.md` as 
 
 ## Gaps (upload PDFs by hand if needed)
 - Hot Spots: RSE 2025 global FRP evaluation (10.1016/j.rse.2025.115136) · GCB 2026 Canada wildfire extremes (10.1111/gcb.70891) · GRL 2024 Canada aridity (10.1029/2024GL114492) · Xu & Wooster 2023 SLSTR FRP (10.1016/j.srs.2023.100087). 4 sources in this notebook show status "error" (failed imports) — safe to delete in the UI.
-- Trend Detective: Cleveland 1990 STL paper, Nature Sust. 2019 greening (s41893-019-0220-7), Nature 2010 (nature09396), Nat. Comms 2018 (s41467-018-03732-9), Climate Reanalyzer homepage, VU repository PDF — see `trend-detective/notebook.log`.
+- Trend Detective: Cleveland 1990 STL paper, Nature Sust. 2019 greening (s41893-019-0220-7), Nature 2010 (nature09396), Nat. Comms 2018 (s41467-018-03732-9), Climate Reanalyzer homepage, VU repository PDF — see `trend-detective/sources.md`.
 
 ## Prior art to check (rival 2026 entries found on GitHub)
 - Lunar: CLPS-MOON-BROWSER, lunarwindow · Analogs: terrestrial-analog-finder · Hot Spots: several hackathon repos (see `fire-hotspots/sources.md`).
