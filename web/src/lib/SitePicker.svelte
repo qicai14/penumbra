@@ -1,6 +1,6 @@
 <script lang="ts">
   import { latlonToXy, TIER_TEXT, xyToLatlon, type EphSegment, type NearTile, type Region } from "./engine";
-  import { checkDate, checkPick, dateRange, edgeDistanceM, pickBorderM, SPANS_DAYS } from "./site";
+  import { checkDate, checkPick, dateRange, edgeDistanceM, isoDay, parseDate, pickBorderM, SPANS_DAYS } from "./site";
   import type { Controls } from "./state.svelte";
   import { maskAt, maskGrid, maskPixels, MASK_STRIDE, MASK_LIT_ALPHA, MASK_DARK_ALPHA } from "./mask";
   import { rgb } from "./color";
@@ -193,11 +193,13 @@
   const ondate = () => { if (tryDate(dateDraft, controls.spanDays)) controls.date = dateDraft; else dateDraft = controls.date; };
   const onspan = (s: number) => { if (tryDate(controls.date, s)) controls.spanDays = s; };
   // Hero scenarios: only the picker's own setters. IM-2 comes from the curated list; best region is the top of `bests`.
-  function heroIm2(date = "2026-11-14") { onsite("im2"); setDate(date); }
+  const HERO_DATE = "2026-11-14"; // the IM-2 landing date the first scenario uses
+  const heroIm2 = (date: string) => { onsite("im2"); setDate(date); };
+  const heroSlip = () => heroIm2(isoDay(parseDate(HERO_DATE)! - 2 * 86400));
   function heroBest() { const t = bests[0]; if (t?.b) goBest(t.g.meta.region, t.lat, t.lon); }
 </script>
 
-<Hero onim2={() => heroIm2()} onbest={heroBest} onslip={() => heroIm2("2026-11-12")} bestReady={!!bests[0]?.b} />
+<Hero onim2={() => heroIm2(HERO_DATE)} onbest={heroBest} onslip={heroSlip} ready={regionMetas.length > 0} bestReady={!!bests[0]?.b} rankedDates={gridDateList} />
 
 <section class="panel" aria-labelledby="site-h">
   <h2 id="site-h">Site and date</h2>

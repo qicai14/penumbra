@@ -616,49 +616,85 @@ test("play advances the time marker (C4-7 #113)", async ({ page }) => {
 });
 
 // Hero line and three scenario buttons (C4-4 #110). The survival headline lives on Planner.
+const navBtn = (page: import("@playwright/test").Page, name: string) => page.getByRole("navigation", { name: "View" }).getByRole("button", { name, exact: true });
 async function heroHeadline(page: import("@playwright/test").Page) {
-  await page.getByRole("navigation", { name: "View" }).getByRole("button", { name: "Planner", exact: true }).click();
-  await expect(page.getByTestId("headline-operable")).toHaveText(/\S/);
+  await navBtn(page, "Planner").click();
+  await expect(page.getByTestId("headline-operable")).toHaveText(/\d/);
   await expect(page.getByTestId("headline-lethal")).toHaveText(/\S/);
+  return (await page.getByTestId("headline-operable").textContent())!;
+}
+async function moveAway(page: import("@playwright/test").Page) { // a site and date the hero buttons would change
+  await page.getByTestId("lat").fill("-84.9"); await page.getByTestId("lon").fill("29.2");
+  await page.getByRole("button", { name: "Set site" }).click();
+  await page.getByTestId("date").fill("2026-05-31"); await page.getByTestId("date").blur();
+  await expect(page.getByTestId("date")).toHaveValue("2026-05-31");
 }
 
 test("hero: line and three buttons are in the first viewport, 44 px, no horizontal scroll (#110)", async ({ page }) => {
   for (const [w, h] of [[1440, 900], [390, 844]]) {
     await page.setViewportSize({ width: w, height: h });
     await page.goto("/");
-    const hero = page.getByTestId("hero");
-    await expect(hero).toBeVisible();
-    await expect(page.getByTestId("hero-line")).not.toContainText(/tier|AVGVISIB/i);
+    await expect(page.getByTestId("hero")).toBeVisible();
+    await expect(page.getByTestId("hero-line")).not.toContainText(/tier|AVGVISIB|\b[WEU]\d/i);
+    const line = (await page.getByTestId("hero-line").boundingBox())!;
+    expect(line.y + line.height).toBeLessThanOrEqual(h);
+    expect(line.x + line.width).toBeLessThanOrEqual(w);
     for (const id of ["hero-im2", "hero-best", "hero-slip"]) {
-      const b = page.getByTestId(id);
-      const box = (await b.boundingBox())!;
+      const box = (await page.getByTestId(id).boundingBox())!;
       expect(box.height).toBeGreaterThanOrEqual(44);
+      expect(box.width).toBeGreaterThanOrEqual(44);
       expect(box.y + box.height).toBeLessThanOrEqual(h);
+      expect(box.x + box.width).toBeLessThanOrEqual(w);
     }
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   }
 });
 
-test("hero: IM-2's site button lands on a headline (#110)", async ({ page }) => {
+test("hero: IM-2's site button restores IM-2 and 2026-11-14 from elsewhere (#110)", async ({ page }) => {
   await page.goto("/");
+  await moveAway(page);
+  await expect(page.getByTestId("lat")).toHaveValue("-84.9");
   await page.getByTestId("hero-im2").click();
   await expect(page.getByTestId("date")).toHaveValue("2026-11-14");
   await expect(page.getByTestId("lat")).toHaveValue("-84.7906");
+  await expect(page.getByTestId("lon")).toHaveValue("29.1957");
   await heroHeadline(page);
 });
 
-test("hero: best region button moves to the top-ranked cell and lands on a headline (#110)", async ({ page }) => {
+test("hero: best region button moves to the top-ranked region and its best cell (#110)", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("ranking-top")).toContainText("best: ");
+  await page.getByTestId("ranking").locator("summary").first().click();
+  const first = page.getByTestId("best-cells").locator("tbody tr").first();
+  const id = (await first.getAttribute("data-testid"))!.replace("best-", "");
+  const [lat, lon] = (await first.getByRole("button").getAttribute("title"))!.split(",").map((s) => parseFloat(s));
   await page.getByTestId("hero-best").click();
-  await expect(page.getByTestId("refusal")).toHaveCount(0);
+  await expect(page.getByLabel("Region")).toHaveValue(id);
+  await expect.poll(async () => parseFloat(await page.getByTestId("lat").inputValue())).toBeCloseTo(lat, 3);
+  await expect.poll(async () => parseFloat(await page.getByTestId("lon").inputValue())).toBeCloseTo(lon, 3);
   await heroHeadline(page);
 });
 
-test("hero: schedule-slips button sets IM-2's site and 2026-11-12 and lands on a headline (#110)", async ({ page }) => {
+test("hero: best region is disabled with the ranked dates listed when the date has no ranking (#110)", async ({ page }) => {
   await page.goto("/");
+  await page.getByTestId("date").fill("2026-12-20"); await page.getByTestId("date").blur();
+  await expect(page.getByTestId("hero-best")).toBeDisabled();
+  await expect(page.getByTestId("hero-best")).toHaveAttribute("aria-describedby", "hero-best-note");
+  await expect(page.getByTestId("hero-best-note")).toContainText("2026-11-14");
+});
+
+test("hero: schedule-slips button sets IM-2's site and 2026-11-12; both dates give a headline (#110)", async ({ page }) => {
+  await page.goto("/");
+  await moveAway(page);
+  await page.getByTestId("hero-im2").click();
+  const on14 = await heroHeadline(page);
+  await navBtn(page, "Site").click();
+  await moveAway(page);
   await page.getByTestId("hero-slip").click();
   await expect(page.getByTestId("date")).toHaveValue("2026-11-12");
   await expect(page.getByTestId("lat")).toHaveValue("-84.7906");
-  await heroHeadline(page);
+  await expect(page.getByTestId("lon")).toHaveValue("29.1957");
+  const on12 = await heroHeadline(page);
+  console.info(`hero slip: operable ${on14} on 2026-11-14, ${on12} on 2026-11-12`);
+  expect(on12).not.toBe(on14);
 });
