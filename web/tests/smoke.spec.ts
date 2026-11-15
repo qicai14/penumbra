@@ -57,6 +57,25 @@ test("timelines render labelled series and follow the panorama time slider", asy
   expect(await page.getByTestId("timelines-now").textContent()).not.toBe(textA);
 });
 
+test("zoom buttons: + narrows, - widens, Reset shows the full span, and the time cursor stays put (T81 #81)", async ({ page }) => {
+  await page.goto("/");
+  const zoom = page.getByTestId("zoom");
+  await expect(page.getByTestId("timelines").locator("canvas")).toHaveCount(3);
+  const span = async () => Number(await zoom.getAttribute("data-span"));
+  const full = await span();
+  await page.getByTestId("zoom-in").click();
+  const half = await span();
+  expect(half).toBeCloseTo(full / 2, -1);
+  await page.getByTestId("zoom-in").click();
+  const quarter = await span();
+  expect(quarter).toBeLessThan(half);
+  await page.getByTestId("zoom-out").click();
+  expect(await span()).toBeGreaterThan(quarter);
+  await page.getByTestId("zoom-reset").click();
+  expect(await span()).toBe(full);
+  await expect(page.getByTestId("timelines-now")).toBeVisible();
+});
+
 test("hovering the chart moves the panorama time", async ({ page }) => {
   await page.goto("/");
   const before = await page.getByTestId("now").textContent();
@@ -361,4 +380,71 @@ test("four views, a keyboard-reachable GitHub link, and a verdict strip built fr
   await page.getByRole("button", { name: "Validation details" }).click();
   await expect(nav.getByRole("button", { name: "About" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("table", { name: /One row per check/ })).toBeVisible();
+});
+
+test("a curated site outside the tiles shows OUT_OF_COVERAGE, not an error; both tool links are present (#82)", async ({ page }) => {
+  await page.goto("/");
+  const curated = page.getByTestId("curated");
+  await expect(curated).toBeEnabled();
+  await curated.selectOption("a11");
+  await expect(page.getByTestId("out-of-coverage")).toContainText("OUT_OF_COVERAGE");
+  await expect(page.getByTestId("refusal")).toHaveCount(0);
+  await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(page.getByTestId("latlon-text")).toHaveText("0.6875, 23.4333");
+  const qm = page.getByRole("link", { name: "Open in QuickMap (opens in a new tab)" });
+  await expect(qm).toHaveAttribute("href", "https://quickmap.lroc.im-ldi.com");
+  await expect(qm).toHaveAttribute("target", "_blank");
+  await expect(qm).toHaveAttribute("rel", /noopener/);
+  await expect(page.getByRole("link", { name: "Open in Moon Trek (opens in a new tab)" })).toHaveAttribute("href", "https://trek.nasa.gov/moon/");
+  // a covered site moves the site and clears the state
+  await curated.selectOption("sp01");
+  await expect(page.getByTestId("out-of-coverage")).toHaveCount(0);
+  await expect(page.getByTestId("lat")).toHaveValue("-89.45");
+});
+
+test("what changes what: four labelled signed bars, and the 300 m bars say so when the grid cannot answer (T83 #83)", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("what-changes")).toBeVisible();
+  for (const [id, label] of [["date-minus", "Landing 2 days earlier"], ["date-plus", "Landing 2 days later"], ["pin-best", "Pin moved 300 m: best cell"], ["pin-worst", "Pin moved 300 m: worst cell"]]) {
+    await expect(page.getByTestId(`wc-${id}`)).toContainText(label);
+    await expect(page.getByTestId(`wc-${id}-value`)).toHaveText(/^[+−]?\d+\.\d d$/);
+  }
+  expect(Number((await page.getByTestId("wc-pin-best-value").textContent())!.replace("−", "-").replace(" d", ""))).toBeGreaterThanOrEqual(0);
+  // A landing date the grid has no layer for: the date bars still run, the 300 m bars say why they are missing.
+  await page.getByTestId("date").fill("2026-11-20");
+  await page.getByTestId("date").blur();
+  await expect(page.getByTestId("wc-pin-best-note")).toContainText("no layer for 2026-11-20");
+  await expect(page.getByTestId("wc-date-plus-value")).toBeVisible();
+});
+
+test("what changes what: a region with no grid says so instead of guessing", async ({ page }) => {
+  await page.route("**/data/manifest.json", async (route) => {
+    const m = await (await route.fetch()).json();
+    delete m.grids;
+    await route.fulfill({ json: m });
+  });
+  await page.goto("/");
+  await expect(page.getByTestId("wc-pin-best-note")).toContainText("no grid data for this region");
+  await expect(page.getByTestId("wc-pin-worst-note")).toContainText("no grid data for this region");
+  await expect(page.getByTestId("wc-date-minus-value")).toBeVisible();
+});
+
+// T80 (#80): About content. Limitations carry their issue or scoreboard ids; empty video URLs render nothing.
+test("About lists team, user story, limitations with ids, and no video slot while URLs are empty", async ({ page, request }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "About", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Team" })).toBeVisible();
+  await expect(page.getByText("Fractured Toes")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Why Penumbra" })).toBeVisible();
+  const lim = page.getByTestId("limitations");
+  for (const id of ["V2b", "V3", "#75", "#48"]) await expect(lim.locator(`[data-limit="${id}"]`)).toHaveCount(1);
+  // Every scoreboard row that is not a pass is named in the limitations.
+  const rows = (await (await request.get("scoreboard.json")).json()) as { id: string; pass: boolean | null }[];
+  for (const r of rows.filter((r) => r.pass !== true)) await expect(lim.locator(`[data-limit="${r.id}"]`).first()).toBeVisible();
+  await expect(lim).toContainText("0.21 d");
+  await expect(lim).toContainText("123 sampled pixels above 60 %");
+  await expect(page.getByTestId("videos")).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Videos" })).toHaveCount(0);
+  await expect(page.locator("main video, main iframe")).toHaveCount(0);
+  await expect(page.getByText("V1’s live demo")).toBeVisible();
 });

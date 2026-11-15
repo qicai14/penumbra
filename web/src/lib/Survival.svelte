@@ -1,11 +1,10 @@
 <script lang="ts">
-  import { SURVIVAL_FAKE, type Scenario } from "./engine";
-  import { headline, presetFields, setPresetField, spanDays, type FieldKey } from "./headline";
+  import type { Scenario } from "./engine";
+  import { presetFields, setPresetField, type FieldKey } from "./headline";
   import type { Controls } from "./state.svelte";
 
-  let { scenario, controls, nearby = null }: { scenario: Scenario; controls: Controls; nearby?: string | null } = $props();
+  let { scenario, controls }: { scenario: Scenario; controls: Controls } = $props();
 
-  const head = $derived(headline(scenario.survival, spanDays(scenario.count, scenario.step_s)));
   const fields = $derived(presetFields(scenario.preset));
   let refused = $state<string | null>(null);
 
@@ -18,52 +17,26 @@
 </script>
 
 <section class="panel" aria-labelledby="sv-h">
-  <header>
-    <h2 id="sv-h">Survival · lander preset</h2>
-    {#if SURVIVAL_FAKE}<span class="pill" data-testid="fake-badge-survival">FAKE DATA</span>{/if}
-  </header>
-
-  <div class="body">
-    <div class="head" data-testid="headline">
-      <p class="fig"><span class="cap">Operable</span><strong data-testid="headline-operable">{head.operable}</strong></p>
-      <p class="fig">
-        <span class="cap">First lethal shadow in</span>
-        <strong data-testid="headline-lethal">{#if !head.none}✕ {/if}{head.lethal}</strong>
-      </p>
-      {#if nearby}<p class="nearby" data-testid="nearest-better">{nearby}</p>{/if}
-    </div>
-
-    <form class="fields" onsubmit={(e) => e.preventDefault()} aria-label="Lander preset">
-      {#each fields as f (f.key)}
-        <label class="row">
-          <span class="name">{f.label}</span>
-          <input type="number" min="0" step={f.step} max={f.key === "earth_margin_deg" ? 90 : undefined} value={f.value} data-testid="preset-{f.key}" aria-describedby={f.note ? "note-{f.key}" : undefined} onchange={(e) => edit(f.key, f.label, e)} />
-          <span class="unit">{f.unit}</span>
-          <span class="tag" data-testid="tag-{f.key}">{f.tag}</span>
-        </label>
-        {#if f.note}<p class="note" id="note-{f.key}" data-testid="note-{f.key}">{f.note}</p>{/if}
-      {/each}
-      <p class="row"><span class="name">Panel</span><span class="static">Sun-tracking</span></p>
-      {#if refused}<p class="refusal" role="alert">{refused}</p>{/if}
-    </form>
-  </div>
+  <h2 id="sv-h">Lander preset</h2>
+  <form class="fields" onsubmit={(e) => e.preventDefault()} aria-label="Lander preset">
+    {#each fields as f (f.key)}
+      <label class="row">
+        <span class="name">{f.label}</span>
+        <input type="number" min="0" step={f.step} max={f.key === "earth_margin_deg" ? 90 : undefined} value={f.value} data-testid="preset-{f.key}" aria-describedby={f.note ? "note-{f.key}" : undefined} onchange={(e) => edit(f.key, f.label, e)} />
+        <span class="unit">{f.unit}</span>
+        <span class="tag" data-testid="tag-{f.key}">{f.tag}</span>
+      </label>
+      {#if f.note}<p class="note" id="note-{f.key}" data-testid="note-{f.key}">{f.note}</p>{/if}
+    {/each}
+    <p class="row"><span class="name">Panel</span><span class="static">Sun-tracking</span></p>
+    {#if refused}<p class="refusal" role="alert">{refused}</p>{/if}
+  </form>
 </section>
 
 <style>
   .panel { background: var(--surface-carbon); border-radius: var(--radius-sm); padding: var(--spacing-16); margin-top: var(--spacing-24); }
-  header { display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-16); margin-bottom: var(--spacing-16); }
-  h2 { margin: 0; font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
-  .pill {
-    border: 1px solid var(--color-slate); border-radius: var(--radius-full); padding: 0 var(--spacing-8);
-    font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); text-transform: uppercase; white-space: nowrap;
-  }
-  .nearby { margin: 0; color: var(--color-fog); font: var(--text-caption)/var(--leading-caption) var(--font-mono); }
-  .body { display: flex; flex-wrap: wrap; gap: var(--spacing-24); align-items: flex-start; }
-  .head { flex: 1 1 280px; display: flex; flex-direction: column; gap: var(--spacing-16); }
-  .fig { margin: 0; display: flex; flex-direction: column; }
-  .cap { font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
-  strong { font: var(--font-weight-regular) var(--text-display)/var(--leading-display) var(--font-mono); color: var(--color-paper); font-variant-numeric: tabular-nums; }
-  .fields { flex: 1 1 320px; display: flex; flex-direction: column; gap: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
+  h2 { margin: 0 0 var(--spacing-16); font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
+  .fields { display: flex; flex-direction: column; gap: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .row { display: flex; align-items: center; gap: var(--spacing-8); margin: 0; }
   .name { flex: 0 0 150px; }
   .unit { flex: 0 0 3ch; }
