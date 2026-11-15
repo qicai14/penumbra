@@ -3,6 +3,14 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 // Runs against `vite preview` locally and the deployed URL in CI (BASE_URL).
+// Site shows the inputs, not a "Computed for" line; Planner keeps it, so read it there and come back.
+async function expectComputed(page: import("@playwright/test").Page, text: string) {
+  const nav = page.getByRole("navigation", { name: "View" });
+  await nav.getByRole("button", { name: "Planner", exact: true }).click();
+  await expect(page.getByTestId("computed-for")).toContainText(text);
+  await nav.getByRole("button", { name: "Site", exact: true }).click();
+}
+
 test("panorama loads the fixture (api_version checked against WASM) and shows the readout", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("readout")).toBeVisible();
@@ -26,7 +34,9 @@ test("keyboard focus reads the horizon elevation and obstacle distance", async (
 // Native values, IM-2, 2026-11-14T00:00:00Z (T02 brief row 14).
 test("tracer shows the native Sun and Earth az/el, no FIXTURE badge", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "About", exact: true }).click();
+  await page.getByRole("button", { name: "Validation", exact: true }).click();
+  await expect(page.getByTestId("tracer").locator("summary")).toContainText(/^Live V1 check: Sun az 97\.5° \/ el 0\.88°$/);
+  await page.getByTestId("tracer").locator("summary").click(); // the tracer is one collapsed line under the scoreboard
   const want = { "sun-az": 97.531671689975, "sun-el": 0.878280821, "earth-az": 329.676179426621, "earth-el": -0.153898865224 };
   for (const [id, v] of Object.entries(want)) {
     await expect(page.getByTestId(id)).toBeVisible();
@@ -44,9 +54,11 @@ test("timelines render labelled series and follow the panorama time slider", asy
   await page.goto("/");
   const tl = page.getByTestId("timelines");
   await expect(tl.locator("canvas")).toHaveCount(3);
-  await expect(tl).toContainText("Illumination");
-  await expect(tl).toContainText("Visibility");
-  await expect(tl).toContainText("2° (assumed)");
+  // the uPlot live legend is off; the series names and the threshold are in the .now readout under the charts
+  const now = page.getByTestId("timelines-now");
+  await expect(now).toContainText("illumination");
+  await expect(now).toContainText("visibility");
+  await expect(now).toContainText("2° (assumed)");
   const slider = page.getByLabel("Time within the span");
   const max = Number(await slider.getAttribute("max"));
   await slider.fill(String(Math.round(max * 0.25)));
@@ -55,6 +67,8 @@ test("timelines render labelled series and follow the panorama time slider", asy
   await slider.fill(String(Math.round(max * 0.75)));
   await expect.poll(() => cursorX(page)).toBeGreaterThan(a + 20);
   expect(await page.getByTestId("timelines-now").textContent()).not.toBe(textA);
+  // the uPlot legend is off, so a key line names every series on screen
+  for (const n of ["Illumination", "Visibility", "Earth margin", "Earth contact", "Battery", "Lethal charge"]) await expect(page.getByTestId("series-key")).toContainText(n);
 });
 
 test("zoom buttons: + narrows, - widens, Reset shows the full span, and the time cursor stays put (T81 #81)", async ({ page }) => {
@@ -88,12 +102,14 @@ test("hovering the chart moves the panorama time", async ({ page }) => {
 
 test("scoreboard lists V1-V5 plus V2b and shows 'not run' for checks that have not run", async ({ page, request }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "About", exact: true }).click();
+  await page.getByRole("button", { name: "Validation", exact: true }).click();
   const table = page.getByRole("table", { name: /One row per check/ });
   await expect(table.getByTestId("score-row")).toHaveCount(6);
   const rows = (await (await request.get("scoreboard.json")).json()) as { pass: boolean | null }[];
   const notRun = rows.filter((r) => r.pass === null).length;
   await expect(table.getByRole("cell", { name: "not run" })).toHaveCount(notRun);
+  // limitations explain the checks but live on About
+  await page.getByRole("button", { name: "About", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Limitations" })).toBeVisible();
 });
 
@@ -132,6 +148,7 @@ test("every dataset row has a role, SCIENCE-SPEC §6 ids and links to the origin
       for (const one of expanded) expect(known.has(one), `${one} in SCIENCE-SPEC §6`).toBe(true);
     }
   }
+  await page.getByRole("button", { name: "Validation", exact: true }).click(); // the scoreboard table lives on Validation
   await expect(page.getByRole("cell", { name: /^illumination: shadow IoU/ })).toBeVisible(); // V3 names its metric (P1)
 });
 
@@ -151,10 +168,10 @@ test("picker refuses an edge click and an out-of-table date, and recomputes on a
   await canvas.click({ position: { x: box.width * 0.4, y: box.height * 0.4 } });
   await expect(refusal).toHaveCount(0);
   const lat = (await page.getByTestId("lat").inputValue());
-  await expect(page.getByTestId("computed-for")).toContainText(Number(lat).toFixed(4));
+  await expectComputed(page, Number(lat).toFixed(4));
 
   await page.getByTestId("mast").fill("6");
-  await expect(page.getByTestId("computed-for")).toContainText("mast 6.0 m");
+  await expectComputed(page, "mast 6.0 m");
 });
 
 test("a new landing date and a shorter span recompute without losing the time cursor (#13)", async ({ page }) => {
@@ -163,11 +180,11 @@ test("a new landing date and a shorter span recompute without losing the time cu
   await page.goto("/");
   await page.getByTestId("date").fill("2027-03-01");
   await page.getByTestId("date").blur();
-  await expect(page.getByTestId("computed-for")).toContainText("landing 2027-03-01 · 30 d");
+  await expectComputed(page, "landing 2027-03-01 · 30 d");
   const slider = page.getByLabel("Time within the span");
   await slider.fill("4000"); // past the end of a 14-day grid (2016 steps)
   await page.getByRole("button", { name: "14 d" }).click();
-  await expect(page.getByTestId("computed-for")).toContainText("· 14 d");
+  await expectComputed(page, "· 14 d");
   await expect(slider).toHaveValue("2015");
   expect(errors).toEqual([]);
 });
@@ -199,16 +216,24 @@ test("switching region moves the site and refreshes the lat/lon boxes", async ({
   await expect(page.getByTestId("lat")).toHaveValue("-84.7906");
   await page.getByLabel("Region").selectOption("shackleton-ridge");
   await expect(page.getByTestId("lat")).not.toHaveValue("-84.7906");
-  await expect(page.getByTestId("computed-for")).toContainText(Number(await page.getByTestId("lat").inputValue()).toFixed(4));
+  await expectComputed(page, Number(await page.getByTestId("lat").inputValue()).toFixed(4));
   await expect(page.getByTestId("refusal")).toHaveCount(0);
 });
 
 test("survival headline, charge trace and preset form", async ({ page }) => {
   await page.goto("/");
+  // the charge trace is a Site timeline; the headline and preset live on Planner (wireframes-v2)
+  await expect(page.getByTestId("soc-chart").locator("canvas")).toHaveCount(1);
+  await expect(page.getByTestId("soc-chart")).toHaveAttribute("aria-label", /Battery state of charge/); // the uPlot live legend is off
+  await page.getByRole("button", { name: "Planner", exact: true }).click();
   await expect(page.getByTestId("headline-operable")).toContainText(/days?$/);
   await expect(page.getByTestId("headline-lethal")).toContainText(/days?$|no lethal shadow in \d+ days?/);
-  await expect(page.getByTestId("soc-chart").locator("canvas")).toHaveCount(1);
-  await expect(page.getByTestId("soc-chart")).toContainText("Battery charge");
+  // sunlight and Earth contact hours come from the model's survival sums, whole hours
+  await expect(page.getByTestId("headline-sun-hours")).toHaveText(/^\d+ h$/);
+  await expect(page.getByTestId("headline-earth-hours")).toHaveText(/^\d+ h$/);
+  // the preset reads as one line; Edit reveals the inputs
+  await expect(page.getByTestId("preset-summary")).toContainText("Min charge 0 Wh · Panel 1.5 m² · Cells 30 % · Load 220 W · Earth margin 2 ° · Sun-tracking");
+  await page.getByTestId("preset-edit").locator("summary").click();
   // U10: every field says cited or assumed; an edit recomputes and the field then reads assumed.
   const tags = page.locator('[data-testid^="tag-"]');
   await expect(tags.first()).toBeVisible();
@@ -257,16 +282,16 @@ test("pair edits survive a trip to the site view, and mast and span ride in the 
   await page.getByTestId("b-date").fill("2026-12-05");
   await expect(page.getByTestId("col-b")).toContainText("landing 2026-12-05");
   await page.getByRole("button", { name: "Site", exact: true }).click();
-  await expect(page.getByTestId("computed-for")).toContainText("mast 6.0 m");
-  await expect(page.getByTestId("computed-for")).toContainText("· 14 d");
-  await page.getByRole("button", { name: "Compare A vs B" }).click();
+  await expectComputed(page, "mast 6.0 m");
+  await expectComputed(page, "· 14 d");
+  await page.getByRole("button", { name: "Compare", exact: true }).click();
   await expect(page.getByTestId("col-b")).toContainText("landing 2026-12-05");
   await expect(page).toHaveURL(/b=-84\.7906,29\.1957@2026-12-05&mast=6&span=14/);
 });
 
 test("the Compare button opens the compare view from the site view, and a bad URL falls back", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("button", { name: "Compare A vs B" }).click();
+  await page.getByRole("button", { name: "Compare", exact: true }).click();
   await expect(page.getByTestId("col-a")).toBeVisible();
   await expect(page).toHaveURL(/a=-84\.7906,29\.1957@2026-11-14&b=/);
   // C4-3 (#109): B is never a copy of A, says why, and B − A is a real difference on the default IM-2 site.
@@ -348,46 +373,51 @@ test("the 3D terrain mounts, shows the picker's mask and time, labels vertical e
   await page.goto("/");
   const t3 = page.getByTestId("terrain-3d");
   const site = page.getByTestId("mask-site");
+  const nav = page.getByRole("navigation", { name: "View" });
+  // the picker's mask is on Site and the 3D view on Terrain; read the picker's time first
+  await expect(site).toHaveAttribute("data-stride", "8", { timeout: 60000 });
+  const siteT = await site.getAttribute("data-t");
+  await nav.getByRole("button", { name: "Terrain" }).click();
   await expect(t3).toBeVisible();
   await expect(page.locator("canvas[aria-label^='3D height mesh']")).toBeVisible();
-  await expect(t3).toContainText("Point-Sun mask");
-  await expect(t3).toContainText("not illumination");
+  // the full mask legend lives in the picker; the 3D view keeps the Sun readout and one caveat line
+  await expect(t3).toContainText("Sun (model): azimuth");
+  await expect(page.getByTestId("t3-caveat")).toHaveText("Point-Sun mask, not illumination; points near the tile edge can read lit.");
   await expect(t3).toHaveAttribute("data-exaggeration", "1");
   await expect(t3).toContainText("1× (true scale)");
   await expect(t3).toHaveAttribute("data-stride", "8", { timeout: 60000 });
-  await expect(site).toHaveAttribute("data-stride", "8", { timeout: 60000 });
   // one mask feeds both views: same time, one vertex per mask point
-  expect(await t3.getAttribute("data-t")).toBe(await site.getAttribute("data-t"));
+  expect(await t3.getAttribute("data-t")).toBe(siteT);
   expect(Number(await t3.getAttribute("data-vertices"))).toBe(192 * 192);
   await page.getByTestId("t3-exaggeration").selectOption("2");
   await expect(t3).toContainText("Heights drawn ×2");
   await page.getByTestId("t3-exaggeration").selectOption("1");
-  // scrubbing moves the 3D view's time with the picker's
+  // scrubbing on Site moves the 3D view's time with the picker's
+  await nav.getByRole("button", { name: "Site" }).click();
   const slider = page.getByLabel("Time within the span");
   const max = Number(await slider.getAttribute("max"));
   await slider.fill(String(Math.round(max / 2)));
+  await expect.poll(async () => (await site.getAttribute("data-t")) !== siteT, { timeout: 60000 }).toBe(true);
+  await expect(site).toHaveAttribute("data-stride", "8", { timeout: 60000 });
+  const midT = await site.getAttribute("data-t");
+  await nav.getByRole("button", { name: "Terrain" }).click();
   await expect(t3).toHaveAttribute("data-stride", "8", { timeout: 60000 });
-  await expect.poll(async () => (await t3.getAttribute("data-t")) === (await site.getAttribute("data-t")), { timeout: 60000 }).toBe(true);
+  await expect.poll(async () => await t3.getAttribute("data-t"), { timeout: 60000 }).toBe(midT);
 });
 
-test("four views, a keyboard-reachable GitHub link, and a verdict strip built from scoreboard.json (T79 #79)", async ({ page, request }) => {
+test("seven views in the wireframes-v2 order, a keyboard-reachable GitHub link, and the scoreboard on Validation only (T79 #79)", async ({ page }) => {
   await page.goto("/");
   const nav = page.getByRole("navigation", { name: "View" });
-  for (const name of ["Site", "Compare A vs B", "IM-2 replay", "About"]) await expect(nav.getByRole("button", { name })).toBeVisible();
-  // Scoreboard, About and Tracer live in the About view, not on the Site scroll.
+  await expect(nav.getByRole("button")).toHaveText(["Site", "Planner", "Terrain", "Compare", "IM-2 replay", "Validation", "About"]);
+  // Scoreboard and Tracer live in the Validation view, not on the Site scroll.
   await expect(page.getByRole("table", { name: /One row per check/ })).toHaveCount(0);
   await expect(page.getByTestId("sun-az")).toHaveCount(0);
   const gh = page.getByRole("link", { name: "GitHub" });
   await expect(gh).toHaveAttribute("href", "https://github.com/qicai14/penumbra");
   await gh.focus();
   await expect(gh).toBeFocused();
-  // The strip text is rebuilt from the data file: every id with its status.
-  const rows = (await (await request.get("scoreboard.json")).json()) as { id: string; pass: boolean | null }[];
-  const ids = (s: boolean | null) => rows.filter((r) => r.pass === s).map((r) => r.id).join(", ");
-  const want = ([[true, "pass"], [false, "fails"], [null, "not run"]] as const).filter(([s]) => ids(s)).map(([s, w]) => `${ids(s)} ${w}`).join(" · ");
-  await expect(page.getByTestId("verdict-strip")).toHaveText(want);
-  await page.getByRole("button", { name: "Validation details" }).click();
-  await expect(nav.getByRole("button", { name: "About" })).toHaveAttribute("aria-pressed", "true");
+  await nav.getByRole("button", { name: "Validation" }).click();
+  await expect(nav.getByRole("button", { name: "Validation" })).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByRole("table", { name: /One row per check/ })).toBeVisible();
 });
 
@@ -413,6 +443,7 @@ test("a curated site outside the tiles shows OUT_OF_COVERAGE, not an error; both
 
 test("what changes what: four labelled signed bars, and the 300 m bars say so when the grid cannot answer (T83 #83)", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("button", { name: "Planner", exact: true }).click(); // What changes what lives on Planner
   await expect(page.getByTestId("what-changes")).toBeVisible();
   for (const [id, label] of [["date-minus", "Landing 2 days earlier"], ["date-plus", "Landing 2 days later"], ["pin-best", "Pin moved 300 m: best cell"], ["pin-worst", "Pin moved 300 m: worst cell"]]) {
     await expect(page.getByTestId(`wc-${id}`)).toContainText(label);
@@ -420,8 +451,11 @@ test("what changes what: four labelled signed bars, and the 300 m bars say so wh
   }
   expect(Number((await page.getByTestId("wc-pin-best-value").textContent())!.replace("−", "-").replace(" d", ""))).toBeGreaterThanOrEqual(0);
   // A landing date the grid has no layer for: the date bars still run, the 300 m bars say why they are missing.
+  // The date is set on Site, so go there and come back.
+  await page.getByRole("button", { name: "Site", exact: true }).click();
   await page.getByTestId("date").fill("2026-11-20");
   await page.getByTestId("date").blur();
+  await page.getByRole("button", { name: "Planner", exact: true }).click();
   await expect(page.getByTestId("wc-pin-best-note")).toContainText("no layer for 2026-11-20");
   await expect(page.getByTestId("wc-date-plus-value")).toBeVisible();
 });
@@ -433,6 +467,7 @@ test("what changes what: a region with no grid says so instead of guessing", asy
     await route.fulfill({ json: m });
   });
   await page.goto("/");
+  await page.getByRole("button", { name: "Planner", exact: true }).click();
   await expect(page.getByTestId("wc-pin-best-note")).toContainText("no grid data for this region");
   await expect(page.getByTestId("wc-pin-worst-note")).toContainText("no grid data for this region");
   await expect(page.getByTestId("wc-date-minus-value")).toBeVisible();
@@ -455,7 +490,29 @@ test("About lists team, user story, limitations with ids, and no video slot whil
   await expect(page.getByTestId("videos")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Videos" })).toHaveCount(0);
   await expect(page.locator("main video, main iframe")).toHaveCount(0);
-  await expect(page.getByText("V1’s live demo")).toBeVisible();
+});
+
+test("Terrain has its own time slider; moving it redraws the 3D mask and carries back to Site", async ({ page }) => {
+  await page.goto("/");
+  const nav = page.getByRole("navigation", { name: "View" });
+  await nav.getByRole("button", { name: "Terrain" }).click();
+  const t3 = page.getByTestId("terrain-3d");
+  await expect(t3).toHaveAttribute("data-stride", "8", { timeout: 60000 });
+  const before = await t3.getAttribute("data-t");
+  await page.getByTestId("t3-time").fill("300");
+  await expect(t3).not.toHaveAttribute("data-t", before!, { timeout: 60000 });
+  await expect(page.getByTestId("countdown")).toBeVisible(); // Sun and Earth elevation sit above the 3D view too
+  // Reset view lights up once the camera leaves home, and goes quiet again when pressed
+  const reset = page.getByTestId("t3-reset");
+  await expect(reset).toHaveAttribute("data-moved", "false");
+  const cv = page.locator("canvas[aria-label^='3D height mesh']");
+  await cv.hover(); await page.mouse.wheel(0, -400);
+  await expect(reset).toHaveAttribute("data-moved", "true");
+  await reset.click();
+  await expect(reset).toHaveAttribute("data-moved", "false");
+  const after = await t3.getAttribute("data-t");
+  await nav.getByRole("button", { name: "Site" }).click();
+  await expect(page.getByTestId("mask-site")).toHaveAttribute("data-t", after!, { timeout: 60000 });
 });
 
 test("ten regions: each shows its tier and label, and the ranking is numbered and sorted by operable days (#26)", async ({ page }) => {
@@ -466,13 +523,22 @@ test("ten regions: each shows its tier and label, and the ranking is numbered an
     await sel.selectOption(id);
     await expect(page.getByTestId("region-label")).toContainText(/Tier [123]/);
     await expect(page.getByTestId("refusal")).toHaveCount(0);
+    // the survival headline lives on Planner
+    await page.getByRole("navigation", { name: "View" }).getByRole("button", { name: "Planner", exact: true }).click();
     await expect(page.getByTestId("headline-operable")).toHaveText(/\S/);
+    await page.getByRole("navigation", { name: "View" }).getByRole("button", { name: "Site", exact: true }).click();
   }
   await expect(page.getByTestId("ranking-title")).toContainText("Region ranking for 2026-11-14");
   const days = (await page.getByTestId("best-cells").locator(".days").allTextContents()).map((t) => parseFloat(t));
   expect(days.length).toBe(10);
   expect([...days].sort((a, b) => b - a)).toEqual(days);
-  await expect(page.getByTestId("best-cells").locator(".who").first()).toContainText("1. ");
+  // one ranked table in a closed dropdown whose summary names the #1 site; open it, rank starts at 1, each row's → moves the site
+  await expect(page.getByTestId("ranking-top")).toContainText("best: ");
+  await page.getByTestId("ranking").locator("summary").first().click();
+  const rows = page.getByTestId("best-cells").locator("tbody tr");
+  await expect(rows).toHaveCount(10);
+  await expect(rows.first().locator(".n")).toHaveText("1");
+  await expect(page.getByTestId("best-cells").getByRole("button", { name: /^Move site to / })).toHaveCount(10);
 });
 
 test("off-grid date: one message and three chips, a chip restores the ranking; move pin matches the readout (#111)", async ({ page }) => {
@@ -488,7 +554,8 @@ test("off-grid date: one message and three chips, a chip restores the ranking; m
   await expect(page.getByTestId("no-grid-msg")).toHaveCount(0);
   await expect(page.getByTestId("ranking-title")).toContainText("Region ranking for 2026-11-14");
   expect(await page.getByTestId("best-cells").locator(".days").count()).toBe(10);
-  // Move pin there: the headline then shows the readout's gain over the old figure.
+  // Move pin there: the headline then shows the readout's gain over the old figure. Both live on Planner.
+  await page.getByRole("navigation", { name: "View" }).getByRole("button", { name: "Planner", exact: true }).click();
   const days = async () => parseFloat((await page.getByTestId("headline-operable").textContent())!);
   const before = await days();
   const move = page.getByTestId("move-pin");
@@ -503,6 +570,7 @@ test("off-grid date: one message and three chips, a chip restores the ranking; m
 
 test("landing window: bar equals headline, clicking a bar sets the date and the headline (#108)", async ({ page }) => {
   await page.goto("/");
+  await page.getByRole("navigation", { name: "View" }).getByRole("button", { name: "Planner", exact: true }).click(); // chart, headline and "Computed for" live on Planner
   const table = page.getByTestId("lw-date");
   await expect(table).toHaveCount(30, { timeout: 15000 });
   const headline = async () => (await page.getByTestId("headline-operable").textContent())!;
@@ -524,5 +592,7 @@ test("landing window: bar equals headline, clicking a bar sets the date and the 
   const want = table.nth(5);
   await expect(page.getByTestId("computed-for")).toContainText(`landing ${await want.getAttribute("data-date")}`);
   await expect.poll(headline).toBe(await want.getAttribute("data-operable"));
-  await expect(page.getByTestId("date")).toHaveValue((await want.getAttribute("data-date"))!);
+  const wantDate = (await want.getAttribute("data-date"))!; // read before leaving Planner, where the table lives
+  await page.getByRole("navigation", { name: "View" }).getByRole("button", { name: "Site", exact: true }).click(); // the date box lives on Site
+  await expect(page.getByTestId("date")).toHaveValue(wantDate);
 });

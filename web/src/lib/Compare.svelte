@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Explain from "./Explain.svelte";
   // T27 (#28): two site-date pairs side by side with one shared lander preset. Each column is its own scenario, so its
   // clocks follow its own landing time (Qi Cai, 2026-11-14). Every figure is the model's; the page only subtracts and words it.
   import { computeScenario, latlonToXy, type EphSegment, type NearMeta, type Preset, type Scenario } from "./engine";
@@ -88,7 +89,10 @@
 </script>
 
 <section class="panel" aria-labelledby="cmp-h">
-  <h2 id="cmp-h">Compare A vs B · two site-date pairs, one lander preset</h2>
+  <h2 id="cmp-h">Compare</h2>
+  <Explain id="cmp" topic="Compare" plain="Two sites or landing dates side by side, with the same lander.">
+    <p>Set A and B, each a spot and a landing date. The sentence at the bottom says which gives more working time, and by how much.</p>
+  </Explain>
 
   <div class="pickers">
     {#each SIDES as s (s)}

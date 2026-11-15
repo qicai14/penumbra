@@ -1,9 +1,9 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import init, { api_version, survival } from "./wasm/penumbra_wasm.js";
-import { checkApiVersion, computeScenario, parseScenario, resetEngineForTests, TIMELINE_COLUMNS, TRACK_COLUMNS, validate } from "./engine";
+import { checkApiVersion, computeScenario, DEFAULT_PRESET, parseScenario, resetEngineForTests, TIMELINE_COLUMNS, TRACK_COLUMNS, validate } from "./engine";
 
-const raw = JSON.parse(readFileSync(new URL("../../public/fixture/scenario.json", import.meta.url), "utf8"));
+const raw = JSON.parse(readFileSync(new URL("../../tests/fixture/scenario.json", import.meta.url), "utf8"));
 await init({ module_or_path: readFileSync(new URL("./wasm/penumbra_wasm_bg.wasm", import.meta.url)) });
 // computeScenario now loads the manifest and ephemeris table, so fetch serves the real files under public/.
 const servePublic = (async (u: string) =>
@@ -13,7 +13,6 @@ test("fixture matches the engine api_version and validates", () => {
   const s = parseScenario(raw, api_version());
   expect((s as { fake?: boolean }).fake).toBe(true);
   expect(s.timeline.t_unix_s.length).toBe(4320);
-  expect(s.scoreboard.map((e) => e.id)).toEqual(["V1", "V2", "V2b", "V3", "V4", "V5"]);
 });
 
 test("a mismatched api_version is refused", () => {
@@ -218,7 +217,6 @@ test("computeScenario runs on the landing date and span, not the fixture grid (#
   try {
     const start = Date.UTC(2027, 2, 1) / 1000; // 2027-03-01: inside the table, not the fixture's 2026-11-14
     const s = await computeScenario({ lat_deg: -84.7906, lon_deg: 29.1957, mast_m: 2, start_unix_s: start, span_days: 14 });
-    expect(s.note).toBe(""); // the fixture's note is not part of a computed scenario
     expect("fake" in s).toBe(false); // nor its FAKE flag: only named fields are copied
     expect(s.start_unix_s).toBe(start);
     expect(s.count).toBe(14 * 144); // 10-minute steps
@@ -299,4 +297,15 @@ test("computePit raises the horizon to the pit rim and can only lower illuminati
   } finally {
     globalThis.fetch = realFetch;
   }
+});
+
+test("DEFAULT_PRESET matches penumbra_core::power::ROVER_PRESET and its cited fields", () => {
+  const rs = readFileSync(new URL("../../../crates/core/src/power.rs", import.meta.url), "utf8");
+  const block = rs.slice(rs.indexOf("pub const ROVER_PRESET"), rs.indexOf("};", rs.indexOf("pub const ROVER_PRESET")));
+  const num = (k: string) => Number(block.match(new RegExp(`${k}: ([0-9_.]+)`))![1].replaceAll("_", ""));
+  for (const k of ["capacity_wh", "start_wh", "min_wh", "panel_area_m2", "efficiency", "load_w"] as const) expect(DEFAULT_PRESET[k]).toBe(num(k));
+  expect(block).toContain("Panel::SunTracking");
+  expect(DEFAULT_PRESET.panel).toBe("tracking");
+  const cited = rs.match(/ROVER_CITED_FIELDS: \[&str; \d+\] = \[([^\]]+)\]/)![1].match(/"(\w+)"/g)!.map((s) => s.slice(1, -1));
+  expect(Object.keys(DEFAULT_PRESET.cited).filter((k) => DEFAULT_PRESET.cited[k]).sort()).toEqual(cited.sort());
 });

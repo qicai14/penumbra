@@ -27,12 +27,12 @@ test("nearest better site: next cell to the right is +50 h = +2.1 d, 100 m, bear
   const b = nearestBetter(g, 0, 1150, 4950, 1000);
   expect(b).toMatchObject({ kind: "better", distM: 100, bearingDeg: 90 });
   expect((b as any).plusDays).toBeCloseTo(50 / 24, 6);
-  expect(readout(b)).toContain("+2.1 d, 100 m away (90° from map up, right on the map)");
+  expect(readout(b)).toBe("Better site within 1 km: +2.1 d, 100 m, right on the map.");
 });
 
 test("best cell in the radius reports none; no-data site reports no data", () => {
   expect(nearestBetter(g, 0, 1550, 4950, 1000)).toEqual({ kind: "none", partial: true });
-  expect(readout(nearestBetter(g, 0, 1550, 4950, 1000))).toContain("covers only part of the 1 km disc");
+  expect(readout(nearestBetter(g, 0, 1550, 4950, 1000))).toContain("grid covers only part of the 1 km disc");
   expect(nearestBetter(g, 0, 1550, 4650)).toBeNull();
   expect(readout(null)).toContain("no grid data");
 });

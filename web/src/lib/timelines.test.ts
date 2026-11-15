@@ -79,7 +79,7 @@ test("operable = illumination > 0 and contact", () => {
 });
 
 test("fixture band sums to its own operable_h (SCIENCE-SPEC 1e)", async () => {
-  const raw = await Bun.file(new URL("../../public/fixture/scenario.json", import.meta.url)).json();
+  const raw = await Bun.file(new URL("../../tests/fixture/scenario.json", import.meta.url)).json();
   const tl = raw.timeline;
   const mask = operableMask({ illumination: Float64Array.from(tl.illumination), contact: Float64Array.from(tl.contact) });
   const h = (mask.reduce((s, v) => s + v, 0) * raw.step_s) / 3600;

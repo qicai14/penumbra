@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Explain from "./Explain.svelte";
   import { computeScenario, latlonToXy, type Inputs, type Scenario } from "./engine";
   import type { Grid } from "./grid";
   import { DATE_SHIFT_D, PIN_RADIUS_M, deltaDays, fmtDelta, withinRadius } from "./whatChanges";
@@ -47,7 +48,10 @@
 
 <section class="panel" aria-labelledby="wc-h">
   <h2 id="wc-h">What changes what</h2>
-  <p class="cap">Change in operable days against this pick, for each input moved on its own.</p>
+  <Explain id="wc" topic="What changes what" plain="Which single change helps most: a different landing date, or moving the site a little.">
+    <p>Each bar is the gain or loss in working days if you change only that one thing. Bars to the right are better than your pick; longer bars matter more.</p>
+    <p>Change in operable days against this pick, for each input moved on its own.</p>
+  </Explain>
   <ul data-testid="what-changes">
     {#each bars as b (b.id)}
       <li data-testid={`wc-${b.id}`}>

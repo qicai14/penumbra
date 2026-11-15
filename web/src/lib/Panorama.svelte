@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Explain from "./Explain.svelte";
   import type { Scenario } from "./engine";
   import {
     azToX, elToY, fmtDist, fmtEl, fmtUtc, horizonAt, pxPerDegX, pxPerDegY, ticks, trackSegments,
@@ -171,8 +172,12 @@
 
 <section class="panel" aria-labelledby="pano-h">
   <header>
-    <h2 id="pano-h">Horizon · where the Sun and Earth are</h2>
+    <h2 id="pano-h">Horizon</h2>
   </header>
+  <Explain id="pano" topic="Horizon" plain="The skyline the lander sees, all the way round, with the paths of the Sun and Earth across it.">
+    <p>The grey line is the terrain on the horizon: hills and crater rims. The Sun and Earth move along their tracks over the days.</p>
+    <p>When the Sun sinks behind the grey line, the lander is in shadow, even in daytime. Near the south pole the Sun stays low, so a small hill can block it for days.</p>
+  </Explain>
 
   <canvas
     bind:this={canvas}

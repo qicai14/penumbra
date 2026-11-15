@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Explain from "./Explain.svelte";
   import * as THREE from "three";
   import { OrbitControls } from "three/addons/controls/OrbitControls.js";
   import { latlonToXy, type EphSegment, type NearTile, type Region } from "./engine";
@@ -11,9 +12,10 @@
 
   // The same point-Sun mask the site picker paints (`feed`), at the same time marker `t`, with the Sun's azimuth and elevation
   // read from the model's track at that marker. Nothing here computes light: a vertex is ember where the mask says lit.
-  let { controls, tile, feed, t, sunAz, sunEl, sunLon }: {
+  let { controls, tile, feed, t, sunAz, sunEl, sunLon, idx = $bindable(0), count }: {
     controls: Controls; tile: NearTile & { regions: Region[]; eph: EphSegment[] }; feed: MaskFeed;
     t: number | null; sunAz: number | null; sunEl: number | null; sunLon: number | null; // sunLon: the longitude the track was computed for
+    idx?: number; count: number; // the shared time marker: dragging here also moves the Site view
   } = $props();
 
   const PIN_H_M = 700, SUN_LEN_M = 4000, VIEW_DIST_M = 14000;
@@ -22,6 +24,8 @@
   let exaggeration = $state<number>(1);
   let glError = $state<string | null>(null);
   let nodata = $state(0);
+  let moved = $state(false); // the camera left its home view, so Reset view is worth pressing
+  let homing = false; // home() moves the camera too; that move must not count as the user's
 
   const m = $derived(tile.meta);
   const shown = $derived(feed.mask && feed.mask.regionId === tile.region.id ? feed.mask : null);
@@ -78,7 +82,7 @@
 
     let raf = 0;
     const render = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; renderer.render(scene, camera); }); };
-    ctl.addEventListener("change", render);
+    ctl.addEventListener("change", () => { render(); if (!homing) moved = true; });
     const resize = () => {
       const w = box.clientWidth, h = box.clientHeight;
       if (!w || !h) return;
@@ -128,7 +132,7 @@
     const el = (35 * Math.PI) / 180;
     g.controls.target.copy(at);
     g.camera.position.set(at.x, at.y + VIEW_DIST_M * Math.sin(el), at.z + VIEW_DIST_M * Math.cos(el)); // from the south, so north is away
-    g.controls.update(); g.render();
+    homing = true; g.controls.update(); homing = false; moved = false; g.render();
   }
   function resetView() { if (gl?.at) home(gl, gl.at); }
   $effect(() => {
@@ -151,32 +155,36 @@
 
 <section class="panel" aria-labelledby="t3-h">
   <header>
-    <h2 id="t3-h">3D terrain · the near tile at the time marker</h2>
+    <h2 id="t3-h">3D terrain</h2>
   </header>
+  <Explain id="t3" topic="3D terrain" plain="The ground around the site in 3D, with sunlit and shadowed ground at the chosen time.">
+    <p><strong>Orange</strong> ground has the Sun's centre above the terrain; <strong>dark</strong> ground has it hidden behind a hill. The pin is the site and the arrow points to the Sun.</p>
+    <p>Drag to turn the view and scroll to zoom. Move the time slider to watch shadows sweep across the ground.</p>
+  </Explain>
 
   <figure data-testid="terrain-3d" data-t={shown?.t_unix_s ?? ""} data-stride={shown?.stride ?? ""} data-lit={litCount} data-vertices={shown ? shown.cols * shown.rows : ""} data-exaggeration={exaggeration} data-gl={glError ? "off" : "on"}>
     <div class="stage" bind:this={box}>
       <canvas
         bind:this={canvas}
         tabindex="0"
-        aria-describedby="t3-note"
+        aria-describedby="t3-note t3-caveat"
         aria-label="3D height mesh of the {tile.region.name} near tile at {shown ? fmtUtc(shown.t_unix_s) : t === null ? 'the time marker' : fmtUtc(t)}. Each mesh point is ember where the Sun's centre is above the terrain and dark where it is below. The pin is the site; the ember arrow points to the Sun. Drag to orbit, scroll to zoom, arrow keys to pan."
       ></canvas>
     </div>
+    <label class="time">
+      <span>Time</span>
+      <input data-testid="t3-time" type="range" min="0" max={count - 1} step="1" bind:value={idx} aria-label="Time within the span" />
+      <output>{t === null ? "…" : fmtUtc(t)}</output>
+    </label>
     {#if glError}<p class="refusal" role="alert">{glError}</p>{/if}
     {#if feed.error}<p class="refusal" role="alert">Mask unavailable. {feed.error}</p>{/if}
     <div class="legend">
-      <p class="what"><strong>Point-Sun mask</strong>, not illumination{#if shown}{" · "}{fmtUtc(shown.t_unix_s)}{/if}{#if feed.busy}{" · updating"}{/if}</p>
-      <p><i class="sw lit" aria-hidden="true"></i>Sun's centre above the terrain <i class="sw dark" aria-hidden="true"></i>Sun's centre below it</p>
-      <p class="sun">
+      <p class="sun" id="t3-note">
         Sun (model): azimuth {sunAz === null ? "…" : `${sunAz.toFixed(1)}°`}, elevation {sunEl === null ? "…" : fmtEl(sunEl)}{#if sunEl !== null && sunEl <= 0}{" · Sun below the horizon"}{/if}
         · pin: {siteLit === null ? (feed.error ? "no mask yet" : "computing") : siteLit ? "lit" : "in shadow"}{#if shown && t !== null && shown.t_unix_s !== t}{" (mask for "}{fmtUtc(shown.t_unix_s)}{")"}{/if}
       </p>
-      <p class="note" id="t3-note">
-        Heights are the shipped DEM. One ray toward the Sun per {(shown?.stride ?? MASK_STRIDE) * m.pixel_m} m mesh point, so the colour between points is a blend, not a computed value.
-        The disc, Earth and terrain beyond the tile are not in it, so points near the edge can read lit.
-        {#if nodata > 0}{nodata} mesh points have no terrain data and sit at the tile's lowest height.{/if}
-      </p>
+      <p class="note" id="t3-caveat" data-testid="t3-caveat">Point-Sun mask, not illumination; points near the tile edge can read lit.</p>
+      {#if nodata > 0}<p class="note">{nodata} mesh points have no terrain data and sit at the tile's lowest height.</p>{/if}
     </div>
     <figcaption>
       <label>Vertical scale
@@ -184,7 +192,7 @@
           {#each EXAGGERATIONS as k (k)}<option value={k}>{exaggerationLabel(k)}</option>{/each}
         </select>
       </label>
-      <button type="button" onclick={resetView}>Reset view</button>
+      <button type="button" class={{ moved }} data-testid="t3-reset" data-moved={moved} onclick={resetView}>Reset view</button>
       {#if exaggeration !== 1}<span class="warn" role="note">Heights drawn ×{exaggeration}: slopes look steeper than they are.</span>{/if}
     </figcaption>
   </figure>
@@ -195,18 +203,17 @@
   header { display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-16); margin-bottom: var(--spacing-16); }
   h2 { margin: 0; font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
   figure { margin: 0; }
+  .time { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-8); margin-top: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
+  .time input { flex: 1 1 200px; accent-color: var(--color-fog); }
+  .time output { color: var(--color-paper); font-variant-numeric: tabular-nums; }
   .stage { position: relative; width: 100%; height: clamp(280px, 52vw, 520px); border-radius: var(--radius-sm); overflow: hidden; background: var(--color-carbon); }
   canvas { display: block; width: 100%; height: 100%; cursor: grab; touch-action: pan-y; }
   canvas:active { cursor: grabbing; }
   canvas:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }
   .legend { margin-top: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-fog); }
   .legend p { margin: 0 0 4px; max-width: 75ch; }
-  .legend .what strong { font-weight: var(--font-weight-regular); color: var(--color-paper); }
   .legend .sun { font-variant-numeric: tabular-nums; }
   .legend .note { color: var(--color-ash); }
-  .sw { display: inline-block; width: 12px; height: 12px; margin: 0 var(--spacing-8) -2px 0; border: 1px solid var(--color-slate); }
-  .sw.lit { background: color-mix(in srgb, var(--color-sun) 60%, var(--color-slate)); }
-  .sw.dark { background: color-mix(in srgb, black 50%, var(--color-fog)); margin-left: var(--spacing-16); }
   figcaption { margin-top: var(--spacing-8); display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-16); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   figcaption label { display: flex; align-items: center; gap: var(--spacing-8); }
   .warn { color: var(--color-paper); }
@@ -218,6 +225,7 @@
     font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-fog); background: transparent;
     border: 1px solid var(--color-slate); border-radius: var(--radius-sm); padding: var(--spacing-8) var(--spacing-16); cursor: pointer;
   }
+  button.moved { color: var(--color-void); background: var(--color-paper); border-color: var(--color-paper); font-weight: var(--font-weight-bold); } /* Axiom colours inverted: paper box, void text */
   button:focus-visible, select:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }
   .refusal { margin: var(--spacing-8) 0 0; padding: var(--spacing-8) var(--spacing-16); border: 1px solid var(--color-pewter); border-radius: var(--radius-sm); background: var(--surface-iron); color: var(--color-paper); }
 </style>
