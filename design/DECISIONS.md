@@ -2,6 +2,12 @@
 
 For Qi Cai's review on Nov 13. Newest first.
 
+## 2026-11-15 · C5 README banner and submission screenshots
+- **Outlined wordmark.** `brand/assets/wordmark.svg` (paper `#eeeeee` ink, for dark grounds) and `brand/assets/wordmark-light.svg` (carbon `#111111` ink, for light grounds). Same lockup as the app header (`web/src/App.svelte`): Grazing Sun from `sun-mark.svg` in ember `#da5c2c`, the hairline horizon, and "PENUMBRA" in Archivo ExtraBold Italic. GitHub does not load web fonts in README SVGs, so the text is outlined to paths (opentype.js on Google Fonts' static semi-expanded instance, 112.5 % width against the app's 112 %, not visible at banner size). The README switches the two with `<picture>` and `prefers-color-scheme`. This also closes the `textLength` stretching question below for the banner: the outlined file keeps the real letter widths.
+- **Contrast.** `#eeeeee` on GitHub dark `#0d1117` and `#111111` on white are both above 15:1. The ember Sun is a graphic, not text: about 3.6:1 on white and 5.0:1 on `#0d1117`, above the 3:1 non-text minimum.
+- **Screenshots.** `docs/screenshots/submission/<view>-<width>.png` at 1440×900 and 390×844, dark scheme, live app, viewport crops: hero (first screen), site (horizon panorama), why-moon (card), compare, landing-window (on Planner). All real data; no FAKE labels needed.
+- Open: the light-ground variant keeps ember, per DESIGN.md's one-orange rule. The older `#b0600a` light-ground amber in the Nov 11 brand-set row predates the Axiom migration and is not used.
+
 ## 2026-11-14 · Screen 6 lo-fi pick: Compare A vs B (Charls + Claude review)
 
 Method:
