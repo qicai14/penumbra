@@ -602,7 +602,7 @@ Two event checkpoints bind these: **footage by Sat 13:00** and **proofreading at
 - **Acceptance criteria**
   - [ ] Fields drafted: high-level summary, demo link, final project link, details (tools and languages), NASA data and partner data with citations, references. A background agent drafts them from IDEA.md and `scoreboard.json`; Qi Cai reviews.
   - [ ] Page editing opens Sun 09:00. Lock the page while editing, save the draft often, then Publish, then Submit for Judging.
-  - [ ] Every Drive link is "Anyone with the link: Viewer" and is opened once logged-out. The videos are also on YouTube (KICKOFF ship checklist).
+  - [ ] Every Drive link is "Anyone with the link: Viewer" and is opened once logged-out. The videos are also on YouTube (KICKOFF ship checklist, docs/archive/KICKOFF.md Phase 6).
 
 ---
 
@@ -788,7 +788,7 @@ If the public repo or the deploy is not working by 09:30, Charls starts T03 in h
 | Q3 | No shaded map and no 3D terrain by default | Accepted (gap 2). The panorama's time scrub shows the Sun sliding behind the skyline. | Accept, and decide on Nov 13 whether Charls's design leans on the 3D screen. If it does, the hours must come from T16 or D2. |
 | Q4 | Demo story steps 4 (rank nine regions) and 6 (open API) | Out; the script rests on steps 1–3 and 5 | Rewrite the 4:30 script on Nov 13. |
 | Q5 | Built data files (about 32 MB) are committed to the public repo | Yes | **Done Nov 12:** a 20 300 000-byte random `web/public/data/dummy-far.bin` was tracked by git, deployed (CI run 43243545081) and served 200 in full in 1.3 s. Pages sent it uncompressed (`application/octet-stream`, no `Content-Encoding` even for `br`), so plan on raw size; `DecompressionStream` stays the fallback. |
-| Q6 | Where the videos live | Drive (local rule) and YouTube (KICKOFF checklist) | Do both. |
+| Q6 | Where the videos live | Drive (local rule) and YouTube (KICKOFF checklist, docs/archive/KICKOFF.md Phase 6) | Do both. |
 | Q7 | D5 is the 30-second video, not the 7-slide deck | Yes | Confirm with the local lead that the video alone is accepted. |
 | Q8 | T00 is 0.5 h and now also holds the public-repo export and setup | 0.5 h, with the scripts from §5 prep written beforehand | Without those scripts T00 is about 1 h [est] and the Sat 12:00 deploy has no margin. |
 | Q9 | Ticket numbering after filing | T00 → issue #1 and so on | If GitHub numbers differ, put the T-number in each issue title. |
