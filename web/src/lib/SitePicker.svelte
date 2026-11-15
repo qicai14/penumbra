@@ -203,13 +203,14 @@
   const ondate = () => { if (tryDate(dateDraft, controls.spanDays)) controls.date = dateDraft; else dateDraft = controls.date; };
   const onspan = (s: number) => { if (tryDate(controls.date, s)) controls.spanDays = s; };
   // Hero scenarios: only the picker's own setters. IM-2 comes from the curated list; best region is the top of `bests`.
+  const stale = $derived(!!scenario && (Math.abs(scenario.site.lat_deg - controls.lat) > 1e-6 || Math.abs(scenario.site.lon_deg - controls.lon) > 1e-6 || Math.abs(scenario.track.t_unix_s[0] - (parseDate(controls.date) ?? 0)) >= 86400));
   const HERO_DATE = "2026-11-14"; // the IM-2 landing date the first scenario uses
   const heroIm2 = (date: string) => { onsite("im2"); setDate(date); };
   const heroSlip = () => heroIm2(isoDay(parseDate(HERO_DATE)! - 2 * 86400));
   function heroBest() { const t = bests[0]; if (t?.b) goBest(t.g.meta.region, t.lat, t.lon); }
 </script>
 
-<Hero {scenario} onim2={() => heroIm2(HERO_DATE)} onbest={heroBest} onslip={heroSlip} ready={regionMetas.length > 0} bestReady={!!bests[0]?.b} rankedDates={gridDateList} />
+<Hero {scenario} {stale} onim2={() => heroIm2(HERO_DATE)} onbest={heroBest} onslip={heroSlip} ready={regionMetas.length > 0} bestReady={!!bests[0]?.b} rankedDates={gridDateList} />
 
 <section class="panel" aria-labelledby="site-h">
   <h2 id="site-h">Site and date</h2>

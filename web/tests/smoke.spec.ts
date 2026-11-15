@@ -635,7 +635,7 @@ test("hero: line and three buttons are in the first viewport, 44 px, no horizont
     await page.setViewportSize({ width: w, height: h });
     await page.goto("/");
     await expect(page.getByTestId("hero")).toBeVisible();
-    await expect(page.getByTestId("hero-line")).not.toContainText(/btierb|AVGVISIB|\b[WEU]\d/i);
+    await expect(page.getByTestId("hero-line")).not.toContainText(/\btier\b|AVGVISIB|\b[WEU]\d/i);
     const line = (await page.getByTestId("hero-line").boundingBox())!;
     expect(line.y + line.height).toBeLessThanOrEqual(h);
     expect(line.x + line.width).toBeLessThanOrEqual(w);
@@ -672,6 +672,8 @@ test("hero: best region button moves to the top-ranked region and its best cell 
   await expect(page.getByLabel("Region")).toHaveValue(id);
   await expect.poll(async () => parseFloat(await page.getByTestId("lat").inputValue())).toBeCloseTo(lat, 3);
   await expect.poll(async () => parseFloat(await page.getByTestId("lon").inputValue())).toBeCloseTo(lon, 3);
+  await expect(page.getByTestId("hero-answer")).not.toHaveAttribute("aria-busy", "true", { timeout: 60000 });
+  await expect(page.getByTestId("hero-answer")).not.toContainText("in no");
   await heroHeadline(page);
 });
 
