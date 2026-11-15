@@ -19,7 +19,7 @@
     <p class="fig"><span class="cap">Operable</span><strong data-testid="headline-operable">{head.operable}</strong></p>
     <p class="fig">
       <span class="cap">First lethal shadow in</span>
-      <strong data-testid="headline-lethal">{#if !head.none}✕ {/if}{head.lethal}</strong>
+      <strong data-testid="headline-lethal">{head.lethal}</strong>
     </p>
     <p class="fig"><span class="cap">Sunlight</span><strong class="sub" data-testid="headline-sun-hours">{hours.sun}</strong></p>
     <p class="fig"><span class="cap">Earth contact</span><strong class="sub" data-testid="headline-earth-hours">{hours.earth}</strong></p>

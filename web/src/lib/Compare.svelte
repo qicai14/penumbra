@@ -135,7 +135,7 @@
       {:else if sc?.sc}
         {@const head = headline(sc.sc.survival, spanDays(sc.sc.count, sc.sc.step_s))}
         <p class="fig"><span class="cap">Operable</span><strong data-testid="{s}-operable">{head.operable}</strong></p>
-        <p class="fig"><span class="cap">First lethal shadow in</span><strong data-testid="{s}-lethal">{#if !head.none}✕ {/if}{head.lethal}</strong></p>
+        <p class="fig"><span class="cap">First lethal shadow in</span><strong data-testid="{s}-lethal">{head.lethal}</strong></p>
         <Countdown scenario={sc.sc} idx={0} prefix="{s}-" title="At landing" sticky={false} />
       {:else}
         <p class="note">Loading…</p>
