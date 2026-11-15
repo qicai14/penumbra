@@ -4,7 +4,7 @@
 
   // Dataset names: docs/SUBMISSION.md rubric item 4. Roles tie to the V1-V5 judges in scoreboard.json.
   // Each row links its original sources (URLs from docs/research/lunar-landing or the ledger's W rows).
-  // The ids are SCIENCE-SPEC §6 evidence-ledger rows, which hold the exact quote taken from each source.
+  // `cite` ids are SCIENCE-SPEC §6 evidence-ledger rows (the exact quote from each source); kept here for traceability, not shown on the page.
   const pgda90 = { label: "PGDA product 90", url: "https://pgda.gsfc.nasa.gov/products/90" };
   const datasets = [
     { name: "LOLA DEMs (20 m and 240 m)", role: "Terrain input to the horizon and shadow model", cite: "E133, E89, E135, E34b",
@@ -63,7 +63,6 @@
             <ul class="sources">
               {#each d.sources as s (s.url)}<li><a href={s.url} target="_blank" rel="noopener noreferrer">{s.label}<span class="sr-only"> (opens in a new tab)</span></a></li>{/each}
             </ul>
-            <span class="ids" data-testid="ids">SCIENCE-SPEC §6: {d.cite}</span>
           </td></tr>
         {/each}
       </tbody>
@@ -93,7 +92,6 @@
   /* Touch: stacked source links sit 3 px apart, so their 24 px circles overlap (WCAG 2.5.8); give each a 44 px row like the buttons. */
   @media (pointer: coarse) { .sources a { display: inline-flex; align-items: center; min-height: 44px; } }
   li > .ids { display: inline; color: var(--color-ash); font-size: var(--text-caption); }
-  td .ids { display: block; margin-top: var(--spacing-8); color: var(--color-ash); font-size: var(--text-caption); }
   .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   a { color: var(--color-paper); text-underline-offset: 2px; }
   a:visited { color: var(--color-paper); }
