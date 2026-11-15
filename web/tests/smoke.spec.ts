@@ -382,6 +382,33 @@ test("four views, a keyboard-reachable GitHub link, and a verdict strip built fr
   await expect(page.getByRole("table", { name: /One row per check/ })).toBeVisible();
 });
 
+test("what changes what: four labelled signed bars, and the 300 m bars say so when the grid cannot answer (T83 #83)", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("what-changes")).toBeVisible();
+  for (const [id, label] of [["date-minus", "Landing 2 days earlier"], ["date-plus", "Landing 2 days later"], ["pin-best", "Pin moved 300 m: best cell"], ["pin-worst", "Pin moved 300 m: worst cell"]]) {
+    await expect(page.getByTestId(`wc-${id}`)).toContainText(label);
+    await expect(page.getByTestId(`wc-${id}-value`)).toHaveText(/^[+−]?\d+\.\d d$/);
+  }
+  expect(Number((await page.getByTestId("wc-pin-best-value").textContent())!.replace("−", "-").replace(" d", ""))).toBeGreaterThanOrEqual(0);
+  // A landing date the grid has no layer for: the date bars still run, the 300 m bars say why they are missing.
+  await page.getByTestId("date").fill("2026-11-20");
+  await page.getByTestId("date").blur();
+  await expect(page.getByTestId("wc-pin-best-note")).toContainText("no layer for 2026-11-20");
+  await expect(page.getByTestId("wc-date-plus-value")).toBeVisible();
+});
+
+test("what changes what: a region with no grid says so instead of guessing", async ({ page }) => {
+  await page.route("**/data/manifest.json", async (route) => {
+    const m = await (await route.fetch()).json();
+    delete m.grids;
+    await route.fulfill({ json: m });
+  });
+  await page.goto("/");
+  await expect(page.getByTestId("wc-pin-best-note")).toContainText("no grid data for this region");
+  await expect(page.getByTestId("wc-pin-worst-note")).toContainText("no grid data for this region");
+  await expect(page.getByTestId("wc-date-minus-value")).toBeVisible();
+});
+
 // T80 (#80): About content. Limitations carry their issue or scoreboard ids; empty video URLs render nothing.
 test("About lists team, user story, limitations with ids, and no video slot while URLs are empty", async ({ page, request }) => {
   await page.goto("/");
