@@ -42,6 +42,14 @@ For a site, a landing date and a mast height, Penumbra answers:
 
 The app also gives the slope at the pin from the 20 m DEM (#112), the operable days for the next 30 landing dates (#108), side-by-side comparison of two site and date pairs, and a replay of the IM-2 site.
 
+<p align="center">
+  <img alt="Site view, Play pressed at 5 days per second: the Sun's track crosses the terrain horizon panorama while the time marker advances" src="docs/screenshots/submission/play.gif" width="800">
+</p>
+
+| Landing window (Planner) | Compare A vs B |
+|---|---|
+| <img alt="Landing window: operable days for each of the next 30 landing dates" src="docs/screenshots/submission/landing-window-1440.png" width="420"> | <img alt="Compare view: two site and date pairs with the same lander preset" src="docs/screenshots/submission/compare-1440.png" width="420"> |
+
 ## Penumbra beside the tools planners already use
 
 Cells read yes, partial, no (server-based), or "not found in docs" where the tool's public docs were searched and nothing turned up. Lookups on 2026-11-15.
