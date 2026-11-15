@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import init, { api_version, survival } from "./wasm/penumbra_wasm.js";
-import { checkApiVersion, computeScenario, parseScenario, TIMELINE_COLUMNS, TRACK_COLUMNS, validate } from "./engine";
+import { checkApiVersion, computeScenario, parseScenario, resetEngineForTests, TIMELINE_COLUMNS, TRACK_COLUMNS, validate } from "./engine";
 
 const raw = JSON.parse(readFileSync(new URL("../../public/fixture/scenario.json", import.meta.url), "utf8"));
 await init({ module_or_path: readFileSync(new URL("./wasm/penumbra_wasm_bg.wasm", import.meta.url)) });
@@ -38,15 +38,18 @@ test("parseScenario rejects null cells and short columns", () => {
   expect(() => parseScenario(short, api_version())).toThrow("count");
 });
 
-// T16: loader error paths. Run before any test that loads the Engine successfully (it is cached for the module's life).
+// T16: loader error paths. The loaded Engine is cached for the process, and another test file (grid.equality) may have
+// loaded it first in CI's file order, so each load-failure test drops the cache before it starts.
 const eph = (reply: () => Response) => (async (u: string) => (/eph-/.test(String(u)) ? reply() : servePublic(u))) as unknown as typeof fetch;
 const inp16 = { lat_deg: -84.79, lon_deg: 29.2, mast_m: 2, start_unix_s: 1794614400, span_days: 30 };
 test("a 404 on an ephemeris segment is NO_DATA (T16)", async () => {
+  resetEngineForTests();
   const realFetch = globalThis.fetch;
   globalThis.fetch = eph(() => new Response("", { status: 404 }));
   try { await expect(computeScenario(inp16)).rejects.toThrow("NO_DATA"); } finally { globalThis.fetch = realFetch; }
 });
 test("a segment whose size is not a whole number of f64s, or has the wrong row count, is BAD_INPUT (T16)", async () => {
+  resetEngineForTests();
   const realFetch = globalThis.fetch;
   try {
     globalThis.fetch = eph(() => new Response(new Uint8Array(13)));
@@ -56,8 +59,8 @@ test("a segment whose size is not a whole number of f64s, or has the wrong row c
   } finally { globalThis.fetch = realFetch; }
 });
 
-// Must run before any test that loads the Engine successfully: the loaded Engine is cached for the module's life.
 test("a failed ephemeris load is retried on the next recompute, not cached (T03 #4)", async () => {
+  resetEngineForTests();
   const realFetch = globalThis.fetch;
   let failed = false;
   globalThis.fetch = (async (u: string) => {

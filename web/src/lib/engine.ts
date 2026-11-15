@@ -156,6 +156,8 @@ async function fetchSegment(seg: EphSegment): Promise<Float64Array> {
 
 type WasmEngine = InstanceType<typeof import("./wasm/penumbra_wasm.js").Engine>;
 let engineLoad: Promise<WasmEngine> | undefined;
+/** Tests only: drop the cached Engine. Bun runs every test file in one process, so another file may have loaded it first. */
+export function resetEngineForTests(): void { engineLoad = undefined; }
 /** The WASM Engine with the shipped ephemeris table loaded; built once and cached (a failed load is retried). */
 export function loadEngine(): Promise<WasmEngine> {
   return (engineLoad ??= (async () => {
