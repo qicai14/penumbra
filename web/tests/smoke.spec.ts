@@ -563,3 +563,32 @@ test("off-grid date: one message and three chips, a chip restores the ranking; m
     await expect.poll(async () => Math.abs((await days()) - (before + gain))).toBeLessThan(0.15);
   }
 });
+
+test("landing window: bar equals headline, clicking a bar sets the date and the headline (#108)", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("navigation", { name: "View" }).getByRole("button", { name: "Planner", exact: true }).click(); // chart, headline and "Computed for" live on Planner
+  const table = page.getByTestId("lw-date");
+  await expect(table).toHaveCount(30, { timeout: 15000 });
+  const headline = async () => (await page.getByTestId("headline-operable").textContent())!;
+  // AC1, 2026-11-14 at the IM-2 site: the bar's figure is the headline's.
+  await expect(page.getByTestId("computed-for")).toContainText("landing 2026-11-14");
+  expect(await table.first().getAttribute("data-operable")).toBe(await headline());
+  const ms = await page.evaluate(() => (window as any).__landingWindowMs as number);
+  console.info(`landing window: 30 dates in ${ms} ms`);
+  expect(ms).toBeLessThan(5000);
+  await expect(page.getByTestId("lw-best")).toContainText("Best landing date");
+  // The canvas is hidden from screen readers; the table is the keyboard route.
+  await expect(page.getByTestId("lw-chart").locator("canvas").first()).toHaveAttribute("aria-hidden", "true");
+  // Click the 6th bar on the chart itself.
+  const over = page.getByTestId("lw-chart").locator(".u-over");
+  await over.scrollIntoViewIfNeeded();
+  const box = (await over.boundingBox())!;
+  await page.mouse.move(box.x + (box.width * (5 + 0.6)) / 30, box.y + box.height - 3);
+  await page.mouse.down(); await page.mouse.up();
+  const want = table.nth(5);
+  await expect(page.getByTestId("computed-for")).toContainText(`landing ${await want.getAttribute("data-date")}`);
+  await expect.poll(headline).toBe(await want.getAttribute("data-operable"));
+  const wantDate = (await want.getAttribute("data-date"))!; // read before leaving Planner, where the table lives
+  await page.getByRole("navigation", { name: "View" }).getByRole("button", { name: "Site", exact: true }).click(); // the date box lives on Site
+  await expect(page.getByTestId("date")).toHaveValue(wantDate);
+});

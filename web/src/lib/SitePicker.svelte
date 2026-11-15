@@ -21,6 +21,8 @@
   let lonDraft = $state(String(controls.lon));
   // svelte-ignore state_referenced_locally
   let dateDraft = $state(controls.date);
+  // The landing window (#108) sets controls.date from outside; keep the input in step.
+  $effect(() => { dateDraft = controls.date; });
   let refusal = $state<string | null>(null);
   let rejected = $state<[number, number] | null>(null); // last refused point, map metres
   let regionMetas = $state.raw<{ id: string; near: NearTile["meta"] }[]>([]); // every region's near tile, for the curated-site coverage check
