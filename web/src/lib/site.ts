@@ -42,7 +42,7 @@ export function parseDate(s: string): number | null {
   return Number.isNaN(ms) || new Date(ms).toISOString().slice(0, 10) !== s ? null : ms / 1000;
 }
 
-const isoDay = (s: number) => new Date(s * 1000).toISOString().slice(0, 10);
+export const isoDay = (s: number) => new Date(s * 1000).toISOString().slice(0, 10);
 /** One segment covers [t0, t0 + (rows - 1) * step]. Segments are never summed: a gap between two is not covered. */
 const segEnd = (g: EphSegment) => g.t0_unix_s + (g.rows - 1) * g.step_s;
 
