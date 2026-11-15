@@ -29,7 +29,7 @@
 #let arr = align(center + horizon, text(size: 16pt, fill: luma(90))[→])
 
 #align(center)[
-  #text(size: 22pt, weight: "bold")[Penumbra] \
+  #text(size: 22pt, weight: "bold")[PENUMBRA] \
   #text(size: 12pt)[Sunlight, Earth contact and the first lethal shadow at lunar south-pole landing sites] \
   #v(4pt)
   Team Fractured Toes: Lim Qi Cai, Charls Pua Vui Hau · NASA Space Apps Challenge 2026, Kuala Lumpur \
@@ -317,6 +317,8 @@ Each limitation in @tab-future has a concrete next step.
 ) <tab-future>
 
 The model also leaves out some physics on purpose. It has no limb darkening and no charge or discharge efficiency, terrain smaller than a 20 m pixel is not in the DEM, and lander values are assumed unless marked cited. Mast height changes illumination at the pole @glaser2018, so the app shows the observer height in every view.
+
+The app's About page lists the same limits; V2b, V3, V4 and the bright-rim gap (\#75) are in Results. Horizon accuracy is checked against our own float 20 m DEM, not an independent source: the shipped three-tier horizon is within 0.0382° of it at five test points (rule: 0.05°, obstacles 60 m or more away), and closer than 60 m the largest difference is 0.1177° (\#48). Overlapping tiles (Mons Mouton Plateau and Mons Mouton, Nobile Rim 1 and Nobile Rim 2) may give slightly different numbers for the same point, because each tile has its own height scale and edges; the app uses the selected region's tile (\#26). The Earth contact margin (2°) and the DEM height error $sigma_z$ (0.5 m) are assumed, not cited. The IM-2 pit view keeps the regional far horizon, and the pit depth comes from the ESA degraded-crater model, not a measurement (V4).
 
 = Commercialization
 
