@@ -24,9 +24,9 @@ NASA Space Apps Challenge 2026 · The Next Frontier · Lunar Landing Site Naviga
 
 ## Who it is for
 
-You plan a landing for a CLPS lander or an Artemis crew. You have a few candidate sites near the south pole and a few possible dates. At that latitude the Sun skims the horizon, so a distant ridge decides whether your solar panels charge and a crater rim can cut your line to Earth. For each site and date you need to know how long the lander will have power, how long it can talk home, and when the first shadow it cannot survive arrives.
+You plan a landing for a CLPS lander or an Artemis crew. You have a few candidate sites near the south pole and a few possible dates. At that latitude the Sun skims the horizon, so a distant ridge decides whether your solar panels charge and a crater rim can cut your line to Earth. As the challenge puts it, "Small changes in landing location or date can dramatically affect both power generation potential and communication windows" ([challenge](https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/)). For each site and date you need to know how long the lander will have power, how long it can talk home, and when the first shadow it cannot survive arrives.
 
-Two recent landers show what happens when that goes wrong. Intuitive Machines' Odysseus (IM-1) landed on 2024-02-22 at 80.1276° S, 1.4367° E (E72a, E72b) on a 12° slope, came to rest about 30° off the surface, and ended "as the sun moved out of view of the one illuminated solar panel" ([SCIENCE-SPEC](docs/SCIENCE-SPEC.md) E75a–c). Athena (IM-2) reached Mons Mouton on 2025-03-06 and "ended up on its side within a 20-meter diameter crater" ([LROC](https://lroc.im-ldi.com/images/1408)); a low Sun angle and the panels' orientation stopped charging (E73, E74). NASA's Artemis III candidate list now holds nine south-pole regions ([NTRS 20250011660](https://ntrs.nasa.gov/citations/20250011660)), and Penumbra ships all nine plus the Shackleton ridge.
+Two recent landers show what happens when that goes wrong. Intuitive Machines' Odysseus (IM-1) landed on 2024-02-22 at 80.13° S, 1.44° E near crater Malapert A, on a 12° slope ([NASA LRO](https://www.nasa.gov/missions/lro/nasas-lro-images-intuitive-machines-odysseus-lander/)). It came to rest about 30° off the surface, ran about 144 hours, per Intuitive Machines, and ended "as the sun moved out of view of the one illuminated solar panel" ([SpaceNews](https://spacenews.com/intuitive-machines-and-nasa-call-im-1-lunar-lander-a-success-as-mission-winds-down/)). Athena (IM-2) landed near its Mons Mouton target on 2025-03-06 ([NASA](https://www.nasa.gov/news-release/nasa-receives-some-data-before-intuitive-machines-ends-lunar-mission/)) and "ended up on its side within a 20-meter diameter crater" ([LROC](https://lroc.im-ldi.com/images/1408)), and NASA got "some data" before its batteries were depleted ([NASA](https://www.nasa.gov/news-release/nasa-receives-some-data-before-intuitive-machines-ends-lunar-mission/)). NASA's Artemis III candidate list now holds nine south-pole regions ([NTRS 20250011660](https://ntrs.nasa.gov/citations/20250011660)), and Penumbra ships all nine plus the Shackleton ridge.
 
 <p align="center">
   <img alt="Penumbra's first screen in the live app: the hero question, three scenario buttons, the operable-days and first-lethal-shadow headline, and the site and date panel with the Sun map" src="docs/screenshots/submission/hero-1440.png" width="900">
@@ -68,19 +68,19 @@ Cells read yes, partial, no (server-based), or "not found in docs" where the too
 | First lethal shadow | yes (#10) | not found in docs | not found in docs | not found in docs |
 | 30-date landing window | yes, operable days for the next 30 landing dates (#108) | not found in docs | partial: start, end and delta-hours inputs, no sweep summary [Q1][Q3] | partial: raw start/stop/step tables only [H2] |
 | Slope at a point | yes, from the 20 m DEM (#112) | partial: Slope tool, registered account needed [T1][T3] | partial: elevation at a point and along a path; slope not found in docs [Q2] | not offered (ephemeris service) |
-| Validated against Horizons and LOLA | yes: V1 and V2 below | not found in docs [T2] | not found in docs | it is the reference: Horizons serves DE441 [H1] |
+| Validated against Horizons and LOLA | V1 (Horizons) and V2 (LOLA map) pass; V2b miss; V3 not run | not found in docs [T2] | not found in docs | it is the reference: Horizons serves DE441 [H1] |
 | Runs with no backend | yes: static files only | no (server-based) [T2] | no (server-based) [Q1] | no (server-based) [H1] |
-| Cost | $0, no account (see [Load, hosting and runtime calls](#load-hosting-and-runtime-calls)) | free to browse; lighting and slope need a registered account [T1] | price not found in docs; "Contact ACT" for Terrain Shadows [Q1] | free; "No account or password is required." [H1] |
+| Cost | $0, no account (see [Load, hosting and runtime calls](#load-hosting-and-runtime-calls)) | free to browse; lighting and slope need a registered account [T1] | price and account requirements not found in docs [Q1] | free; "No account or password is required." [H1] |
 
 Where the other tools are better:
 
-- **Moon Trek** covers the whole Moon in one portal, with lighting, slope, Sun-angle and line-of-sight tools [T1][T3]. Penumbra covers ten south-pole regions.
-- **QuickMap** carries the full LROC data catalogue, a Sun+Earth terrain-shadow tool over any time range, and CSV export [Q2]. Penumbra ships only the layers its model needs.
+- **Moon Trek** has wide coverage in one portal, with lighting, slope, Sun-angle and line-of-sight tools [T1][T3]. Penumbra covers ten south-pole regions.
+- **QuickMap** has wide LROC data coverage, a Sun+Earth terrain-shadow tool over any time range, and CSV export [Q2]. Penumbra ships only the layers its model needs.
 - **Horizons** is the ephemeris authority (DE441). It's free and scriptable through an API [H1][H2]. Penumbra's V1 test uses Horizons as its judge.
 
 <sub>
 [T1] https://trek.nasa.gov/moon/ ·
-[T2] Moon Trek paper, https://moontrek.jpl.nasa.gov ·
+[T2] Day & Law, "Moon Trek: An Interactive Web Portal for Current and Future Lunar Missions", EPSC Abstracts 11, EPSC2017-100 (2017), https://meetingorganizer.copernicus.org/EPSC2017/EPSC2017-100.pdf ·
 [T3] https://meetingorganizer.copernicus.org/EGU23/EGU23-969.html ·
 [Q1] https://qts.quickmap.io/fcgi-bin/fprovweb.exe?_xtype=text%2Fhtml&cmd_script=qts_js.msh ·
 [Q2] https://docs.quickmap.io/toolbar/2-query (QuickMap lives at https://quickmap.lroc.im-ldi.com) ·
@@ -171,8 +171,8 @@ Every number in this README comes from [`docs/submission/facts.md`](docs/submiss
 | One Rust model, native and WASM | a Python or TS model plus a browser port | The scoreboard numbers and the planner's numbers come from the same code, so they cannot drift | [ADR 0001](docs/adr/0001-one-rust-model-native-and-wasm.md); [`docs/STACK.md`](docs/STACK.md) |
 | ANISE (native only) + NAIF kernels | CSPICE, SpiceyPy | Pure-Rust SPICE reader with MOON_ME/MOON_PA frames; the kernels are 133 MB, so vectors ship as an hourly table of about 2.1 MB | [`docs/STACK.md`](docs/STACK.md); [ADR 0002](docs/adr/0002-ephemeris-table-on-a-utc-grid.md) |
 | Svelte 5 + Vite | React / Next.js | Compiled, small bundle; one heavy canvas plus panels needs no React and no SSR | [`docs/STACK.md`](docs/STACK.md) |
-| Plain Three.js, colours from the model | Threlte, GPU shadow maps | Shadow maps are unreliable at 1° Sun elevation; the picture must equal the validated numbers | [`docs/STACK.md`](docs/STACK.md); [ADR 0006](docs/adr/0006-illumination-from-the-model-not-shadow-maps.md) |
-| uPlot | Chart.js, Plotly, ECharts | 260 k points per series stays smooth at about 50 KB | [`docs/STACK.md`](docs/STACK.md) |
+| Plain Three.js, colours from the model | Threlte, GPU shadow maps | Our design reasoning (ADR 0006): GPU shadow maps are unreliable at 1° Sun elevation, and the picture must equal the validated numbers | [`docs/STACK.md`](docs/STACK.md); [ADR 0006](docs/adr/0006-illumination-from-the-model-not-shadow-maps.md) |
+| uPlot | Chart.js, Plotly, ECharts | Small and fast for long time series | [`docs/STACK.md`](docs/STACK.md) |
 | Bun + TypeScript | Python, npm | One non-Rust language; Bun runs TS directly | [`docs/STACK.md`](docs/STACK.md); [`AGENTS.md`](AGENTS.md) |
 | Typst for the D1 paper | Word, Canva | Real equations, numbers pulled from repo files, plain text that diffs in PRs | [`docs/SUBMISSION.md`](docs/SUBMISSION.md) "Typst for D1" |
 | Cloudflare Pages | Vercel, Netlify | Free, global, static; nothing to go down after judging | [`docs/STACK.md`](docs/STACK.md) Hosting and Backend rows |
@@ -181,10 +181,10 @@ Every number in this README comes from [`docs/submission/facts.md`](docs/submiss
 
 Condensed from [`docs/submission/commercialization.md`](docs/submission/commercialization.md); every figure is a C-id in [`docs/EVIDENCE.md`](docs/EVIDENCE.md).
 
-- **What failure costs.** CLPS task orders (as of Feb 2024): IM-1 $122.0 M, IM-2 $50.0 M, Astrobotic Griffin $322.8 M; the VIPER rover was $505.4 M (C1). CLPS is capped at $2.6 B through November 2028 (C3).
+- **What failure costs.** CLPS task orders (as of Feb 2024): IM-1 $122.0 M, IM-2 $50.0 M, Astrobotic Griffin $322.8 M; separately, the VIPER rover project cost $505.4 M (C1, NASA OIG IG-24-013). CLPS is capped at $2.6 B through November 2028 (C3).
 - **Buyers.** CLPS lander vendors choosing sites and dates; NASA and partner landing-site teams for the crewed south-pole landing; rover and ISRU teams sizing power and comms at a stop; universities teaching mission design.
 - **Model.** Open core. The app and the Rust model stay free and Apache-2.0, so anyone can rerun V1 and V2. Paid work covers custom sites and dates, finer DEMs and a signed sign-off report.
-- **Why now.** Artemis IV in 2028 (C4), Blue Moon MK1 in 2027 (C5), four more listed south-pole deliveries (C6), China's Chang'e-7 planned for the second half of 2026 (C7).
+- **Why now.** Artemis IV in 2028 (C4), Blue Moon MK1 in 2027 (C5), NASA lists further CLPS deliveries to the south pole (C6), and China's Chang'e-7, once scheduled for the second half of 2026 (C7), missed its August 2026 window and is now expected in 2027 (C8).
 
 ## Limitations and future work
 
