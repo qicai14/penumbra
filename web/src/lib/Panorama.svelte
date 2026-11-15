@@ -54,7 +54,8 @@
     g.font = `${k.caption} ${k.font}`;
 
     // Gridlines and axis labels.
-    const azStep = span === 360 ? 30 : span === 90 ? 10 : 5;
+    const narrow = width < 500; // cardinals only, so labels never collide
+    const azStep = span === 360 ? (narrow ? 90 : 30) : span === 90 ? (narrow ? 30 : 10) : narrow ? 15 : 5;
     const elStep = elZoom ? 5 : 10;
     g.lineWidth = 1;
     g.strokeStyle = k.iron;
@@ -140,7 +141,9 @@
       g.fillStyle = fill; g.fill();
       g.restore();
       g.fillStyle = labelColor; g.textAlign = "left"; g.textBaseline = "bottom";
-      g.fillText(label, x + rx + 6, y - ry - 2);
+      const tw = g.measureText(label).width, over = x + rx + 6 + tw > v.x0 + v.w;
+      g.textAlign = over ? "right" : "left";
+      g.fillText(label, Math.max(v.x0 + (over ? tw : 0), over ? x - rx - 6 : x + rx + 6), Math.max(y - ry - 2, v.y0 + 12));
     };
     disc(tr.earth_az_deg[idx], tr.earth_el_deg[idx], tr.earth_radius_deg[idx], k.earth, k.earthLine, "Earth", k.earthLine);
     disc(tr.sun_az_deg[idx], tr.sun_el_deg[idx], tr.sun_radius_deg[idx], k.sun, k.sun, "Sun", k.paper);

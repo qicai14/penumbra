@@ -8,7 +8,11 @@
 
   const t = $derived(rows && tally(rows));
   const mark = { pass: "✓ pass", miss: "✗ miss", "not run": "not run" } as const;
-  const num = (v: number | null) => (v === null ? "—" : String(v));
+  // Display only. V2b: all 7 Barker RoIs pass; the miss is Mazarico SP-01.
+  const note: Record<string, string> = { V2b: "7 of 7 Barker RoIs pass. The miss is Mazarico SP-01: our shortest night is 2.96 d vs his 2.75 d." };
+  // A pass with no threshold is a reconstruction, not a validation (V4).
+  const recon = (r: Row) => r.pass === true && r.threshold === null;
+  const num =(v: number | null) => (v === null ? "—" : String(v));
 </script>
 
 <section aria-labelledby="scoreboard-h">
@@ -38,11 +42,11 @@
             <tr data-testid="score-row" data-status={s}>
               <th scope="row">{r.id}</th>
               <td>{r.judge}</td>
-              <td>{r.metric}</td>
+              <td>{r.metric}{#if note[r.id]}<span class="note">{note[r.id]}</span>{/if}</td>
               <td class="n">{num(r.threshold)}</td>
               <td class="n">{num(r.value)}</td>
               <td class="n">{num(r.sample_size)}</td>
-              <td class="verdict-cell" class:off={s === "not run"}>{mark[s]}</td>
+              <td class="verdict-cell" class:off={s === "not run" || recon(r)}>{recon(r) ? "reconstruction" : mark[s]}</td>
             </tr>
           {/each}
         </tbody>
@@ -62,5 +66,6 @@
   th, td { border: 1px solid var(--color-iron); padding: var(--spacing-8); text-align: left; vertical-align: top; }
   thead th { color: var(--color-fog); font-weight: var(--font-weight-regular); background: var(--surface-carbon); }
   .n { text-align: right; font-variant-numeric: tabular-nums; }
+  .note { display: block; margin-top: var(--spacing-8); color: var(--color-fog); font-size: var(--text-caption); }
   .off { color: var(--color-fog); }
 </style>

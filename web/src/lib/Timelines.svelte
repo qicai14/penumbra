@@ -71,7 +71,8 @@
           ctx.font = font.replace(/(\d+)px/, (_, n) => `${Number(n) * px}px`);
           ctx.textBaseline = "top";
           const edge = [-Infinity, -Infinity]; // per row (sunrise, sunset): right edge of the last label drawn, so labels never overprint
-          list.forEach((b) => {
+          const spans = list.map((b) => { const [a, z] = bandInterval(b); return [Math.min(u.valToPos(a, "x", true), u.valToPos(b.t_unix_s, "x", true) - 3 * px), u.valToPos(z, "x", true)]; });
+          list.forEach((b, bi) => {
             const [a, z] = bandInterval(b);
             const x0 = u.valToPos(a, "x", true), x1 = u.valToPos(z, "x", true), xc = u.valToPos(b.t_unix_s, "x", true);
             if (x1 < bbox.left || x0 > bbox.left + bbox.width) return;
@@ -81,8 +82,11 @@
             ctx.beginPath(); ctx.moveTo(xc, bbox.top); ctx.lineTo(xc, bbox.top + bbox.height); ctx.stroke();
             const text = bandLabel(b), w = ctx.measureText(text).width;
             const row = b.kind === "sunrise" ? 0 : 1;
-            const right = xc + 4 * px + w <= bbox.left + bbox.width;
-            const left = right ? xc + 4 * px : xc - 4 * px - w;
+            const clear = (l: number) => spans.every(([s0, s1], j) => j === bi || l + w < s0 - 3 * px || l - 3 * px > s1);
+            const rl = xc + 4 * px, ll = xc - 4 * px - w;
+            const right = rl + w <= bbox.left + bbox.width && (clear(rl) || !(ll >= bbox.left && clear(ll)));
+            const left = right ? rl : ll;
+            if (!clear(left)) return; // a label that would cross another band stays off; the band list below has the time
             if (left < Math.max(edge[row], bbox.left)) return;
             const y = bbox.top + bbox.height * (0.45 + row * 0.25);
             ctx.fillStyle = chip; ctx.fillRect(left - 3 * px, y - 2 * px, w + 6 * px, 16 * px);
@@ -97,7 +101,7 @@
   }
 
   /** Marks the first lethal shadow: a vertical line on every chart, and on the charge chart a ✕ with its label. */
-  function lethalPlugin(tS: number | null, colour: string, font: string, text: boolean): uPlot.Plugin {
+  function lethalPlugin(tS: number | null, colour: string, font: string, text: boolean, chip: string): uPlot.Plugin {
     return {
       hooks: {
         draw: (u) => {
@@ -111,11 +115,13 @@
           if (text) {
             ctx.font = font.replace(/(\d+)px/, (_, n) => `${Number(n) * uPlot.pxRatio}px`);
             ctx.textBaseline = "top";
-            const label = "✕ first lethal shadow";
+            const label = bbox.width / uPlot.pxRatio < 400 ? "✕ lethal" : "✕ first lethal shadow";
             const w = ctx.measureText(label).width;
             const left = x + 6 * uPlot.pxRatio + w < bbox.left + bbox.width;
             ctx.textAlign = left ? "left" : "right";
-            ctx.fillText(label, x + (left ? 6 : -6) * uPlot.pxRatio, bbox.top + 4 * uPlot.pxRatio);
+            const lx = x + (left ? 6 : -6) * uPlot.pxRatio, p = uPlot.pxRatio;
+            ctx.save(); ctx.fillStyle = chip; ctx.fillRect(left ? lx - 3 * p : lx - w - 3 * p, bbox.top + bbox.height * 0.4 - 3 * p, w + 6 * p, 16 * p); ctx.restore();
+            ctx.fillText(label, lx, bbox.top + bbox.height * 0.4);
           }
           ctx.restore();
         },
@@ -158,17 +164,17 @@
     full = [t[0], t[t.length - 1] + scenario.step_s];
     const lethalS = lethalUnixS(scenario.start_unix_s, scenario.survival.lethal_h);
     const runs = clipRunsAt(operableRuns(tl.t_unix_s, operableMask(tl), scenario.step_s), lethalS);
-    const band = (text = false) => [bandPlugin(runs, k.fog + "26"), lethalPlugin(lethalS, k.paper, k.font, text), wheelPlugin()];
+    const band = (text = false) => [bandPlugin(runs, k.fog + "26"), lethalPlugin(lethalS, k.paper, k.font, text, getComputedStyle(host).getPropertyValue("--surface-carbon").trim() || k.iron), wheelPlugin()];
     const x = (show: boolean): uPlot.Axis => ({ show, stroke: k.ash, grid: { stroke: k.iron, width: 1 }, ticks: { stroke: k.iron }, font: k.font });
-    const y = (extra: Partial<uPlot.Axis> = {}): uPlot.Axis => ({ size: 56, stroke: k.ash, grid: { stroke: k.iron, width: 1 }, ticks: { stroke: k.iron }, font: k.font, ...extra });
+    const y = (extra: Partial<uPlot.Axis> = {}): uPlot.Axis => ({ size: 56, labelSize: 18, labelFont: k.font, stroke: k.ash, grid: { stroke: k.iron, width: 1 }, ticks: { stroke: k.iron }, font: k.font, ...extra });
     const base = (height: number, show: boolean) => ({
       width, height,
       tzDate: (ts: number) => uPlot.tzDate(new Date(ts * 1000), "Etc/UTC"),
       scales: { x: { time: true } },
       cursor: { sync: { key: SYNC, scales: ["x", null] as [string, null] }, y: false, points: { show: false }, drag: { x: true, y: false, setScale: true } },
       legend: { show: false },
-      padding: [8, 12, 0, 0] as [number, number, number, number],
-      axes: [x(show), y()],
+      padding: [8, 28, 0, 0] as [number, number, number, number],
+      axes: [x(show), y({ label: "Illumination (0–1)" })],
     });
     const hooks = (): uPlot.Hooks.Arrays => ({
       setCursor: [onCursor],
@@ -185,7 +191,7 @@
     }, d.illum, host.children[0] as HTMLElement);
     const margin = new uPlot({
       ...base(130, false), hooks: hooks(), plugins: band(),
-      axes: [x(false), y({ values: (_u, v) => v.map((n) => `${n}°`) })],
+      axes: [x(false), y({ label: "Elevation (°)", size: 64, values: (_u, v) => v.map((n) => `${n}°`) })],
       series: [
         {},
         { label: "Earth margin (deg above mask)", stroke: k.earthLine, width: 2, value: (_u, v) => (v == null ? "--" : `${v.toFixed(2)}°`) },
@@ -195,7 +201,7 @@
     const contact = new uPlot({
       ...base(100, false), hooks: hooks(), plugins: band(),
       scales: { x: { time: true }, y: { range: [-0.15, 1.15] } },
-      axes: [x(false), y({ splits: () => [0, 1], values: () => ["no", "yes"] })],
+      axes: [x(false), y({ label: "Contact", splits: () => [0, 1], values: () => ["no", "yes"] })],
       series: [
         {},
         { label: "Earth contact", stroke: k.earthLine, width: 2, paths: uPlot.paths.stepped!({ align: 1 }), value: (_u, v) => (v == null ? "--" : v >= 0.5 ? "yes" : "no") },
@@ -205,7 +211,7 @@
     const soc = new uPlot({
       ...base(130, true), hooks: hooks(), plugins: band(true),
       scales: { x: { time: true }, y: { range: [0, cap * 1.05] } },
-      axes: [x(true), y({ size: 56, values: (_u, v) => v.map((n) => `${n}`) })],
+      axes: [x(true), y({ label: "Charge (Wh)", size: 64, values: (_u, v) => v.map((n) => `${n}`) })],
       series: [
         {},
         { label: "Battery charge (Wh)", stroke: k.paper, width: 2, value: (_u, v) => (v == null ? "--" : `${v.toFixed(0)} Wh`) },
@@ -287,12 +293,14 @@
     {fmtUtc(tl.t_unix_s[idx])} · illumination {tl.illumination[idx].toFixed(2)} · visibility {tl.visibility[idx].toFixed(0)} · Earth margin {tl.earth_margin_deg[idx].toFixed(2)}° (threshold {label}) · contact {tl.contact[idx] >= 0.5 ? "yes" : "no"}
   </p>
   <!-- The uPlot legend is off, so this line names each series by its stroke, chart by chart (top to bottom). -->
-  <p class="key" data-testid="series-key"><i class="ln sun"></i>Illumination <i class="ln paper dash"></i>Visibility · <i class="ln earth"></i>Earth margin <i class="ln paper dash"></i>threshold · <i class="ln earth"></i>Earth contact · <i class="ln paper"></i>Battery <i class="ln fog dash"></i>Lethal charge</p>
-  <p class="key"><span class="swatch"></span>Shaded: the lander can work · <span class="swatch hatch"></span>Hatched: ± uncertainty</p>
+  <p class="key" data-testid="series-key"><span class="it"><i class="ln sun"></i>Illumination</span> <span class="it"><i class="ln paper dash"></i>Visibility</span> · <span class="it"><i class="ln earth"></i>Earth margin</span> <span class="it"><i class="ln paper dash"></i>threshold</span> · <span class="it"><i class="ln earth"></i>Earth contact</span> · <span class="it"><i class="ln paper"></i>Battery</span> <span class="it"><i class="ln fog dash"></i>Lethal charge</span></p>
+  <p class="key"><span class="it"><span class="swatch"></span>Shaded: the lander can work</span> · <span class="it"><span class="swatch hatch"></span>Hatched: ± uncertainty</span></p>
+  <div class="ex">
   <Explain id="tl" topic="Timelines" plain="Hour by hour over the span: when the lander has sunlight, can talk to Earth, and can work.">
     <p>Each row tracks one thing over the whole span. The <strong>shaded band</strong> marks when the lander can work: Sun on its panels and Earth in view. The <strong>hatched edges</strong> show how sure we are of each sunrise and sunset.</p>
     <p data-testid="band-key">Shaded: operable window (illumination above zero and Earth contact). Hatched: ± uncertainty from DEM height error, {SIGMA_Z_TEXT}. "ill-conditioned" = wider than 6 h [est].</p>
   </Explain>
+  </div>
   {#if bandError}<p class="key" role="alert">Sunrise and sunset bands unavailable: {bandError}</p>{/if}
   <details class="bands" data-testid="band-list">
     <summary>Sunrise and sunset times with ± uncertainty ({bands.length})</summary>
@@ -317,6 +325,8 @@
   .now, .key { margin: var(--spacing-8) 0 0; font: var(--text-caption)/var(--leading-caption) var(--font-mono); font-variant-numeric: tabular-nums; }
   .now { color: var(--color-fog); }
   .key { color: var(--color-ash); display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-8); }
+  .it { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
+  .ex { margin-top: var(--spacing-16); }
   .ln { display: inline-block; width: 16px; border-top: 2px solid; }
   .ln.sun { border-color: var(--color-sun); }
   .ln.earth { border-color: var(--color-earth-line); }
