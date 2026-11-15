@@ -50,7 +50,7 @@ The app also gives the slope at the pin from the 20 m DEM (#112), the operable d
 
 <p align="center">
   <img alt="3D LOLA terrain around the site, coloured by the model's illumination" src="docs/screenshots/submission/terrain.gif" width="800">
-  <br><em>Dragging the camera across the 3D terrain: orange ground is sunlit at the chosen time, as computed by the model.</em>
+  <br><em>Play running at 1 day per second while the camera moves: sunlit ground (orange) shifts as the Sun moves, as computed by the model.</em>
 </p>
 
 | Landing window (Planner) | Compare A vs B |
