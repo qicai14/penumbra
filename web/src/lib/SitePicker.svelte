@@ -180,9 +180,7 @@
 </script>
 
 <section class="panel" aria-labelledby="site-h">
-  <header>
-    <h2 id="site-h">Site and date · where and when you land</h2>
-  </header>
+  <h2 id="site-h">Site and date</h2>
 
   <div class="body">
     <figure>
@@ -194,7 +192,12 @@
       <div class="legend" data-testid="mask-legend" data-t={shown?.t_unix_s ?? ""}>
         <p class="what"><strong>Point-Sun mask</strong>, not illumination{#if shown}{" · "}{fmtUtc(shown.t_unix_s)}{/if}{#if feed.busy}{" · updating"}{/if}</p>
         <p><i class="sw lit" aria-hidden="true"></i>Sun's centre above the terrain <i class="sw dark" aria-hidden="true"></i>Sun's centre below it</p>
-        <p class="note">One ray toward the Sun per {(shown?.stride ?? MASK_STRIDE) * m.pixel_m} m point on this tile. The disc, Earth and terrain beyond the tile are not in it, so points near the edge can read lit.</p>
+        <details class="more" data-testid="map-notes">
+          <summary>How to read the map</summary>
+          <p class="note">Orange ground has the Sun in view at the chosen time; dark ground is in its shadow. The coloured heatmap scores each spot by how many days a lander there could work.</p>
+          <p class="note">One ray toward the Sun per {(shown?.stride ?? MASK_STRIDE) * m.pixel_m} m point on this tile. The disc, Earth and terrain beyond the tile are not in it, so points near the edge can read lit.</p>
+          <p class="note">{tile.region.name} · black {grey.lo_m.toFixed(0)} m, white {grey.hi_m.toFixed(0)} m · dashed line: {PICK_BORDER_M / 1000} km from the edge, picks outside it are refused</p>
+        </details>
         {#if feed.error}<p class="refusal" role="alert">Mask unavailable. {feed.error}</p>{/if}
       </div>
       {#if grid}
@@ -202,15 +205,11 @@
           {#if gridK >= 0}
             <p class="what"><strong>Operable days</strong>, regional terrain, point grid {grid.meta.pixel_m} m</p>
             <p><i class="ramp" aria-hidden="true"></i>0 to {grid.meta.span_days} d <i class="line" aria-hidden="true"></i>{CONTOUR_H / 24} d line</p>
-            <p class="note">Landing {controls.date} 00:00 UTC,{grid.meta.span_days} d span, mast {grid.meta.mast_m} m: set at grid build, not the controls on the right.</p>
           {:else}
             <p class="note" data-testid="heat-dates">Regional terrain, point grid {grid.meta.pixel_m} m: no heatmap for {controls.date}. Grid landing dates: {grid.meta.dates.join(", ")}.</p>
           {/if}
         </div>
       {/if}
-      <figcaption>
-        {tile.region.name} · black {grey.lo_m.toFixed(0)} m, white {grey.hi_m.toFixed(0)} m · dashed line: {PICK_BORDER_M / 1000} km from the edge, picks outside it are refused
-      </figcaption>
     </figure>
 
     <div class="fields">
@@ -238,7 +237,7 @@
         <button type="submit">Set site</button>
       </form>
       <p class="now" data-testid="site-now">
-        Site {controls.lat.toFixed(4)}°, {controls.lon.toFixed(4)}°E · {edgeKm.toFixed(1)} km from the tile edge
+        {edgeKm.toFixed(1)} km from the tile edge
       </p>
       <p class="now" role="status" aria-live="polite" aria-atomic="true" data-testid="mask-site" data-lit={siteLit ?? ""} data-t={shown?.t_unix_s ?? ""} data-stride={shown?.stride ?? ""}>
         Nearest mask point (within {((shown?.stride ?? MASK_STRIDE) * m.pixel_m) / 2} m of the site), point Sun: {siteLit === null ? "computing" : siteLit ? "lit" : "in shadow"}
@@ -284,7 +283,7 @@
               {/if}
             </div>
           {/each}
-          <p class="note">Best cell of each {grids[0].meta.pixel_m} m point grid on the landing date; a tie goes to the first cell, top row then left to right on the map.{#if gridDates && bests.every((x) => !x.b)} Grid landing dates: {gridDates}.{/if} Built for the default preset, mast {grids[0].meta.mast_m} m and {grids[0].meta.span_days} d span{gridDiffers ? "; your controls differ, so these days will not match the headline" : ""}.</p>
+          <p class="note">Best {grids[0].meta.pixel_m} m cell on the landing date.{#if gridDates && bests.every((x) => !x.b)} Grid dates: {gridDates}.{/if} Default preset, mast {grids[0].meta.mast_m} m, {grids[0].meta.span_days} d span{gridDiffers ? "; your settings differ, so days won't match the headline" : ""}.</p>
         </div>
       {/if}
 
@@ -297,8 +296,7 @@
 
 <style>
   .panel { background: var(--surface-carbon); border-radius: var(--radius-sm); padding: var(--spacing-16); margin-bottom: var(--spacing-16); }
-  header { display: flex; justify-content: space-between; align-items: center; gap: var(--spacing-16); margin-bottom: var(--spacing-16); }
-  h2 { margin: 0; font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
+  h2 { margin: 0 0 var(--spacing-16); font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
   .body { display: flex; flex-wrap: wrap; gap: var(--spacing-24); align-items: flex-start; }
   figure { margin: 0; flex: 0 1 384px; min-width: 240px; }
   canvas { display: block; width: 100%; aspect-ratio: 1; border-radius: var(--radius-sm); cursor: crosshair; image-rendering: pixelated; }
@@ -306,12 +304,14 @@
   .legend p { margin: 0 0 4px; }
   .legend .what strong { font-weight: var(--font-weight-regular); color: var(--color-paper); }
   .legend .note { color: var(--color-ash); }
+  .legend .more { margin: 0 0 4px; }
+  .legend .more > summary { cursor: pointer; width: fit-content; color: var(--color-fog); text-decoration: underline; text-underline-offset: 4px; }
+  .legend .more > summary:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }
   .sw { display: inline-block; width: 12px; height: 12px; margin: 0 var(--spacing-8) -2px 0; border: 1px solid var(--color-slate); }
   .sw.lit { background: color-mix(in srgb, var(--color-sun) 60%, var(--color-slate)); }
   .sw.dark { background: color-mix(in srgb, black 50%, var(--color-fog)); margin-left: var(--spacing-16); }
   .ramp { display: inline-block; width: 48px; height: 10px; margin: 0 var(--spacing-8) 0 0; background: linear-gradient(to right, var(--color-slate), var(--color-sun)); }
   .line { display: inline-block; width: 16px; border-top: 2px solid var(--color-paper); margin: 0 var(--spacing-8) 3px var(--spacing-16); }
-  figcaption { margin-top: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .fields { flex: 1 1 280px; min-width: 0; display: flex; flex-direction: column; gap: var(--spacing-16); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .row { display: flex; align-items: center; gap: var(--spacing-8); }
   .row > span:first-child { flex: 0 0 150px; }

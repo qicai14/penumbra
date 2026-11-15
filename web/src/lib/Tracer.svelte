@@ -18,9 +18,9 @@
   );
 </script>
 
-<section>
-  <h2>IM-2 tracer, 2026-11-14T00:00Z (computed in the browser)</h2>
-  <p class="cap">V1’s live demo: Sun and Earth positions from the model that is checked against JPL Horizons.</p>
+<details class="tracer" data-testid="tracer">
+  <summary>Live V1 check: {#if track}Sun az {track.sun_az_deg[0].toFixed(1)}° / el {track.sun_el_deg[0].toFixed(2)}°{:else if error}unavailable{:else}loading…{/if}</summary>
+  <p class="cap">IM-2 tracer, 2026-11-14T00:00Z, computed in the browser: Sun and Earth positions from the model that is checked against JPL Horizons.</p>
   {#if error}
     <p role="alert" data-testid="tracer-error">{error}</p>
   {:else if !rows}
@@ -37,9 +37,13 @@
       <dd data-testid="ground" data-value={TRACER.ground_m}>{TRACER.ground_m} m (Horizons check point, on the sphere)</dd>
     </dl>
   {/if}
-</section>
+</details>
 
 <style>
+  .tracer { margin-top: var(--spacing-16); font: var(--text-caption)/var(--leading-caption) var(--font-mono); }
+  summary { cursor: pointer; width: fit-content; color: var(--color-fog); text-decoration: underline; text-underline-offset: 4px; }
+  summary:hover { color: var(--color-paper); }
+  summary:focus-visible { outline: 1px solid var(--color-paper); outline-offset: 2px; }
   .cap { margin: 0 0 var(--spacing-8); color: var(--color-ash); font-size: var(--text-caption); }
   dl { display: grid; grid-template-columns: max-content 1fr; gap: 0.25rem 1rem; }
   dt { margin: 0; }

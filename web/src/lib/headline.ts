@@ -64,3 +64,12 @@ export function setPresetField(p: Preset, key: FieldKey, value: number): Preset 
   if (next.min_wh > next.capacity_wh) return `lethal charge must not exceed battery capacity (${next.capacity_wh} Wh)`;
   return next;
 }
+
+/** Whole hours as "412 h" for the Sunlight and Earth contact figures. */
+export const fmtHours = (hours: number): string => `${Math.round(hours)} h`;
+
+/** Sunlight and Earth contact hours, read straight from the model's `survival` sums (`sunlit_h`, `contact_h`).
+ *  Unlike `operable_h` they are totals over the whole span (crates/core/src/power.rs), not cut off at the lethal shadow. */
+export function hourFigures(s: Pick<Survival, "sunlit_h" | "contact_h">): { sun: string; earth: string } {
+  return { sun: fmtHours(s.sunlit_h), earth: fmtHours(s.contact_h) };
+}

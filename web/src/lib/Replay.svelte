@@ -1,8 +1,9 @@
 <script lang="ts">
+  import Explain from "./Explain.svelte";
   // T16 (#17): the IM-2 replay. One click loads the site, the touchdown time and the lander preset, then shows two answers side by side:
   // regional terrain, and a pit of D x d around the lander (A3). Every figure is the model's; this file only words and lays them out.
   import { tick } from "svelte";
-  import { computePit, computeScenario, defaultPitDepth, loadFixture, loadManifest, pitDepthToHide, type Scenario } from "./engine";
+  import { computePit, computeScenario, DEFAULT_PRESET, defaultPitDepth, loadManifest, pitDepthToHide, type Scenario } from "./engine";
   import { fmtDays, headline, presetFields, spanDays } from "./headline";
   import Panorama from "./Panorama.svelte";
   import { fmtUtc } from "./panorama";
@@ -30,9 +31,8 @@
       const m = await loadManifest();
       const ok = checkDate(IM2.date, IM2.span_days, m.ephemeris);
       if (!ok.ok) throw new Error(ok.reason);
-      const fx = await loadFixture();
       const regional = await computeScenario({
-        lat_deg: IM2.lat_deg, lon_deg: IM2.lon_deg, mast_m: panel, start_unix_s: IM2.touchdown_unix_s, span_days: IM2.span_days, preset: fx.preset,
+        lat_deg: IM2.lat_deg, lon_deg: IM2.lon_deg, mast_m: panel, start_unix_s: IM2.touchdown_unix_s, span_days: IM2.span_days, preset: DEFAULT_PRESET,
       });
       const typicalDepth = await defaultPitDepth(diameter);
       const bad = checkPit({ diameter_m: diameter, depth_m: depth ?? typicalDepth, panel_m: panel });
@@ -81,12 +81,13 @@
 
 <section class="panel" aria-labelledby="rp-h">
   <header>
-    <h2 id="rp-h">IM-2 replay · regional terrain against a pit</h2>
+    <h2 id="rp-h">IM-2 replay</h2>
   </header>
 
-  <p class="lede">
-    The IM-2 landing site on its landing date. A reconstruction to compare with the mission reports; it does not say what happened.
-  </p>
+  <Explain id="rp" topic="IM-2 replay" plain="A real mission: the IM-2 landing site and date, on open ground and in a small pit.">
+    <p>IM-2 landed near Mons Mouton in March 2025 and ended up on its side in a crater about 20 m wide, about one terrain-map pixel. Reports say it operated for under a day (unconfirmed). This view runs the model twice: once with the open regional terrain, once with the lander inside a pit, to show how a small crater can cut its sunlight.</p>
+    <p>It is a reconstruction to compare with the mission reports. It does not say what happened.</p>
+  </Explain>
   <ul class="tags" data-testid="replay-assumptions">
     <li><span class="tag">assumed · U8</span> Touchdown 2025-03-06 17:28 UTC. The time is not in a primary source.</li>
     <li><span class="tag">assumed · U10</span> Lander values and panel height. IM-2 battery and array values are not published.</li>
@@ -151,7 +152,6 @@
   header { margin-bottom: var(--spacing-16); }
   h2 { margin: 0; font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
   h3 { margin: 0 0 var(--spacing-8); font: var(--font-weight-regular) var(--text-body)/var(--leading-body) var(--font-mono); color: var(--color-fog); }
-  .lede { margin: 0 0 var(--spacing-8); color: var(--color-paper); }
   .tags { margin: 0 0 var(--spacing-16); padding: 0; list-style: none; display: flex; flex-direction: column; gap: var(--spacing-8); font: var(--text-caption)/var(--leading-caption) var(--font-mono); color: var(--color-ash); }
   .tag { border: 1px solid var(--color-slate); border-radius: var(--radius-full); padding: 0 var(--spacing-8); color: var(--color-fog); white-space: nowrap; font: var(--text-caption)/var(--leading-caption) var(--font-mono); }
   .pair { display: flex; flex-wrap: wrap; gap: var(--spacing-16); margin-bottom: var(--spacing-16); }
