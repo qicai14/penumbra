@@ -35,8 +35,6 @@ Where the other tools are better:
 - **QuickMap** carries the full LROC data catalogue, a Sun+Earth terrain-shadow tool over any time range, and CSV export [Q2]. Penumbra ships only the layers its model needs.
 - **Horizons** is the ephemeris authority (DE441), free, scriptable through an API [H1][H2]. Penumbra's V1 test uses Horizons as its judge.
 
-SUNLOCK (https://github.com/nasa/spaceapps/discussions/2170) and Lunar Window (https://github.com/nasa/spaceapps/discussions/2092) also address this challenge; we did not compare features.
-
 Footnotes:
 
 - [T1] https://trek.nasa.gov/moon/ — tools list ("Calculate Sun Angle", "Surface Lighting"); "Advanced tools … (e.g., lighting, slope analysis) require a registered individual or group account."
